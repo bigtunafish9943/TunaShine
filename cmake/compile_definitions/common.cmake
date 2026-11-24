@@ -88,6 +88,7 @@ set(TUNASTREAM_TARGET_FILES
         "${CMAKE_SOURCE_DIR}/src/game_library.cpp"
         "${CMAKE_SOURCE_DIR}/src/other_hosts.cpp"
         "${CMAKE_SOURCE_DIR}/src/pairing_backup.cpp"
+        "${CMAKE_SOURCE_DIR}/src/file_outbox.cpp"
         "${CMAKE_SOURCE_DIR}/src/updater.h"
         "${CMAKE_SOURCE_DIR}/src/confighttp.h"
         "${CMAKE_SOURCE_DIR}/src/rtsp.cpp"

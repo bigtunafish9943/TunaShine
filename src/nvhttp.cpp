@@ -23,6 +23,7 @@
 #include <Simple-Web-Server/server_http.hpp>
 
 // local includes
+#include "file_outbox.h"
 #include "pairing_backup.h"
 #include "config.h"
 #include "display_device.h"
@@ -1617,6 +1618,59 @@ namespace nvhttp {
     response->close_connection_after_response = true;
   }
 
+  /**
+   * "Send to device": the files waiting for the device asking, as JSON
+   * {"files":[{"id","name","size"}]}. A device only ever sees its own outbox.
+   */
+  void tunaFiles(resp_https_t response, req_https_t request) {
+    print_req<TunaStreamHTTPS>(request);
+    auto named_cert_p = get_verified_cert(request);
+
+    nlohmann::json files = nlohmann::json::array();
+    for (auto &entry : file_outbox::list(named_cert_p->uuid)) {
+      files.push_back({{"id", entry.id}, {"name", entry.name}, {"size", entry.size}});
+    }
+    SimpleWeb::CaseInsensitiveMultimap headers;
+    headers.emplace("Content-Type", "application/json");
+    headers.emplace("Cache-Control", "no-store");
+    response->write(SimpleWeb::StatusCode::success_ok, nlohmann::json {{"files", files}}.dump(), headers);
+    response->close_connection_after_response = true;
+  }
+
+  /// Sends one waiting file to the device it is for.
+  void tunaFile(resp_https_t response, req_https_t request) {
+    print_req<TunaStreamHTTPS>(request);
+    auto named_cert_p = get_verified_cert(request);
+    auto args = request->parse_query_string();
+    auto path = file_outbox::path_of(named_cert_p->uuid, get_arg(args, "id", ""));
+    if (path.empty()) {
+      response->write(SimpleWeb::StatusCode::client_error_not_found);
+      response->close_connection_after_response = true;
+      return;
+    }
+    std::ifstream in(path, std::ios::binary);
+    SimpleWeb::CaseInsensitiveMultimap headers;
+    headers.emplace("Content-Type", "application/octet-stream");
+    headers.emplace("Cache-Control", "no-store");
+    response->write(SimpleWeb::StatusCode::success_ok, in, headers);
+    response->close_connection_after_response = true;
+  }
+
+  /// The device has the file: remove it from the outbox.
+  void tunaFileDone(resp_https_t response, req_https_t request) {
+    print_req<TunaStreamHTTPS>(request);
+    auto named_cert_p = get_verified_cert(request);
+    auto args = request->parse_query_string();
+    auto id = get_arg(args, "id", "");
+    if (file_outbox::remove(named_cert_p->uuid, id)) {
+      BOOST_LOG(info) << "Device ["sv << named_cert_p->name << "] received "sv << id;
+      response->write(SimpleWeb::StatusCode::success_ok);
+    } else {
+      response->write(SimpleWeb::StatusCode::client_error_not_found);
+    }
+    response->close_connection_after_response = true;
+  }
+
   void getClipboard(resp_https_t response, req_https_t request) {
     print_req<TunaStreamHTTPS>(request);
 
@@ -1821,6 +1875,9 @@ namespace nvhttp {
     };
     https_server.resource["^/cancel$"]["GET"] = cancel;
     https_server.resource["^/tuna/speedtest$"]["GET"] = speedtest;
+    https_server.resource["^/tuna/files$"]["GET"] = tunaFiles;
+    https_server.resource["^/tuna/file$"]["GET"] = tunaFile;
+    https_server.resource["^/tuna/file/done$"]["GET"] = tunaFileDone;
     https_server.resource["^/actions/clipboard$"]["GET"] = getClipboard;
     https_server.resource["^/actions/clipboard$"]["POST"] = setClipboard;
 
@@ -1956,6 +2013,8 @@ namespace nvhttp {
     client_t &client = client_root;
     for (auto it = client.named_devices.begin(); it != client.named_devices.end();) {
       if ((*it)->uuid == uuid) {
+        // Files that were waiting for it would never be collected now
+        file_outbox::clear((*it)->uuid);
         it = client.named_devices.erase(it);
         removed = true;
       } else {
