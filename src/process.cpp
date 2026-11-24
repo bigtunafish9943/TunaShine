@@ -67,6 +67,7 @@ namespace proc {
 
 #ifdef _WIN32
   VDISPLAY::DRIVER_STATUS vDisplayDriverStatus = VDISPLAY::DRIVER_STATUS::UNKNOWN;
+  std::atomic_bool vdisplay_failed {false};
 
   void onVDisplayWatchdogFailed() {
     vDisplayDriverStatus = VDISPLAY::DRIVER_STATUS::WATCHDOG_FAILED;
@@ -307,6 +308,25 @@ namespace proc {
           target_fps,
           launch_session->display_guid
         );
+
+        if (vdisplayName.empty()) {
+          // A failed attempt can leave a half-added display behind, so remove it before
+          // trying once more. This covers the driver being slow to respond after sleep.
+          BOOST_LOG(warning) << "Virtual Display creation failed, trying once more";
+          VDISPLAY::removeVirtualDisplay(launch_session->display_guid);
+          std::this_thread::sleep_for(500ms);
+          vdisplayName = VDISPLAY::createVirtualDisplay(
+            device_uuid_str.c_str(),
+            device_name.c_str(),
+            render_width,
+            render_height,
+            target_fps,
+            launch_session->display_guid
+          );
+        }
+
+        // Remembered for the web interface, which tells the user the stream fell back
+        vdisplay_failed = vdisplayName.empty();
 
         // No matter we get the display name or not, the virtual display might still be created.
         // We need to track it properly to remove the display when the session terminates.

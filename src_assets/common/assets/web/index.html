@@ -48,6 +48,11 @@
       </div>
     </dl>
 
+    <div class="alert alert-warning" v-if="vdisplayFailed">
+      {{ $t('index.vdisplay_failed') }}
+      <a href="./troubleshooting#restart">{{ $t('index.vdisplay_failed_fix') }}</a>
+    </div>
+
     <!-- Who is playing, and what their controllers look like to games -->
     <div class="home-players" v-if="players.length">
       <h2 class="h5">{{ $t('index.players_title') }}</h2>
@@ -103,15 +108,22 @@
           </div>
         </div>
         <div v-if="stableBuildAvailable">
-          <div class="alert alert-warning">
-            <div class="d-flex justify-content-between">
-              <div class="my-2">
-                <p>{{ $t('index.new_stable') }}</p>
-              </div>
-              <a class="btn btn-success m-1" :href="githubVersion.release.html_url" target="_blank">{{ $t('index.download') }}</a>
+          <div class="update-offer">
+            <p class="update-title">{{ $t('index.update_available', { version: githubVersion.version }) }}</p>
+            <p class="update-desc">{{ $t('index.update_desc') }}</p>
+
+            <div class="update-progress" v-if="update.stage && update.stage !== 'idle'" role="status">
+              <span v-if="['checking', 'downloading', 'installing', 'restarting'].includes(update.stage)" class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+              <span>{{ $t('index.update_stage_' + update.stage, { version: update.version || githubVersion.version }) }}</span>
+              <span v-if="update.stage === 'failed'" class="update-error">{{ update.error }}</span>
             </div>
-            <h3>{{githubVersion.release.name}}</h3>
-            <pre>{{githubVersion.release.body}}</pre>
+
+            <div class="update-actions">
+              <button class="btn btn-primary" :disabled="updateBusy" @click="installUpdate">
+                <i class="fas fa-download"></i> {{ $t('index.update_now') }}
+              </button>
+              <a class="btn btn-outline-secondary" :href="githubVersion.release.html_url" target="_blank">{{ $t('index.update_notes') }}</a>
+            </div>
           </div>
         </div>
       </div>
@@ -151,7 +163,9 @@
         clientCount: null,
         customPort: null,
         ending: false,
+        update: { stage: '', version: '', error: '' },
         players: [],
+        vdisplayFailed: false,
         statusTimer: null,
       }
     },
@@ -190,6 +204,58 @@
       this.loading = false;
     },
     methods: {
+      /**
+       * Install the newest release. The server downloads and checks it, then runs the
+       * installer, which restarts TunaStream; this page reloads once it is back.
+       */
+      async installUpdate() {
+        if (!confirm(this.$t('index.update_confirm'))) {
+          return;
+        }
+        this.update = { stage: 'checking', version: '', error: '' };
+        try {
+          await fetch("./api/update", { credentials: 'include', method: 'POST', headers: { 'Content-Type': 'application/json' } });
+        } catch (e) {
+          this.update = { stage: 'failed', version: '', error: String(e) };
+          return;
+        }
+        const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+        // Follow progress until the installer takes over and stops this server
+        for (let i = 0; i < 600; i++) {
+          await sleep(2000);
+          let state = null;
+          try {
+            state = await fetch("./api/update", { credentials: 'include' }).then((r) => r.ok ? r.json() : null);
+          } catch (e) {
+            state = null;
+          }
+          if (!state) {
+            if (this.update.stage === 'installing' || this.update.stage === 'restarting') {
+              break;  // the server went away: the installer is replacing it
+            }
+            continue;
+          }
+          this.update = { stage: state.stage, version: state.version, error: state.error };
+          if (['failed', 'up_to_date'].includes(state.stage)) {
+            return;
+          }
+        }
+        // Wait for the new version to answer, then reload
+        this.update = { ...this.update, stage: 'restarting' };
+        for (let i = 0; i < 180; i++) {
+          await sleep(3000);
+          try {
+            const r = await fetch("./api/configLocale", { credentials: 'include', cache: 'no-store' });
+            if (r.ok) {
+              location.reload();
+              return;
+            }
+          } catch (e) {
+            // still restarting
+          }
+        }
+        this.update = { ...this.update, stage: 'failed', error: this.$t('index.update_no_restart') };
+      },
       /** Quit the app that is being streamed, which also disconnects whoever is playing. */
       async endSession() {
         if (!confirm(this.$t('index.end_session_confirm', { app: this.currentAppName }))) {
@@ -229,6 +295,7 @@
         try {
           const status = await fetch("./api/status").then((r) => r.ok ? r.json() : null);
           const controllers = (status && status.controllers) || [];
+          this.vdisplayFailed = !!(status && status.vdisplayFailed);
           // One entry per connected device, with the controllers it brought
           const names = [...new Set([...connected, ...controllers.map((c) => c.device)])];
           this.players = names.map((device) => ({
@@ -241,6 +308,9 @@
       }
     },
     computed: {
+      updateBusy() {
+        return ['checking', 'downloading', 'installing', 'restarting'].includes(this.update.stage);
+      },
       needsAttention() {
         return !!this.fancyLogs.find((x) => x.level === "Fatal") ||
           (this.platform === "windows" && this.vdisplayStatus !== 0);

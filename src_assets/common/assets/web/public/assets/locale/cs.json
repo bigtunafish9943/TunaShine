@@ -28,10 +28,8 @@
   "apps": {
     "actions": "Akce",
     "add_cmds": "Přidat příkazy",
-    "add_new": "Přidat nový",
     "app_name": "Název aplikace",
     "app_name_desc": "Název aplikace, jak je uveden v aplikaci Moonlight",
-    "applications_desc": "Aplikace se obnovují pouze při restartování klienta",
     "applications_title": "Aplikace",
     "auto_detach": "Pokračovat ve streamování, pokud se aplikace rychle ukončí",
     "auto_detach_desc": "Pokusí se automaticky detekovat aplikace typu launcher, které se po spuštění jiného programu nebo jeho instance rychle zavřou. Pokud je detekována aplikace typu launcher, je považována za odpojenou aplikaci.",
@@ -61,7 +59,6 @@
     "env_qres_example": "Příklad – QR pro automatizaci rozlišení:",
     "env_qres_path": "qres cesta",
     "env_var_name": "Název Var",
-    "env_vars_about": "O proměnných prostředí",
     "env_vars_desc": "Ve výchozím nastavení získávají tyto proměnné prostředí všechny příkazy:",
     "env_xrandr_example": "Příklad - Xrandr pro automatizaci rozlišení:",
     "exit_timeout": "Časový limit pro ukončení",
@@ -393,7 +390,6 @@
     "configuration": "Konfigurace",
     "home": "Domů",
     "password": "Změnit heslo",
-    "pin": "PIN",
     "theme_auto": "Automaticky",
     "theme_dark": "Tmavý",
     "theme_light": "Světlý",
@@ -409,21 +405,15 @@
     "success_msg": "Heslo bylo úspěšně změněno! Tato stránka se brzy znovu načte a prohlížeč vás požádá o zadání nových přihlašovacích údajů."
   },
   "pin": {
-    "device_name": "Název zařízení",
     "pair_failure": "Spárování se nezdařilo: Zkontrolujte, zda je PIN správně zadán",
-    "pair_success": "Úspěch! Prosím, zkontrolujte Moonlight pro pokračování",
-    "pin_pairing": "Párování PIN",
-    "send": "Odeslat",
     "warning_msg": "Ujistěte se, že máte přístup ke klientovi, se kterým se párujete. Tento software může dát počítači úplnou kontrolu, proto buďte opatrní!"
   },
   "resource_card": {
-    "github_discussions": "Diskuse na GitHubu",
     "legal": "Právní předpisy",
     "legal_desc": "Dalším používáním tohoto softwaru souhlasíte s podmínkami uvedenými v následujících dokumentech.",
     "license": "Licence",
     "lizardbyte_website": "Webové stránky LizardByte",
     "resources": "Zdroje",
-    "resources_desc": "Zdroje pro TunaStream!",
     "third_party_notice": "Oznámení třetí strany"
   },
   "troubleshooting": {
@@ -452,11 +442,6 @@
     "unpair_title": "Zrušit párování"
   },
   "welcome": {
-    "confirm_password": "Potvrdit heslo",
-    "create_creds": "Před zahájením je třeba vytvořit nové uživatelské jméno a heslo pro přístup k webovému uživatelskému rozhraní.",
-    "create_creds_alert": "Pro přístup k webovému uživatelskému rozhraní TunaStream je třeba zadat níže uvedené přihlašovací údaje. Uchovávejte je v bezpečí, protože už je nikdy neuvidíte!",
-    "greeting": "Vítejte v TunaStream!",
-    "login": "Přihlásit se",
-    "welcome_success": "Tato stránka se brzy znovu načte a prohlížeč vás požádá o nové přihlašovací údaje"
+    "confirm_password": "Potvrdit heslo"
   }
 }

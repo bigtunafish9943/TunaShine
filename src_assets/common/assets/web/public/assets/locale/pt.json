@@ -28,10 +28,8 @@
   "apps": {
     "actions": "Ações.",
     "add_cmds": "Adicionar Comandos",
-    "add_new": "Adicionar novo",
     "app_name": "Nome da aplicação",
     "app_name_desc": "Nome do aplicativo, como mostrado no Moonlight",
-    "applications_desc": "Aplicações só são atualizadas quando o Cliente for reiniciado",
     "applications_title": "Aplicações",
     "auto_detach": "Continue transmitindo se o aplicativo fechar rapidamente",
     "auto_detach_desc": "Isso tentará detectar automaticamente aplicativos de tipo launcher que fecham rapidamente após a inicialização de outro programa ou instância de si mesmos. Quando um aplicativo de tipo launcher é detectado, ele é tratado como um aplicativo destacado.",
@@ -61,7 +59,6 @@
     "env_qres_example": "Exemplo - QRes para Automação de Resolução:",
     "env_qres_path": "Caminho das configurações rápidas",
     "env_var_name": "Nome da Var",
-    "env_vars_about": "Sobre Variáveis de Ambiente",
     "env_vars_desc": "Todos os comandos obtêm essas variáveis de ambiente por padrão:",
     "env_xrandr_example": "Exemplo - Xrandr para Automação de Resolução:",
     "exit_timeout": "Tempo Esgotado",
@@ -385,7 +382,6 @@
     "configuration": "Configuração",
     "home": "Residencial",
     "password": "Mudar a senha",
-    "pin": "PIN",
     "theme_auto": "Automático",
     "theme_dark": "Escuro",
     "theme_light": "Fino",
@@ -401,21 +397,15 @@
     "success_msg": "A senha foi alterada com sucesso! Essa página será recarregada em breve, seu navegador irá pedir as novas credenciais."
   },
   "pin": {
-    "device_name": "Nome do dispositivo",
     "pair_failure": "Pareamento Falhou: Verifique se o PIN foi digitado corretamente",
-    "pair_success": "Sucesso! Por favor, verifique a Lua Lunar para continuar",
-    "pin_pairing": "PIN Pairing",
-    "send": "Mandar",
     "warning_msg": "Certifique-se de que você tem acesso ao cliente com o qual está emparelhando. Este software pode dar controle total ao seu computador, então tenha cuidado!"
   },
   "resource_card": {
-    "github_discussions": "GitHub Discussions",
     "legal": "Informações",
     "legal_desc": "Ao continuar a usar este software, você concorda com os termos e condições nos seguintes documentos.",
     "license": "Tipo:",
     "lizardbyte_website": "Portal LizardByte",
     "resources": "Recursos",
-    "resources_desc": "Recursos para luz solar!",
     "third_party_notice": "Aviso de terceiros"
   },
   "troubleshooting": {
@@ -444,11 +434,6 @@
     "unpair_title": "Desconectar dispositivos"
   },
   "welcome": {
-    "confirm_password": "Confirmar a senha",
-    "create_creds": "Antes de começar, precisamos que você crie um novo nome de usuário e senha para acessar a interface da web.",
-    "create_creds_alert": "As credenciais abaixo são necessárias para acessar a interface da Web do TunaStream. Mantenha-as seguras, já que você nunca vai vê-las novamente!",
-    "greeting": "Bem-vindo ao Sol!",
-    "login": "Conectar",
-    "welcome_success": "Esta página será recarregada em breve, seu navegador irá pedir novas credenciais"
+    "confirm_password": "Confirmar a senha"
   }
 }

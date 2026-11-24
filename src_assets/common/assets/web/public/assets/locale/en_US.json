@@ -28,10 +28,8 @@
   "apps": {
     "actions": "Actions",
     "add_cmds": "Add Commands",
-    "add_new": "Add New",
     "app_name": "Application Name",
     "app_name_desc": "Application Name, as shown on Moonlight",
-    "applications_desc": "Applications are refreshed only when Client is restarted",
     "applications_title": "Applications",
     "auto_detach": "Continue streaming if the application exits quickly",
     "auto_detach_desc": "This will attempt to automatically detect launcher-type apps that close quickly after launching another program or instance of themselves. When a launcher-type app is detected, it is treated as a detached app.",
@@ -61,7 +59,6 @@
     "env_qres_example": "Example - QRes for Resolution Automation:",
     "env_qres_path": "qres path",
     "env_var_name": "Var Name",
-    "env_vars_about": "About Environment Variables",
     "env_vars_desc": "All commands get these environment variables by default:",
     "env_xrandr_example": "Example - Xrandr for Resolution Automation:",
     "exit_timeout": "Exit Timeout",
@@ -226,7 +223,6 @@
     "install_steam_audio_drivers": "Install Steam Audio Drivers",
     "install_steam_audio_drivers_desc": "If Steam is installed, this will automatically install the Steam Streaming Speakers driver to support 5.1/7.1 surround sound and muting host audio.",
     "isolated_virtual_display_option": "Move the Virtual Display to the bottom right-most corner of the display layout",
-    "isolated_virtual_display_option_desc": "This makes the display isolated from all other display and contains mouse movements to the virtual screen. This reorganizes the displays such that the all other displays are to the left of the virtual display.",
     "key_repeat_delay": "Key Repeat Delay",
     "key_repeat_delay_desc": "Control how fast keys will repeat themselves. The initial delay in milliseconds before repeating keys.",
     "key_repeat_frequency": "Key Repeat Frequency",
@@ -384,7 +380,6 @@
     "configuration": "Configuration",
     "home": "Home",
     "password": "Change Password",
-    "pin": "Pin",
     "theme_auto": "Auto",
     "theme_dark": "Dark",
     "theme_light": "Light",
@@ -400,21 +395,15 @@
     "success_msg": "Password has been changed successfully! This page will reload soon, your browser will ask you for the new credentials."
   },
   "pin": {
-    "device_name": "Device Name",
     "pair_failure": "Pairing Failed: Check if the PIN is typed correctly",
-    "pair_success": "Success! Please check Moonlight to continue",
-    "pin_pairing": "PIN Pairing",
-    "send": "Send",
     "warning_msg": "Make sure you have access to the client you are pairing with. This software can give total control to your computer, so be careful!"
   },
   "resource_card": {
-    "github_discussions": "GitHub Discussions",
     "legal": "Legal",
     "legal_desc": "By continuing to use this software you agree to the terms and conditions in the following documents.",
     "license": "License",
     "lizardbyte_website": "LizardByte Website",
     "resources": "Resources",
-    "resources_desc": "Resources for TunaStream!",
     "third_party_notice": "Third Party Notice"
   },
   "troubleshooting": {
@@ -443,11 +432,6 @@
     "unpair_title": "Unpair Devices"
   },
   "welcome": {
-    "confirm_password": "Confirm password",
-    "create_creds": "Before Getting Started, we need you to make a new username and password for accessing the Web UI.",
-    "create_creds_alert": "The credentials below are needed to access TunaStream's Web UI. Keep them safe, since you will never see them again!",
-    "greeting": "Welcome to TunaStream!",
-    "login": "Login",
-    "welcome_success": "This page will reload soon, your browser will ask you for the new credentials"
+    "confirm_password": "Confirm password"
   }
 }

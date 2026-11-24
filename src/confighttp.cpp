@@ -40,6 +40,7 @@
 #include "process.h"
 #include "rtsp.h"
 #include "stream.h"
+#include "updater.h"
 #include "utility.h"
 #include "uuid.h"
 
@@ -733,6 +734,43 @@ namespace confighttp {
       });
     }
     output_tree["controllers"] = controllers;
+#ifdef _WIN32
+    output_tree["vdisplayFailed"] = proc::vdisplay_failed.load();
+#endif
+    send_response(response, output_tree);
+  }
+
+  /**
+   * @brief Start installing the latest release, or report how far an update has got.
+   * @details POST starts it; GET reports progress. The release is always looked up by the
+   *          server itself, never taken from the request.
+   *
+   * @api_examples{/api/update| POST| null}
+   */
+  void startUpdate(resp_https_t response, req_https_t request) {
+    if (!validateContentType(response, request, "application/json") || !authenticate(response, request)) {
+      return;
+    }
+
+    print_req(request);
+
+    nlohmann::json output_tree;
+    output_tree["status"] = true;
+    output_tree["started"] = updater::start();
+    send_response(response, output_tree);
+  }
+
+  void getUpdate(resp_https_t response, req_https_t request) {
+    if (!authenticate(response, request)) {
+      return;
+    }
+
+    auto state = updater::state();
+    nlohmann::json output_tree;
+    output_tree["status"] = true;
+    output_tree["stage"] = state.stage;
+    output_tree["version"] = state.version;
+    output_tree["error"] = state.error;
     send_response(response, output_tree);
   }
 
@@ -1594,6 +1632,8 @@ namespace confighttp {
     server.resource["^/api/apps/close$"]["POST"] = closeApp;
     server.resource["^/api/rumble-test$"]["POST"] = rumbleTest;
     server.resource["^/api/status$"]["GET"] = getStatus;
+    server.resource["^/api/update$"]["GET"] = getUpdate;
+    server.resource["^/api/update$"]["POST"] = startUpdate;
     server.resource["^/api/logs$"]["GET"] = getLogs;
     server.resource["^/api/config$"]["GET"] = getConfig;
     server.resource["^/api/config$"]["POST"] = saveConfig;
