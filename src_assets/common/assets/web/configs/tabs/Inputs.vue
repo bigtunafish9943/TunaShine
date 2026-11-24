@@ -85,7 +85,7 @@ const config = ref(props.config)
                     id="motion_as_ds4"
                     locale-prefix="config"
                     v-model="config.motion_as_ds4"
-                    default="true"
+                    default="false"
           ></Checkbox>
           <Checkbox class="mb-3"
                     id="touchpad_as_ds4"

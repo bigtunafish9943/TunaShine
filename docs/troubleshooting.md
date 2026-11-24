@@ -16,8 +16,9 @@ which half is broken first.
 virtual gamepad.
 
 - Set **Settings > Controls > Controller type the PC sees** to **Xbox 360** and reconnect the controller. Most PC games
-  only rumble an Xbox controller. By default, controllers that report motion sensors or a touchpad (PlayStation,
-  Switch Pro, many handhelds) are emulated as a PlayStation 4 controller, which fewer games rumble.
+  only rumble an Xbox controller. By default, controllers with a touchpad (PlayStation controllers) are emulated as
+  a PlayStation 4 controller, which fewer games rumble. Controllers with only motion sensors, such as 8BitDo and
+  Switch Pro controllers, stay Xbox 360.
 - Check the game's own vibration setting.
 - If the game runs through Steam, check Steam Input for that game: it can replace the gamepad the game sees.
 - The log says which type was chosen, for example `Gamepad 0 will be Xbox 360 controller`.
@@ -30,6 +31,18 @@ virtual gamepad.
 - Make sure **Settings > Controls > Rumble** is on.
 - The log should show `Rumble test sent to 1 client(s)`. If it says no device is streaming, the stream was not
   running when you pressed the button.
+
+### 8BitDo Ultimate 2
+
+- **Use the 2.4G adapter, not Bluetooth, on an Android TV box or phone.** Over Bluetooth, 8BitDo controllers often
+  connect but don't rumble in Moonlight on Android
+  ([moonlight-android#1442](https://github.com/moonlight-stream/moonlight-android/issues/1442)). Plugged into the
+  device's USB port (with a USB-C to USB-A adapter if needed), the adapter shows up as an Xbox controller.
+- **Pick "Xbox-style controller" in setup**, or set the controller type to **Xbox 360**. Its gyro used to make
+  automatic mode choose a PlayStation 4 controller.
+- **Back paddles and L4/R4** reach the PC only as the buttons they're mapped to. Map them to existing buttons in
+  8BitDo Ultimate Software if you want them in games.
+- **Update its firmware** with 8BitDo Ultimate Software; rumble and connection fixes arrive that way.
 
 ## The connection
 
