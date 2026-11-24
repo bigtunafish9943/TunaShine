@@ -87,13 +87,14 @@ grant more, so if a new device says `Permission Denied`, or its mouse and keyboa
   Turn on *End session when the last client disconnects* under **Configuration**, or *Terminate on Pause* for a
   single app, to get your monitor back straight away.
 - **Using the PC while it streams.** The stream's virtual display is an extra monitor on the same Windows desktop,
-  so your real monitor stays usable. While someone is streaming it is the main display, so games open on the
-  stream, and so do new windows and notifications. Your own monitor is the main display again as soon as they
-  disconnect, even if the game is left running. While they play, turn on Do Not Disturb if those shouldn't show on the TV. Windows still has
-  one mouse, one keyboard and one focused window for both of you, so clicking a window on your monitor takes
-  focus away from the game. It works best when the person streaming plays with a controller. Under **Devices**,
-  give that device *Controller Input* but not mouse or keyboard, and under **Configuration > Audio/Video** turn on
-  *Move the Virtual Display to the bottom right-most corner* to stop your mouse sliding onto the stream.
+  so your real monitor stays usable. While someone is streaming, the virtual display is the main display, so
+  games open on the stream. So do new windows and notifications: turn on Do Not Disturb if those shouldn't show
+  on the TV. Your own monitor is the main display again as soon as they disconnect, even if the game is left
+  running. Windows still has one mouse, one keyboard and one focused window for both of you, so clicking a window
+  on your monitor takes focus away from the game. It works best when the person streaming plays with a
+  controller: under **Devices**, edit their device and choose *Controller only*, and under
+  **Configuration > Audio/Video** turn on *Move the Virtual Display to the bottom right-most corner* to stop your
+  mouse sliding onto the stream.
 - **Other virtual display drivers.** Remove them before using TunaShine; two at once cause conflicts.
 - **Laptops with two GPUs.** Under **Configuration > Audio/Video**, set *Adapter Name* to the discrete GPU and
   enable *Headless mode*, then restart.

@@ -4,14 +4,18 @@ What TunaShine is working toward, roughly in order. Nothing here is a promise or
 
 ## Now
 
-- **Reliable controller rumble.** Two host-side changes are in: rumble is sent to the client within about
-  20 ms instead of up to 150 ms, and a reconnected controller no longer has its first rumble dropped. Whether
-  this fixes rumble over Wi-Fi is not yet confirmed on real hardware.
-- **Returning to the PC when the client disconnects.** Restoring the physical display, resolution and window
-  positions when a stream ends is unreliable. Needs investigation in the display restore code.
-- **Easier setup and a better web UI.** Done so far: new theme, status home page with first-device steps, settings
-  in a side menu, a single Devices page for pairing and permissions. The app editor now shows the few fields most apps
-  need and folds the rest away. Still to do: the Applications list itself.
+Everything here is built and passes the automated checks, but has not yet been confirmed on real hardware.
+
+- **Reliable controller rumble.** Rumble reaches the client within about 20 ms instead of up to 150 ms, a
+  reconnected controller no longer has its first rumble dropped, and the Troubleshooting page has a rumble test
+  that tells a game problem from a client problem.
+- **Stopping and starting.** Streams run on a virtual display that is the main display only while someone is
+  streaming. Closing the client hands the main display back to the PC; reconnecting takes it again. A dropped
+  connection keeps the app running for two minutes instead of quitting it.
+- **Easier setup and a better web UI.** New theme, status home page with first-device steps and an End session
+  button, settings in a side menu, a single Devices page for pairing and permissions with one-click presets, and
+  an app editor that folds rarely used options away.
+- **Installs next to Sunshine or Apollo**, on its own port.
 
 ## Next
 
