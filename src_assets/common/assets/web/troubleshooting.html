@@ -78,37 +78,37 @@
         </div>
       </div>
     </div>
-    <!-- Restart TunaShine -->
+    <!-- Restart TunaStream -->
     <div class="card p-2 my-4">
       <div class="card-body">
-        <h2 id="restart">{{ $t('troubleshooting.restart_apollo') }}</h2>
+        <h2 id="restart">{{ $t('troubleshooting.restart_tunastream') }}</h2>
         <br>
-        <p>{{ $t('troubleshooting.restart_apollo_desc') }}</p>
+        <p>{{ $t('troubleshooting.restart_tunastream_desc') }}</p>
         <div class="alert alert-success" v-if="serverRestarting">
-          {{ $t('troubleshooting.restart_apollo_success') }}
+          {{ $t('troubleshooting.restart_tunastream_success') }}
         </div>
         <div>
           <button class="btn btn-warning" :disabled="serverQuitting || serverRestarting" @click="restart">
-            {{ $t('troubleshooting.restart_apollo') }}
+            {{ $t('troubleshooting.restart_tunastream') }}
           </button>
         </div>
       </div>
     </div>
-    <!-- Quit TunaShine -->
+    <!-- Quit TunaStream -->
     <div class="card p-2 my-4">
       <div class="card-body">
-        <h2 id="quit">{{ $t('troubleshooting.quit_apollo') }}</h2>
+        <h2 id="quit">{{ $t('troubleshooting.quit_tunastream') }}</h2>
         <br>
-        <p>{{ $t('troubleshooting.quit_apollo_desc') }}</p>
+        <p>{{ $t('troubleshooting.quit_tunastream_desc') }}</p>
         <div class="alert alert-success" v-if="serverQuit">
-          {{ $t('troubleshooting.quit_apollo_success') }}
+          {{ $t('troubleshooting.quit_tunastream_success') }}
         </div>
         <div class="alert alert-success" v-if="serverQuitting">
-          {{ $t('troubleshooting.quit_apollo_success_ongoing') }}
+          {{ $t('troubleshooting.quit_tunastream_success_ongoing') }}
         </div>
         <div>
           <button class="btn btn-warning" :disabled="serverQuitting || serverRestarting" @click="quit">
-            {{ $t('troubleshooting.quit_apollo') }}
+            {{ $t('troubleshooting.quit_tunastream') }}
           </button>
         </div>
       </div>
@@ -297,7 +297,7 @@
           });
         },
         quit() {
-          if (window.confirm(this.i18n.t('troubleshooting.quit_apollo_confirm'))) {
+          if (window.confirm(this.i18n.t('troubleshooting.quit_tunastream_confirm'))) {
             this.serverQuitting = true;
             fetch("./api/quit", {
               credentials: 'include',

@@ -404,7 +404,7 @@ namespace platf {
 
     virtual int convert(platf::img_t &img) = 0;
 
-    video::sunshine_colorspace_t colorspace;
+    video::tunastream_colorspace_t colorspace;
   };
 
   struct avcodec_encode_device_t: encode_device_t {
@@ -449,7 +449,7 @@ namespace platf {
   };
 
   struct nvenc_encode_device_t: encode_device_t {
-    virtual bool init_encoder(const video::config_t &client_config, const video::sunshine_colorspace_t &colorspace) = 0;
+    virtual bool init_encoder(const video::config_t &client_config, const video::tunastream_colorspace_t &colorspace) = 0;
 
     nvenc::nvenc_base *nvenc = nullptr;
   };
@@ -827,7 +827,7 @@ namespace platf {
    */
   platform_caps::caps_t get_capabilities();
 
-#define SERVICE_NAME "Apollo"
+#define SERVICE_NAME "TunaStream"
 #define SERVICE_TYPE "_nvstream._tcp"
 
   namespace publish {

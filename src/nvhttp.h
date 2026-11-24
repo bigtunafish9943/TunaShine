@@ -33,7 +33,7 @@ namespace nvhttp {
   /**
    * @brief The protocol version.
    * @details The version of the GameStream protocol we are mocking.
-   * @note The negative 4th number indicates to Moonlight that this is Sunshine.
+   * @note The negative 4th number indicates to Moonlight that this is TunaStream.
    */
   constexpr auto VERSION = "7.1.431.-1";
 
@@ -79,13 +79,13 @@ namespace nvhttp {
    */
   void setup(const std::string &pkey, const std::string &cert);
 
-  class SunshineHTTPS: public SimpleWeb::HTTPS {
+  class TunaStreamHTTPS: public SimpleWeb::HTTPS {
   public:
-    SunshineHTTPS(boost::asio::io_context &io_context, boost::asio::ssl::context &ctx):
+    TunaStreamHTTPS(boost::asio::io_context &io_context, boost::asio::ssl::context &ctx):
         SimpleWeb::HTTPS(io_context, ctx) {
     }
 
-    virtual ~SunshineHTTPS() {
+    virtual ~TunaStreamHTTPS() {
       // Gracefully shutdown the TLS connection
       SimpleWeb::error_code ec;
       shutdown(ec);
@@ -93,11 +93,11 @@ namespace nvhttp {
   };
 
   enum class PAIR_PHASE {
-    NONE,  ///< Sunshine is not in a pairing phase
-    GETSERVERCERT,  ///< Sunshine is in the get server certificate phase
-    CLIENTCHALLENGE,  ///< Sunshine is in the client challenge phase
-    SERVERCHALLENGERESP,  ///< Sunshine is in the server challenge response phase
-    CLIENTPAIRINGSECRET  ///< Sunshine is in the client pairing secret phase
+    NONE,  ///< TunaStream is not in a pairing phase
+    GETSERVERCERT,  ///< TunaStream is in the get server certificate phase
+    CLIENTCHALLENGE,  ///< TunaStream is in the client challenge phase
+    SERVERCHALLENGERESP,  ///< TunaStream is in the server challenge response phase
+    CLIENTPAIRINGSECRET  ///< TunaStream is in the client pairing secret phase
   };
 
   struct pair_session_t {
@@ -116,7 +116,7 @@ namespace nvhttp {
     struct {
       util::Either<
         std::shared_ptr<typename SimpleWeb::ServerBase<SimpleWeb::HTTP>::Response>,
-        std::shared_ptr<typename SimpleWeb::ServerBase<SunshineHTTPS>::Response>>
+        std::shared_ptr<typename SimpleWeb::ServerBase<TunaStreamHTTPS>::Response>>
         response;
       std::string salt = {};
     } async_insert_pin;

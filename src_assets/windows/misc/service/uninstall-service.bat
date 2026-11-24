@@ -1,22 +1,22 @@
 @echo off
 setlocal enabledelayedexpansion
 
-set "SERVICE_CONFIG_DIR=%LOCALAPPDATA%\TunaShine"
+set "SERVICE_CONFIG_DIR=%LOCALAPPDATA%\TunaStream"
 set "SERVICE_CONFIG_FILE=%SERVICE_CONFIG_DIR%\service_start_type.txt"
 
 rem Save the current service start type to a file if the service exists
-sc qc TunaShineService >nul 2>&1
+sc qc TunaStreamService >nul 2>&1
 if %ERRORLEVEL%==0 (
     if not exist "%SERVICE_CONFIG_DIR%\" mkdir "%SERVICE_CONFIG_DIR%\"
 
     rem Get the start type
-    for /f "tokens=3" %%i in ('sc qc TunaShineService ^| findstr /C:"START_TYPE"') do (
+    for /f "tokens=3" %%i in ('sc qc TunaStreamService ^| findstr /C:"START_TYPE"') do (
         set "CURRENT_START_TYPE=%%i"
     )
 
     rem Set the content to write
     if "!CURRENT_START_TYPE!"=="2" (
-        sc qc TunaShineService | findstr /C:"(DELAYED)" >nul
+        sc qc TunaStreamService | findstr /C:"(DELAYED)" >nul
         if !ERRORLEVEL!==0 (
             set "CONTENT=2-delayed"
         ) else (
@@ -32,10 +32,10 @@ if %ERRORLEVEL%==0 (
     echo !CONTENT!> "%SERVICE_CONFIG_FILE%"
 )
 
-rem Stop and delete the legacy SunshineSvc service
-net stop sunshinesvc
-sc delete sunshinesvc
+rem Stop and delete the legacy TunaStreamSvc service
+net stop tunastreamsvc
+sc delete tunastreamsvc
 
-rem Stop and delete the new TunaShineService service
-net stop TunaShineService
-sc delete TunaShineService
+rem Stop and delete the new TunaStreamService service
+net stop TunaStreamService
+sc delete TunaStreamService

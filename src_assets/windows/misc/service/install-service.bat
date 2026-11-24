@@ -1,22 +1,22 @@
 @echo off
 setlocal enabledelayedexpansion
 
-rem Get sunshine root directory
+rem Get tunastream root directory
 for %%I in ("%~dp0\..") do set "ROOT_DIR=%%~fI"
 
-set SERVICE_NAME=TunaShineService
-set "SERVICE_BIN=%ROOT_DIR%\tools\sunshinesvc.exe"
-set "SERVICE_CONFIG_DIR=%LOCALAPPDATA%\TunaShine"
+set SERVICE_NAME=TunaStreamService
+set "SERVICE_BIN=%ROOT_DIR%\tools\tunastreamsvc.exe"
+set "SERVICE_CONFIG_DIR=%LOCALAPPDATA%\TunaStream"
 set "SERVICE_CONFIG_FILE=%SERVICE_CONFIG_DIR%\service_start_type.txt"
 
 rem Set service to demand start. It will be changed to auto later if the user selected that option.
 set SERVICE_START_TYPE=demand
 
-rem Remove the legacy SunshineSvc service
-net stop sunshinesvc
-sc delete sunshinesvc
+rem Remove the legacy TunaStreamSvc service
+net stop tunastreamsvc
+sc delete tunastreamsvc
 
-rem Check if TunaShineService already exists
+rem Check if TunaStreamService already exists
 sc qc %SERVICE_NAME% > nul 2>&1
 if %ERRORLEVEL%==0 (
     rem Stop the existing service if running
@@ -58,10 +58,10 @@ if exist "%SERVICE_CONFIG_FILE%" (
 echo Setting service start type set to: [!SERVICE_START_TYPE!]
 
 rem Run the sc command to create/reconfigure the service
-sc %SC_CMD% %SERVICE_NAME% binPath= "\"%SERVICE_BIN%\"" start= %SERVICE_START_TYPE% DisplayName= "TunaShine Service"
+sc %SC_CMD% %SERVICE_NAME% binPath= "\"%SERVICE_BIN%\"" start= %SERVICE_START_TYPE% DisplayName= "TunaStream Service"
 
 rem Set the description of the service
-sc description %SERVICE_NAME% "TunaShine is a self-hosted game stream host for Moonlight."
+sc description %SERVICE_NAME% "TunaStream is a self-hosted game stream host for Moonlight."
 
 rem Start the new service
 net start %SERVICE_NAME%

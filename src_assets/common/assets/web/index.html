@@ -113,9 +113,9 @@
   import { initApp } from './init'
   import Navbar from './Navbar.vue'
   import ResourceCard from './ResourceCard.vue'
-  import ApolloVersion from './apollo_version'
+  import TunaStreamVersion from './tunastream_version'
 
-  console.log("Hello, TunaShine!")
+  console.log("Hello, TunaStream!")
   let app = createApp({
     components: {
       Navbar,
@@ -142,20 +142,20 @@
       try {
         let config = await fetch("./api/config").then((r) => r.json());
         this.notifyPreReleases = config.notify_pre_releases;
-        this.version = new ApolloVersion(null, config.version);
+        this.version = new TunaStreamVersion(null, config.version);
         this.platform = config.platform;
         this.vdisplayStatus = config.vdisplayStatus ?? 0;
-        // Set when TunaShine is not on the default port, e.g. installed next to Sunshine
+        // Set when TunaStream is not on the default port, e.g. installed next to TunaStream
         const port = parseInt(config.port, 10);
         this.customPort = (port && port !== 47989) ? port : null;
         this.loadStatus();
         console.log("Version: ", this.version.version)
         const latest = await fetch("https://api.github.com/repos/bigtunafish9943/TunaShine/releases/latest").then((r) => r.ok ? r.json() : null);
-        this.githubVersion = latest ? new ApolloVersion(latest, null) : null;
+        this.githubVersion = latest ? new TunaStreamVersion(latest, null) : null;
         console.log("GitHub Version: ", this.githubVersion && this.githubVersion.version)
         if (this.githubVersion) {
           const pre = (await fetch("https://api.github.com/repos/bigtunafish9943/TunaShine/releases").then((r) => r.ok ? r.json() : [])).find(release => release.prerelease);
-          this.preReleaseVersion = pre ? new ApolloVersion(pre, null) : null;
+          this.preReleaseVersion = pre ? new TunaStreamVersion(pre, null) : null;
           console.log("Pre-Release Version: ", this.preReleaseVersion && this.preReleaseVersion.version)
         }
       } catch (e) {
