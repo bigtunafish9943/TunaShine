@@ -1,5 +1,5 @@
 <template>
-  <nav class="navbar navbar-light navbar-expand-lg navbar-background header">
+  <nav ref="nav" class="navbar navbar-light navbar-expand-lg navbar-background header">
     <div class="container">
       <a class="navbar-brand" href="./" title="TunaStream">
         <img src="/images/logo-tunastream-45.png" height="34" alt="">
@@ -36,22 +36,69 @@
       </div>
     </div>
   </nav>
+
+  <!-- Shown on every page when a newer release is out, until closed for that version -->
+  <div class="update-banner" v-if="updateVersion && !dismissed" role="status">
+    <i class="fas fa-circle-arrow-up" aria-hidden="true"></i>
+    <span class="update-banner-text">{{ $t('navbar.update_banner', { version: updateVersion }) }}</span>
+    <a class="btn btn-sm btn-primary" href="./#update">{{ $t('navbar.update_banner_action') }}</a>
+    <button type="button" class="update-banner-close" @click="dismiss" :aria-label="$t('navbar.update_banner_close')" :title="$t('navbar.update_banner_close')">
+      <i class="fas fa-xmark" aria-hidden="true"></i>
+    </button>
+  </div>
 </template>
 
 <script>
 import ThemeToggle from './ThemeToggle.vue'
+import TunaStreamVersion from './tunastream_version'
+
+const DISMISS_KEY = 'tunastream.dismissedUpdate';
 
 export default {
   components: { ThemeToggle },
-  created() {
-    console.log("Header mounted!")
+  data() {
+    return {
+      updateVersion: '',
+      dismissed: false,
+    };
+  },
+  async created() {
+    try {
+      const config = await fetch("./api/config", { credentials: 'include' }).then((r) => r.ok ? r.json() : null);
+      if (!config || !config.version) return;
+      const latest = await fetch("https://api.github.com/repos/bigtunafish9943/TunaStream/releases/latest").then((r) => r.ok ? r.json() : null);
+      if (!latest) return;
+      const installed = new TunaStreamVersion(null, config.version);
+      const available = new TunaStreamVersion(latest, null);
+      if (available.isGreater(installed)) {
+        this.updateVersion = available.version;
+        try {
+          this.dismissed = localStorage.getItem(DISMISS_KEY) === available.version;
+        } catch (e) {
+          this.dismissed = false;
+        }
+      }
+    } catch (e) {
+      // No banner when GitHub can't be reached
+    }
+  },
+  methods: {
+    dismiss() {
+      this.dismissed = true;
+      try {
+        // Remembered per version, so the next release shows the banner again
+        localStorage.setItem(DISMISS_KEY, this.updateVersion);
+      } catch (e) {
+        // Closing still works for this page view
+      }
+    },
   },
   mounted() {
     // Mark the link for the current page. Links are relative ("./pin") while the path is
     // absolute ("/pin"), so compare the last path segment.
     const page = document.location.pathname.replace(/\/+$/, "").split("/").pop().replace(/\.html$/, "");
     const target = (page === "" || page === "index") ? "./" : "./" + page;
-    const el = this.$el.querySelector("a.nav-link[href='" + target + "']");
+    const el = this.$refs.nav.querySelector("a.nav-link[href='" + target + "']");
     if (el) el.classList.add("active")
   }
 }
