@@ -633,7 +633,8 @@
     "create_account": "Create account",
     "create_creds": "Choose a username and password. You will use them to open this page from now on.",
     "create_creds_alert": "Keep these somewhere safe. TunaStream cannot show you the password again.",
-    "greeting": "Welcome to TunaStream",
+    "greeting": "Create your account",
+    "sign_in_title": "Sign in",
     "login": "Sign in",
     "welcome_success": "Account created. This page will reload and ask you to sign in.",
     "login_success": "This page will reload soon."
