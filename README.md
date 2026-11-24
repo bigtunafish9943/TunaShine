@@ -116,5 +116,14 @@ Every push builds the Windows installer with GitHub Actions and runs a smoke tes
 
 ## License and credits
 
-TunaStream is free software under the [GPL-3.0](LICENSE). It is derived from earlier open-source streaming
-hosts, whose authors are credited in [NOTICE](NOTICE) as that license requires.
+TunaStream is free software under the [GPL-3.0](LICENSE). It started from these open-source projects, and
+owes them a great deal:
+
+- [Apollo](https://github.com/ClassicOldSong/Apollo) by ClassicOldSong, which TunaStream began as a copy of:
+  the virtual display support, per-device permissions and much more come from it.
+- [Sunshine](https://github.com/LizardByte/Sunshine) by LizardByte, the streaming host Apollo is built on.
+- [SudoVDA](https://github.com/SudoMaker/SudoVDA) by SudoMaker, the virtual display driver TunaStream installs.
+- [Moonlight](https://moonlight-stream.org), the open-source client TunaStream streams to, and the GameStream
+  protocol work behind it.
+
+Their authors and licenses are listed in [NOTICE](NOTICE).
