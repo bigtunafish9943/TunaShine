@@ -458,6 +458,9 @@ namespace proc {
       } else {
         // Driver isn't working so we don't need to track virtual display.
         launch_session->virtual_display = false;
+        // The stream wanted its own screen but shows the PC's monitor instead: say so on the home page
+        vdisplay_failed = true;
+        BOOST_LOG(warning) << "Streaming the PC's own monitor because the virtual display driver isn't working"sv;
       }
     }
 

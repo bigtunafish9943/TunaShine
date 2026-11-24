@@ -9,6 +9,7 @@
 #include <iostream>
 
 // local includes
+#include "pairing_backup.h"
 #include "confighttp.h"
 #include "display_device.h"
 #include "entry_handler.h"
@@ -167,6 +168,9 @@ int main(int argc, char *argv[]) {
   if (!log_deinit_guard) {
     BOOST_LOG(error) << "Logging failed to initialize"sv;
   }
+
+  // Put back paired devices and settings lost to a reinstall, before a new certificate would be made
+  pairing_backup::restore_missing();
 
   // logging can begin at this point
   // if anything is logged prior to this point, it will appear in stdout, but not in the log viewer in the UI
@@ -409,6 +413,9 @@ int main(int argc, char *argv[]) {
 
     return -1;
   }
+
+  // The certificate exists now; keep a copy of it with the paired devices and settings
+  pairing_backup::save();
 
   std::unique_ptr<platf::deinit_t> mDNS;
   auto sync_mDNS = std::async(std::launch::async, [&mDNS]() {
