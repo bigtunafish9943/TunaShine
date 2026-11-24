@@ -796,3 +796,22 @@ body .dropdown-menu {
     border-radius: 0 0.5rem 0.5rem 0;
     color: var(--bs-secondary-color);
 }
+
+/* Settings page heading, with the button that reruns setup */
+.settings-title {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem 1rem;
+}
+
+.settings-title h1 {
+    margin-bottom: 0.5rem !important;
+}
+
+.settings-intro {
+    color: var(--bs-secondary-color);
+    margin-bottom: 1.5rem;
+    max-width: 46rem;
+}

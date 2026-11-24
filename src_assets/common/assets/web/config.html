@@ -17,7 +17,11 @@
 <body id="app" v-cloak>
   <Navbar></Navbar>
   <div class="container">
-    <h1 class="my-4">{{ $t('config.configuration') }}</h1>
+    <div class="settings-title">
+      <h1 class="my-4">{{ $t('config.configuration') }}</h1>
+      <a class="btn btn-outline-primary" href="./setup"><i class="fas fa-wand-magic-sparkles"></i> {{ $t('config.run_setup') }}</a>
+    </div>
+    <p class="settings-intro">{{ $t('config.settings_intro') }}</p>
     <div class="form settings-layout" v-if="config">
       <!-- Settings menu -->
       <nav class="settings-menu" aria-label="Settings sections">
