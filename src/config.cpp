@@ -517,6 +517,7 @@ namespace config {
     false, // isolated Display
     false, // ignore_encoder_probe_failure
     true, // virtual_display_primary
+    true, // virtual_display_only
   };
 
   audio_t audio {
@@ -1216,6 +1217,7 @@ namespace config {
     string_f(vars, "fallback_mode", video.fallback_mode);
     bool_f(vars, "isolated_virtual_display_option", video.isolated_virtual_display_option);
     bool_f(vars, "virtual_display_primary", video.virtual_display_primary);
+    bool_f(vars, "virtual_display_only", video.virtual_display_only);
     bool_f(vars, "ignore_encoder_probe_failure", video.ignore_encoder_probe_failure);
 
     path_f(vars, "pkey", nvhttp.pkey);
