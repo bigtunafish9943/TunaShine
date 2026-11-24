@@ -887,6 +887,14 @@ namespace platf {
 
   capture_counters_t capture_counters();
 
+  /**
+   * @brief Cap games at the stream's frame rate, so each frame the game draws is one the stream sends.
+   * @details Uses the graphics driver's own frame rate limit where available (NVIDIA). A limit the
+   *          user set themselves is left alone, and theirs is put back when streaming stops.
+   * @param fps Frame rate to cap at, or 0 to remove the cap.
+   */
+  void set_game_frame_limit(int fps);
+
   std::string
   get_clipboard();
 

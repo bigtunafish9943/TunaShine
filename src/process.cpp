@@ -60,6 +60,9 @@ namespace proc {
   // "end the session if nobody reconnects" task can tell it is out of date.
   static std::atomic_uint64_t session_generation {0};
 
+  // Frame rate games are capped at while this app streams; 0 when there is no cap
+  static std::atomic_int frame_limit_fps {0};
+
   int input_only_app_id = -1;
   std::string input_only_app_id_str;
   int terminate_app_id = -1;
@@ -79,9 +82,83 @@ namespace proc {
     if (vDisplayDriverStatus == VDISPLAY::DRIVER_STATUS::OK) {
       if (!VDISPLAY::startPingThread(onVDisplayWatchdogFailed)) {
         onVDisplayWatchdogFailed();
+        BOOST_LOG(warning) << "Virtual display driver opened, but its watchdog did not answer"sv;
         return;
       }
+    } else if (vDisplayDriverStatus == VDISPLAY::DRIVER_STATUS::VERSION_INCOMPATIBLE) {
+      BOOST_LOG(warning) << "Virtual display driver is a version TunaStream can't use; reinstall it from Troubleshooting"sv;
+    } else {
+      BOOST_LOG(warning) << "Couldn't open the virtual display driver: it is missing, disabled or in use by another program"sv;
     }
+  }
+
+  static std::atomic_bool vdisplay_repairing {false};
+
+  bool vdisplay_repair_running() {
+    return vdisplay_repairing;
+  }
+
+  bool start_vdisplay_repair() {
+    if (vdisplay_repairing.exchange(true)) {
+      return false;
+    }
+
+    std::thread([]() {
+      auto done = util::fail_guard([]() {
+        vdisplay_repairing = false;
+      });
+
+      BOOST_LOG(info) << "Repairing the virtual display driver"sv;
+      VDISPLAY::closeVDisplayDevice();
+      vDisplayDriverStatus = VDISPLAY::DRIVER_STATUS::UNKNOWN;
+
+      // The installer ships the driver and its install script next to tunastream.exe
+      wchar_t exe[MAX_PATH] {};
+      GetModuleFileNameW(nullptr, exe, MAX_PATH);
+      auto script = std::filesystem::path {exe}.parent_path() / L"drivers" / L"sudovda" / L"install.bat";
+      std::error_code ec;
+      if (std::filesystem::exists(script, ec)) {
+        wchar_t system_dir[MAX_PATH] {};
+        GetSystemDirectoryW(system_dir, MAX_PATH);
+        std::wstring cmd_exe = std::wstring {system_dir} + L"\\cmd.exe";
+        std::wstring command = L"cmd.exe /c \"\"" + script.wstring() + L"\"\"";
+        auto working_dir = script.parent_path().wstring();
+
+        STARTUPINFOW startup {};
+        startup.cb = sizeof(startup);
+        PROCESS_INFORMATION process {};
+        if (CreateProcessW(cmd_exe.c_str(), command.data(), nullptr, nullptr, FALSE, CREATE_NO_WINDOW, nullptr, working_dir.c_str(), &startup, &process)) {
+          WaitForSingleObject(process.hProcess, 120000);
+          DWORD exit_code = 0;
+          GetExitCodeProcess(process.hProcess, &exit_code);
+          CloseHandle(process.hThread);
+          CloseHandle(process.hProcess);
+          BOOST_LOG(info) << "Virtual display driver reinstall finished with code "sv << exit_code;
+        } else {
+          BOOST_LOG(error) << "Couldn't run the virtual display driver installer: "sv << GetLastError();
+        }
+      } else {
+        BOOST_LOG(warning) << "Virtual display driver installer not found at "sv << script.string() << "; reconnecting only"sv;
+      }
+
+      // The device can take a few seconds to appear after installing
+      for (int attempt = 0; attempt < 10; ++attempt) {
+        initVDisplayDriver();
+        if (vDisplayDriverStatus == VDISPLAY::DRIVER_STATUS::OK) {
+          break;
+        }
+        std::this_thread::sleep_for(1s);
+      }
+
+      if (vDisplayDriverStatus == VDISPLAY::DRIVER_STATUS::OK) {
+        vdisplay_failed = false;
+        BOOST_LOG(info) << "Virtual display driver is working again"sv;
+      } else {
+        BOOST_LOG(error) << "Virtual display driver still isn't working after the repair"sv;
+      }
+    }).detach();
+
+    return true;
   }
 #endif
 
@@ -409,6 +486,12 @@ namespace proc {
       }
     }
 
+    // Cap games at the stream's frame rate before the app starts, so it reads the cap when it starts
+    if (config::tunastream.game_frame_limit && launch_session->fps > 0) {
+      frame_limit_fps = (launch_session->fps + 500) / 1000;
+      platf::set_game_frame_limit(frame_limit_fps);
+    }
+
     std::string fps_str;
     char fps_buf[8];
     snprintf(fps_buf, sizeof(fps_buf), "%.3f", (float)launch_session->fps / 1000.0f);
@@ -664,6 +747,10 @@ namespace proc {
     // Normally already done by the resume request, before capture starts
     reclaim_primary_display();
 
+    if (config::tunastream.game_frame_limit && frame_limit_fps > 0) {
+      platf::set_game_frame_limit(frame_limit_fps);
+    }
+
     if (!_app.state_cmds.empty()) {
       auto exec_thread = std::thread([cmd_list = _app.state_cmds, app_working_dir = _app.working_dir, _env = _env]() mutable {
 
@@ -706,6 +793,9 @@ namespace proc {
   }
 
   void proc_t::pause(bool connection_lost) {
+    // Nobody is streaming now, so the PC's own frame rate limit applies again
+    platf::set_game_frame_limit(0);
+
     if (!running()) {
       BOOST_LOG(info) << "Session already stopped, do not run pause commands.";
       return;
@@ -804,8 +894,32 @@ namespace proc {
 #endif
   }
 
+  bool proc_t::continue_on_host() {
+#ifdef _WIN32
+    if (!running() || !this->virtual_display || !_launch_session) {
+      return false;
+    }
+
+    if (!VDISPLAY::removeVirtualDisplay(_launch_session->display_guid)) {
+      BOOST_LOG(warning) << "Couldn't remove the virtual display to move ["sv << _app_name << "] to this PC's screen"sv;
+      return false;
+    }
+
+    BOOST_LOG(info) << "Moved ["sv << _app_name << "] to this PC's own screen"sv;
+    this->virtual_display = false;
+    this->display_name.clear();
+    this->previous_primary_display.clear();
+    config::video.output_name = initial_display;
+    return true;
+#else
+    return false;
+#endif
+  }
+
   void proc_t::terminate(bool immediate, bool needs_refresh) {
     ++session_generation;
+    platf::set_game_frame_limit(0);
+    frame_limit_fps = 0;
     std::error_code ec;
     placebo = false;
 
@@ -865,7 +979,7 @@ namespace proc {
       } else if (this->virtual_display) {
         BOOST_LOG(warning) << "Virtual Display remove failed";
       } else {
-        BOOST_LOG(warning) << "Virtual Display remove failed, but it seems it was not created correctly either.";
+        BOOST_LOG(info) << "Virtual Display was already removed";
       }
     }
 

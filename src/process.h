@@ -47,6 +47,15 @@ namespace proc {
   extern VDISPLAY::DRIVER_STATUS vDisplayDriverStatus;
   /// True when the last stream could not create its virtual display and showed the PC's own screen
   extern std::atomic_bool vdisplay_failed;
+
+  /**
+   * @brief Reinstall the virtual display driver and reconnect to it, in the background.
+   * @return False if a repair is already running.
+   */
+  bool start_vdisplay_repair();
+
+  /// True while start_vdisplay_repair() is working.
+  bool vdisplay_repair_running();
 #endif
 
   typedef config::prep_cmd_t cmd_t;
@@ -153,6 +162,20 @@ namespace proc {
      */
     void pause(bool connection_lost = false);
     void terminate(bool immediate = false, bool needs_refresh = true);
+
+    /**
+     * @brief Move a paused app from the stream's virtual display to this PC's own screen.
+     * @details Removes the virtual display; Windows then moves the app's windows to the PC's
+     *          monitor. A client that reconnects afterwards streams the PC's own screen.
+     *          Call only when nobody is streaming.
+     * @return False if no app is running on a virtual display, or it could not be removed.
+     */
+    bool continue_on_host();
+
+    /// True while the running app is on the stream's virtual display.
+    bool on_virtual_display() const {
+      return virtual_display;
+    }
 
     /// How long an app is kept running after its last client's connection drops,
     /// when it would otherwise be ended on disconnect.

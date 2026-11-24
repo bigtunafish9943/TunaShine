@@ -139,52 +139,72 @@ namespace nvprefs {
       return true;
     }
 
-    auto make_undo_and_commit = [&]() -> bool {
-      // Create and lock undo file if it hasn't been done yet
-      if (!pimpl->undo_file) {
-        // Prepare TunaStream folder in ProgramData if it doesn't exist
-        if (!CreateDirectoryW(pimpl->undo_folder_path.c_str(), nullptr) && GetLastError() != ERROR_ALREADY_EXISTS) {
-          error_message("Couldn't create undo folder");
-          return false;
-        }
-
-        // Create undo file to handle improper termination of nvprefs.exe
-        pimpl->undo_file = undo_file_t::create_new_file(pimpl->undo_file_path);
-        if (!pimpl->undo_file) {
-          error_message("Couldn't create undo file");
-          return false;
-        }
-      }
-
-      assert(undo_data);
-      if (pimpl->undo_data) {
-        // Merge undo data if settings has been modified externally since our last modification
-        pimpl->undo_data->merge(*undo_data);
-      } else {
-        pimpl->undo_data = undo_data;
-      }
-
-      // Write undo data to undo file
-      if (!pimpl->undo_file->write_undo_data(*pimpl->undo_data)) {
-        error_message("Couldn't write to undo file - deleting the file");
-        if (!pimpl->undo_file->delete_file()) {
-          error_message("Couldn't delete undo file");
-        }
-        return false;
-      }
-
-      // Save global profile settings
-      if (!pimpl->driver_settings.save_settings()) {
-        error_message("Couldn't save global profile settings");
-        return false;
-      }
-
-      return true;
-    };
-
-    if (!make_undo_and_commit()) {
+    if (!commit_global_profile_change(*undo_data)) {
       // Revert settings modifications
       pimpl->driver_settings.load_settings();
+      return false;
+    }
+
+    return true;
+  }
+
+  bool nvprefs_interface::set_frame_limit(unsigned int fps) {
+    if (!pimpl->loaded) {
+      return false;
+    }
+
+    std::optional<undo_data_t> undo_data;
+    if (!pimpl->driver_settings.set_global_frame_limit(fps, pimpl->undo_data, undo_data)) {
+      error_message("Couldn't set Max Frame Rate");
+      return false;
+    } else if (!undo_data) {
+      return true;
+    }
+
+    if (!commit_global_profile_change(*undo_data)) {
+      pimpl->driver_settings.load_settings();
+      return false;
+    }
+
+    return true;
+  }
+
+  bool nvprefs_interface::commit_global_profile_change(const undo_data_t &undo_data) {
+    // Create and lock undo file if it hasn't been done yet
+    if (!pimpl->undo_file) {
+      // Prepare TunaStream folder in ProgramData if it doesn't exist
+      if (!CreateDirectoryW(pimpl->undo_folder_path.c_str(), nullptr) && GetLastError() != ERROR_ALREADY_EXISTS) {
+        error_message("Couldn't create undo folder");
+        return false;
+      }
+
+      // Create undo file to handle improper termination of nvprefs.exe
+      pimpl->undo_file = undo_file_t::create_new_file(pimpl->undo_file_path);
+      if (!pimpl->undo_file) {
+        error_message("Couldn't create undo file");
+        return false;
+      }
+    }
+
+    if (pimpl->undo_data) {
+      // Merge undo data if settings has been modified externally since our last modification
+      pimpl->undo_data->merge(undo_data);
+    } else {
+      pimpl->undo_data = undo_data;
+    }
+
+    // Write undo data to undo file
+    if (!pimpl->undo_file->write_undo_data(*pimpl->undo_data)) {
+      error_message("Couldn't write to undo file - deleting the file");
+      if (!pimpl->undo_file->delete_file()) {
+        error_message("Couldn't delete undo file");
+      }
+      return false;
+    }
+
+    // Save global profile settings
+    if (!pimpl->driver_settings.save_settings()) {
+      error_message("Couldn't save global profile settings");
       return false;
     }
 
