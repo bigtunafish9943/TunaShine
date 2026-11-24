@@ -11,7 +11,7 @@
 namespace game_library {
   /// A game found in one of the PC's game launchers, ready to add as an app.
   struct game_t {
-    std::string source;  ///< steam, epic, gog or program
+    std::string source;  ///< steam, epic, gog, ea, ubisoft, amazon, store or program
     std::string id;  ///< The launcher's own id for the game
     std::string name;  ///< Name shown to the user
     std::string cmd;  ///< Command to run and track, when the game is started directly
@@ -20,8 +20,8 @@ namespace game_library {
   };
 
   /**
-   * @brief List the games installed through Steam, the Epic Games Launcher and GOG Galaxy,
-   *        and the programs in the Start menu.
+   * @brief List the games installed through Steam, Epic, GOG, EA, Ubisoft Connect and Amazon
+   *        Games, and everything in the Start menu, including Microsoft Store and Xbox games.
    * @details Reads each launcher's own records and the Start menu shortcuts; nothing is started
    *          or changed. Tools such as redistributables, runtimes and uninstallers are left out.
    *          Empty on platforms other than Windows.

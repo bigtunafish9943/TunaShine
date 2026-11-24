@@ -51,6 +51,40 @@ jobs:
         with:
           node-version: 22
 
+      # The virtual display driver binary (SudoVDA.dll) and its installer tool (nefconc.exe) are not
+      # in the source tree; Apollo adds them when it builds releases. Take the complete signed driver
+      # package from Apollo's official installer, pinned by the checksum GitHub publishes for it, so
+      # the driver files all come from one signed set.
+      - name: Fetch the virtual display driver
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $url = 'https://github.com/ClassicOldSong/Apollo/releases/download/v0.4.6/Apollo-0.4.6.exe'
+          $expected = '42b2aefaacb3474511517a56b96ee9f0517f30ac38b5dd2fda9fd5b478f5021a'
+          $installer = Join-Path $env:RUNNER_TEMP 'Apollo-0.4.6.exe'
+          Invoke-WebRequest -Uri $url -OutFile $installer
+          $actual = (Get-FileHash -Algorithm SHA256 $installer).Hash.ToLower()
+          if ($actual -ne $expected) { throw "Apollo installer checksum mismatch: $actual" }
+
+          $extract = Join-Path $env:RUNNER_TEMP 'apollo'
+          & 7z x $installer "-o$extract" -y | Out-Null
+          $dll = Get-ChildItem -Path $extract -Recurse -Filter 'SudoVDA.dll' | Select-Object -First 1
+          if (-not $dll) { throw 'SudoVDA.dll not found in the Apollo installer' }
+          $source = $dll.Directory.FullName
+          Write-Host "Driver package found in $source"
+          Get-ChildItem $source | Format-Table Name, Length
+
+          $target = 'src_assets/windows/drivers/sudovda'
+          foreach ($name in 'SudoVDA.dll', 'SudoVDA.inf', 'sudovda.cat', 'nefconc.exe') {
+            $file = Get-ChildItem -Path $source -Filter $name | Select-Object -First 1
+            if (-not $file) { throw "$name missing from the driver package" }
+            Copy-Item $file.FullName (Join-Path $target $file.Name) -Force
+          }
+          # The certificate is optional in the package; keep ours if it isn't there
+          $cer = Get-ChildItem -Path $source -Filter 'sudovda.cer' | Select-Object -First 1
+          if ($cer) { Copy-Item $cer.FullName (Join-Path $target 'sudovda.cer') -Force }
+          Get-ChildItem $target | Format-Table Name, Length
+
       - name: Record Node.js location
         shell: pwsh
         run: |
