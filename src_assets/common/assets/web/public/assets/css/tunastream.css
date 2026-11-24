@@ -743,3 +743,33 @@ body .dropdown-menu {
     flex-wrap: wrap;
     gap: 0.5rem;
 }
+
+/* ---------- Settings: plain-language screen explainer ---------- */
+.screen-explainer {
+    margin-bottom: 1.5rem;
+    padding: 1rem 1.25rem;
+    background-color: var(--bs-tertiary-bg);
+    border-radius: 0.6rem;
+}
+
+.screen-explainer ul {
+    padding-left: 1.2rem;
+    margin-bottom: 0.75rem;
+}
+
+.screen-explainer li {
+    margin-bottom: 0.3rem;
+}
+
+.screen-status {
+    margin: 0;
+    font-weight: 600;
+}
+
+.screen-status-ok i {
+    color: var(--bs-success);
+}
+
+.screen-status-bad {
+    color: var(--bs-warning-text-emphasis);
+}
