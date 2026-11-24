@@ -23,8 +23,15 @@ target_compile_options(audio-info PRIVATE ${TUNASTREAM_COMPILE_OPTIONS})
 
 add_executable(tunastreamsvc tunastreamsvc.cpp)
 set_target_properties(tunastreamsvc PROPERTIES CXX_STANDARD 23)
+# The service only starts TunaStream in the user's session, so it links only what that needs: no
+# networking or other libraries it never calls. It is also built without a link timestamp, so the
+# file is byte-for-byte the same across releases while its source and toolchain don't change. That
+# keeps antivirus reputation (and any false-positive clearance) from resetting with every release.
 target_link_libraries(tunastreamsvc
         ${CMAKE_THREAD_LIBS_INIT}
         wtsapi32
-        ${PLATFORM_LIBRARIES})
+        libssp.a
+        libstdc++.a
+        libwinpthread.a)
+target_link_options(tunastreamsvc PRIVATE -Wl,--no-insert-timestamp)
 target_compile_options(tunastreamsvc PRIVATE ${TUNASTREAM_COMPILE_OPTIONS})
