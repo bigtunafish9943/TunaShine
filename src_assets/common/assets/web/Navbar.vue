@@ -29,7 +29,7 @@
           <li class="nav-item">
             <a class="nav-link" href="./troubleshooting"><i class="fas fa-fw fa-info"></i> {{ $t('navbar.troubleshoot') }}</a>
           </li>
-          <li class="nav-item">
+          <li class="nav-item nav-item-theme">
             <ThemeToggle/>
           </li>
         </ul>
