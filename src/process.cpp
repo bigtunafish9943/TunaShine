@@ -651,7 +651,8 @@ namespace proc {
       return;
     }
 
-    if (_app.terminate_on_pause) {
+    // Either the app asks for this, or the global "end session on disconnect" setting does
+    if (_app.terminate_on_pause || config::sunshine.end_session_on_disconnect) {
       BOOST_LOG(info) << "Terminating app [" << _app_name << "] when all clients are disconnected. Pause commands are skipped.";
       terminate();
       return;

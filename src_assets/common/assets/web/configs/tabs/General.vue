@@ -244,6 +244,14 @@ onMounted(() => {
               v-model="config.hide_tray_controls"
               default="false"
     ></Checkbox>
+
+    <!-- End session when the last client disconnects -->
+    <Checkbox class="mb-3"
+              id="end_session_on_disconnect"
+              locale-prefix="config"
+              v-model="config.end_session_on_disconnect"
+              default="false"
+    ></Checkbox>
   </div>
 </template>
 
