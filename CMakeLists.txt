@@ -6,7 +6,7 @@ cmake_minimum_required(VERSION 3.20)
 
 project(TunaStream VERSION 0.0.0
         DESCRIPTION "Self-hosted game stream host for Artemis"
-        HOMEPAGE_URL "https://github.com/bigtunafish9943/TunaShine")
+        HOMEPAGE_URL "https://github.com/bigtunafish9943/TunaStream")
 
 set(PROJECT_LICENSE "GPL-3.0-only")
 

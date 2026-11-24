@@ -150,11 +150,11 @@
         this.customPort = (port && port !== 47989) ? port : null;
         this.loadStatus();
         console.log("Version: ", this.version.version)
-        const latest = await fetch("https://api.github.com/repos/bigtunafish9943/TunaShine/releases/latest").then((r) => r.ok ? r.json() : null);
+        const latest = await fetch("https://api.github.com/repos/bigtunafish9943/TunaStream/releases/latest").then((r) => r.ok ? r.json() : null);
         this.githubVersion = latest ? new TunaStreamVersion(latest, null) : null;
         console.log("GitHub Version: ", this.githubVersion && this.githubVersion.version)
         if (this.githubVersion) {
-          const pre = (await fetch("https://api.github.com/repos/bigtunafish9943/TunaShine/releases").then((r) => r.ok ? r.json() : [])).find(release => release.prerelease);
+          const pre = (await fetch("https://api.github.com/repos/bigtunafish9943/TunaStream/releases").then((r) => r.ok ? r.json() : [])).find(release => release.prerelease);
           this.preReleaseVersion = pre ? new TunaStreamVersion(pre, null) : null;
           console.log("Pre-Release Version: ", this.preReleaseVersion && this.preReleaseVersion.version)
         }
