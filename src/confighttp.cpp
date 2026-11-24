@@ -41,6 +41,7 @@
 #include "rtsp.h"
 #include "stream.h"
 #include "game_library.h"
+#include "other_hosts.h"
 #include "updater.h"
 #include "utility.h"
 #include "uuid.h"
@@ -874,11 +875,18 @@ namespace confighttp {
       });
     }
     output_tree["streams"] = streams;
+
+    nlohmann::json hosts = nlohmann::json::array();
+    for (const auto &host : other_hosts::installed()) {
+      hosts.push_back({{"name", host.name}, {"service", host.service}, {"running", host.running}});
+    }
+    output_tree["otherHosts"] = hosts;
 #ifdef _WIN32
     output_tree["vdisplayFailed"] = proc::vdisplay_failed.load();
     output_tree["vdisplayStatus"] = (int) proc::vDisplayDriverStatus;
     output_tree["vdisplayRepairing"] = proc::vdisplay_repair_running();
     output_tree["onVirtualDisplay"] = proc::proc.on_virtual_display();
+    output_tree["displayRestoreFailed"] = proc::display_restore_failed.load();
 #endif
     send_response(response, output_tree);
   }
@@ -939,6 +947,33 @@ namespace confighttp {
       output_tree["error"] = "There is no paused game on the stream's screen to move.";
     }
     send_response(response, output_tree);
+  }
+
+  /**
+   * @brief Pause or resume Sunshine or Apollo when they are installed next to TunaStream.
+   * @details Body: {"service": "SunshineService", "run": false}. Only those two services are accepted.
+   */
+  void setOtherHost(resp_https_t response, req_https_t request) {
+    if (!validateContentType(response, request, "application/json") || !authenticate(response, request)) {
+      return;
+    }
+
+    print_req(request);
+
+    nlohmann::json output_tree;
+    try {
+      std::stringstream ss;
+      ss << request->content.rdbuf();
+      auto input = nlohmann::json::parse(ss.str());
+      auto error = other_hosts::set_running(input.value("service", ""), input.value("run", false));
+      output_tree["status"] = error.empty();
+      if (!error.empty()) {
+        output_tree["error"] = error;
+      }
+      send_response(response, output_tree);
+    } catch (std::exception &e) {
+      bad_request(response, request, e.what());
+    }
   }
 
   void startUpdate(resp_https_t response, req_https_t request) {
@@ -1846,6 +1881,7 @@ namespace confighttp {
     server.resource["^/api/vdisplay/repair$"]["POST"] = repairVirtualDisplay;
     server.resource["^/api/apps/continue-here$"]["POST"] = continueHere;
     server.resource["^/api/apps/discover$"]["GET"] = discoverApps;
+    server.resource["^/api/other-hosts$"]["POST"] = setOtherHost;
     server.resource["^/api/apps/add-many$"]["POST"] = addApps;
     server.resource["^/api/logs$"]["GET"] = getLogs;
     server.resource["^/api/config$"]["GET"] = getConfig;

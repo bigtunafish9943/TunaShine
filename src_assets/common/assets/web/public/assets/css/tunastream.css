@@ -1033,3 +1033,36 @@ body .dropdown-menu {
     color: #fff;
     background-color: rgba(255, 255, 255, 0.12);
 }
+
+/* Another streaming host on this PC */
+.home-other-host {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem 1rem;
+    margin: 0 0 1rem;
+    padding: 0.75rem 1rem;
+    background-color: var(--ts-surface);
+    border: 1px solid var(--ts-surface-border);
+    border-radius: 0.75rem;
+}
+
+.home-other-host p {
+    margin: 0;
+    flex: 1 1 24rem;
+}
+
+.home-other-host i {
+    color: var(--bs-warning);
+    margin-right: 0.35rem;
+}
+
+.home-other-host-paused {
+    color: var(--bs-secondary-color);
+}
+
+.home-other-host-error {
+    flex-basis: 100%;
+    color: var(--bs-warning-text-emphasis);
+}
