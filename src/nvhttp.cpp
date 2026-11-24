@@ -1335,7 +1335,7 @@ namespace nvhttp {
           tree.put(
             "root.<xmlattr>.status_message",
             err == 503 ? "Failed to initialize video capture/encoding. Is a display connected and turned on?" :
-            err == 424 ? "TunaStream couldn't create the stream's own screen. On the PC, open TunaStream, go to Troubleshooting and press Repair virtual screen." :
+            err == 424 ? "TunaStream couldn't create the stream's own screen. In TunaReceive, hold select on your PC and choose Repair the PC's virtual screen, or on the PC open TunaStream's Troubleshooting page and press Repair virtual screen." :
                          "Failed to start the specified application");
           tree.put("root.gamesession", 0);
 
@@ -1671,6 +1671,44 @@ namespace nvhttp {
     response->close_connection_after_response = true;
   }
 
+  /**
+   * The virtual screen from the couch: GET /tuna/vdisplay reports whether the driver works and
+   * whether a repair is running; /tuna/vdisplay/repair starts one (reinstalls the driver), unless
+   * someone is streaming. JSON {"ok", "repairing", "started", "error"}.
+   */
+  void tunaVdisplay(resp_https_t response, req_https_t request) {
+    print_req<TunaStreamHTTPS>(request);
+    auto named_cert_p = get_verified_cert(request);
+    nlohmann::json out;
+#ifdef _WIN32
+    out["ok"] = proc::vDisplayDriverStatus == VDISPLAY::DRIVER_STATUS::OK;
+    out["repairing"] = proc::vdisplay_repair_running();
+    if (request->path == "/tuna/vdisplay/repair") {
+      if (!(named_cert_p->perm & PERM::_allow_view)) {
+        out["started"] = false;
+        out["error"] = "This device isn't allowed to do that";
+      } else if (rtsp_stream::session_count() > 0) {
+        out["started"] = false;
+        out["error"] = "Someone is streaming. Repairing removes the stream's screen, so end that stream first.";
+      } else {
+        BOOST_LOG(info) << "Device ["sv << named_cert_p->name << "] asked to repair the virtual display"sv;
+        out["started"] = proc::start_vdisplay_repair();
+        out["repairing"] = true;
+      }
+    }
+#else
+    out["ok"] = false;
+    out["repairing"] = false;
+    out["started"] = false;
+    out["error"] = "Only available on Windows";
+#endif
+    SimpleWeb::CaseInsensitiveMultimap headers;
+    headers.emplace("Content-Type", "application/json");
+    headers.emplace("Cache-Control", "no-store");
+    response->write(SimpleWeb::StatusCode::success_ok, out.dump(), headers);
+    response->close_connection_after_response = true;
+  }
+
   void getClipboard(resp_https_t response, req_https_t request) {
     print_req<TunaStreamHTTPS>(request);
 
@@ -1876,6 +1914,8 @@ namespace nvhttp {
     https_server.resource["^/cancel$"]["GET"] = cancel;
     https_server.resource["^/tuna/speedtest$"]["GET"] = speedtest;
     https_server.resource["^/tuna/files$"]["GET"] = tunaFiles;
+    https_server.resource["^/tuna/vdisplay$"]["GET"] = tunaVdisplay;
+    https_server.resource["^/tuna/vdisplay/repair$"]["GET"] = tunaVdisplay;
     https_server.resource["^/tuna/file$"]["GET"] = tunaFile;
     https_server.resource["^/tuna/file/done$"]["GET"] = tunaFileDone;
     https_server.resource["^/actions/clipboard$"]["GET"] = getClipboard;
