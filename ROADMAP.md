@@ -13,15 +13,19 @@ Everything here is built and passes the automated checks, but has not yet been c
   streaming. Closing the client hands the main display back to the PC; reconnecting takes it again. A dropped
   connection keeps the app running for two minutes instead of quitting it.
 - **Easier setup and a better web UI.** New theme, status home page with first-device steps and an End session
-  button, settings in a side menu, a single Devices page for pairing and permissions with one-click presets, and
-  an app editor that folds rarely used options away.
+  button, navigation and settings in side menus, settings written in plain words with technical options folded
+  under *Advanced settings* or *For experts*, a single Devices page for pairing and permissions with one-click
+  presets, and an app editor that folds rarely used options away.
+- **Updates from inside the app.** The home page offers *Update now* when a new release is out; TunaStream
+  downloads the installer, checks it against GitHub's published checksum and installs it silently.
 - **Installs next to another streaming host**, on its own port.
 - **Releases you can download without a GitHub account**, published from every passing build of `master`, with a
   branded installer.
 - **See who is playing.** The home page lists each streaming device and what its controllers are presented to
   games as.
 - **Translations** of TunaStream's own screens in German, Spanish, French, Italian, Brazilian Portuguese, Russian,
-  Japanese, Chinese and Korean.
+  Japanese, Chinese and Korean. Settings reworded in plain English show in English in other languages until they
+  are translated again.
 
 ## Next
 

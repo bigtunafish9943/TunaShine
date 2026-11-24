@@ -79,7 +79,6 @@
     "working_dir_desc": "O diretório de trabalho que deve ser passado para o processo. Por exemplo, alguns aplicativos usam o diretório de trabalho para procurar arquivos de configuração. Se não estiver definido, o TunaStream será o padrão para o diretório pai do comando"
   },
   "config": {
-    "adapter_name": "Nome do adaptador",
     "adapter_name_desc_linux_1": "Especifique manualmente uma GPU para usar na captura.",
     "adapter_name_desc_linux_2": "para encontrar todos os dispositivos capazes do VAAPI",
     "adapter_name_desc_linux_3": "Substitua ``renderD129`` pelo dispositivo de cima para listar o nome e os recursos do dispositivo. Para ser apoiado pelo Sol, ele precisa ter no mínimo:",

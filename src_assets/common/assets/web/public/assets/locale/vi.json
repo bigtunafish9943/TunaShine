@@ -79,7 +79,6 @@
     "working_dir_desc": "Thư mục làm việc cần được truyền vào quá trình. Ví dụ, một số ứng dụng sử dụng thư mục làm việc để tìm kiếm các tệp cấu hình. Nếu không được thiết lập, TunaStream sẽ mặc định sử dụng thư mục cha của lệnh."
   },
   "config": {
-    "adapter_name": "Adapter Name",
     "adapter_name_desc_linux_1": "Chọn GPU cụ thể để sử dụng cho quá trình capture.",
     "adapter_name_desc_linux_2": "Tìm tất cả các thiết bị hỗ trợ VAAPI",
     "adapter_name_desc_linux_3": "Thay thế ``renderD129`` bằng thiết bị từ trên để liệt kê tên và khả năng của thiết bị. Để được hỗ trợ bởi TunaStream, thiết bị cần phải có ít nhất:",

@@ -79,7 +79,6 @@
     "working_dir_desc": "Sürece aktarılması gereken çalışma dizini. Örneğin, bazı uygulamalar yapılandırma dosyalarını aramak için çalışma dizinini kullanır. Ayarlanmazsa, TunaStream varsayılan olarak komutun üst dizinini kullanır"
   },
   "config": {
-    "adapter_name": "Adaptör Adı",
     "adapter_name_desc_linux_1": "Yakalama için kullanılacak GPU'yu manuel olarak belirleyin.",
     "adapter_name_desc_linux_2": "VAAPI kullanabilen tüm cihazları bulmak için",
     "adapter_name_desc_linux_3": "Cihazın adını ve özelliklerini listelemek için ``renderD129`` yerine yukarıdaki cihazı yazın. TunaStream tarafından desteklenebilmesi için en azından şu özelliklere sahip olması gerekir:",

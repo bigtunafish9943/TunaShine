@@ -27,8 +27,10 @@ set up and pleasant to use.
 - **Survives a dropped connection.** A Wi-Fi hiccup does not quit your game: it keeps running for two minutes so
   you can reconnect.
 - **A clear web interface.** A home page that shows what is streaming, which devices are paired and whether the
-  virtual display is working, with an End session button. Settings in a side menu. Pairing and permissions together
-  on one Devices page.
+  virtual display is working, with an End session button. Settings in plain words, with the technical ones tucked
+  away. Pairing and permissions together on one Devices page.
+- **Updates itself.** When a new version is out, the home page offers *Update now*; TunaStream downloads it,
+  checks it and installs it, keeping your settings and paired devices.
 - **Controller rumble you can test.** Rumble is sent to the client within about 20 ms, and the Troubleshooting
   page can buzz the controller directly so you can tell a game problem from a client problem.
 - **Permissions for each device**, with one-click presets such as *Controller only*.
@@ -48,6 +50,8 @@ set up and pleasant to use.
    virtual gamepad drivers.
 3. **Open TunaStream** from the Start menu or its tray icon, and create the username and password you will use
    for the web interface. The home page then shows the steps to pair your first device.
+
+After that, you don't need to come back here: new versions show up on the home page with an *Update now* button.
 
 Already running another streaming host such as Sunshine? You can keep it. The installer notices and gives
 TunaStream its own port (48989) and a name ending in `-TunaStream`, so both can run and show up separately in your
@@ -73,16 +77,16 @@ grant more, so if a new device says `Permission Denied`, or its mouse and keyboa
   on the TV. Windows still has one mouse, one keyboard and one focused window for both of you, so clicking a window
   on your monitor takes focus away from the game. It works best when the person streaming plays with a
   controller: under **Devices**, edit their device and choose *Controller only*, and under
-  **Configuration > Audio/Video** turn on *Move the Virtual Display to the bottom right-most corner* to stop your
-  mouse sliding onto the stream.
+  **Settings > Screen and sound** turn on *Keep my mouse off the stream's screen*.
 - **A game keeps running after you close the client.** That is the default, so you can pick up where you left
-  off. Turn on *End session when the last client disconnects* under **Configuration**, or *Terminate on Pause*
-  for a single app, to quit it instead.
+  off. Turn on *Quit the game when the last device disconnects* under **Settings > General**, or *Terminate on
+  Pause* for a single app, to quit it instead.
 - **Running next to another streaming host.** TunaStream appears in your client as a separate PC and needs its
   own pairing. If the client doesn't find it, add it by hand using the PC's IP address and the port, such as
   `192.168.1.20:48989`. Stream from one host at a time.
 - **Other virtual display drivers.** Remove them before using TunaStream; two at once cause conflicts.
-- **Laptops with two GPUs.** Under **Configuration > Audio/Video**, set *Adapter Name* to the discrete GPU.
+- **Laptops with two GPUs.** Under **Settings > Screen and sound > Advanced settings**, set *Graphics card* to
+  the discrete GPU.
 - **HDR** needs Windows 11 23H2 or later, and how good it looks depends mostly on the device you stream to.
 
 Something not working? See [troubleshooting](docs/troubleshooting.md) for rumble, connection and stop/start

@@ -137,7 +137,7 @@
     "generic_moonlight_clients_desc": "Generic Moonlight clients are still usable with TunaStream."
   },
   "config": {
-    "adapter_name": "Adapter Name",
+    "adapter_name": "Graphics card",
     "adapter_name_desc_linux_1": "Manually specify a GPU to use for capture.",
     "adapter_name_desc_linux_2": "to find all devices capable of VAAPI",
     "adapter_name_desc_linux_3": "Replace ``renderD129`` with the device from above to lists the name and capabilities of the device. To be supported by TunaStream, it needs to have at the very minimum:",
@@ -206,7 +206,7 @@
     "channels_desc_2": "Some hardware encoders may have limitations that reduce performance with multiple streams.",
     "coder_cabac": "cabac -- context adaptive binary arithmetic coding - higher quality",
     "coder_cavlc": "cavlc -- context adaptive variable-length coding - faster decode",
-    "configuration": "Configuration",
+    "configuration": "Settings",
     "controller": "Controllers",
     "controller_desc": "Let devices use a game controller on this PC.",
     "credentials_file": "Login file",
@@ -563,8 +563,8 @@
     "welcome": "Hello, TunaStream!"
   },
   "navbar": {
-    "applications": "Applications",
-    "configuration": "Configuration",
+    "applications": "Apps",
+    "configuration": "Settings",
     "home": "Home",
     "password": "Change Password",
     "pin": "Devices",

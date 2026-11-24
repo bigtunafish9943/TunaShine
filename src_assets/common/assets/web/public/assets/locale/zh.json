@@ -133,7 +133,6 @@
     "generic_moonlight_clients_desc": "普通 Moonlight 客户端也可与 TunaStream 共同使用。"
   },
   "config": {
-    "adapter_name": "适配器名称",
     "adapter_name_desc_linux_1": "手动指定用于捕获的 GPU。",
     "adapter_name_desc_linux_2": "找到所有能够使用 VAAPI 的设备",
     "adapter_name_desc_linux_3": "用上面的设备替换``renderD129``，列出设备的名称和功能。要获得 TunaStream 的支持，设备至少需要具备以下功能：",

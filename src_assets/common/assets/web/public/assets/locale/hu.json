@@ -79,7 +79,6 @@
     "working_dir_desc": "A folyamatnak átadandó munkakönyvtár. Egyes alkalmazások például a munkakönyvtárat használják a konfigurációs fájlok keresésére. Ha nincs megadva, a TunaStream alapértelmezés szerint a parancs szülő könyvtárát fogja használni."
   },
   "config": {
-    "adapter_name": "Adapter neve",
     "adapter_name_desc_linux_1": "Kézzel adja meg a rögzítéshez használt GPU-t.",
     "adapter_name_desc_linux_2": "az összes VAAPI-képes eszköz megtalálása",
     "adapter_name_desc_linux_3": "A ``renderD129``-t helyettesítsük a fenti eszközzel, hogy felsoroljuk az eszköz nevét és képességeit. Ahhoz, hogy a TunaStream támogassa, legalább a következőkkel kell rendelkeznie:",

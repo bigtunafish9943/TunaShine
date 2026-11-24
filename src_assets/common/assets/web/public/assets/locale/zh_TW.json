@@ -79,7 +79,6 @@
     "working_dir_desc": "這是要傳遞給處理程序的工作目錄。例如，有些應用程式會使用這個目錄來搜尋設定檔。如果沒有設定，TunaStream 會自動使用指令所在的目錄"
   },
   "config": {
-    "adapter_name": "顯示卡名稱",
     "adapter_name_desc_linux_1": "手動指定用於擷取的 GPU。",
     "adapter_name_desc_linux_2": "找出所有支援 VAAPI 的裝置",
     "adapter_name_desc_linux_3": "將 ``renderD129`` 替換為上面提到的裝置，以列出裝置的名稱和功能。要被 TunaStream 支援，裝置至少需要具備以下條件：",

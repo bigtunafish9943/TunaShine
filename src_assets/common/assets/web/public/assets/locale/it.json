@@ -86,7 +86,6 @@
     "working_dir_desc": "La directory di lavoro che dovrebbe essere passata al processo. Per esempio, alcune applicazioni usano la directory di lavoro per cercare i file di configurazione. Se non impostato, TunaStream userà come predefinita la directory padre del comando"
   },
   "config": {
-    "adapter_name": "Nome Adattatore",
     "adapter_name_desc_linux_1": "Specifica manualmente una GPU da usare per la cattura.",
     "adapter_name_desc_linux_2": "per trovare tutti i dispositivi con capacità VAAPI",
     "adapter_name_desc_linux_3": "Sostituisci ``renderD129`` con il dispositivo sopra per elencare il nome e le funzionalità del dispositivo. Per essere supportato da TunaStream, ha bisogno di avere minimo:",
