@@ -1123,6 +1123,7 @@ namespace rtsp_stream {
     // down to nearly nothing.
     if (configuredBitrateKbps) {
       BOOST_LOG(debug) << "Client configured bitrate is "sv << configuredBitrateKbps << " Kbps"sv;
+      config.configuredBitrateKbps = (int) configuredBitrateKbps;
 
       // If the FEC percentage isn't too high, adjust the configured bitrate to ensure video
       // traffic doesn't exceed the user's selected bitrate when the FEC shards are included.

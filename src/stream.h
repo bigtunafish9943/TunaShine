@@ -35,6 +35,10 @@ namespace stream {
     int audioQosType;
     int videoQosType;
 
+    // The bitrate setting on the device, before room for error correction and audio was taken
+    // out of it. Zero when the device didn't say.
+    int configuredBitrateKbps = 0;
+
     uint32_t encryptionFlagsEnabled;
 
     std::optional<int> gcmap;
@@ -53,8 +57,9 @@ namespace stream {
 
     /**
      * @brief Ask the stream's encoder for a different bitrate, without a restart or key frame.
-     * @details Kept between a fifth of and the bitrate the device started the stream with.
-     * @return The bitrate actually asked for, in kbps.
+     * @details kbps is in the units of the device's own bitrate setting, and is scaled to the
+     *          encoder's share of it. Kept between a fifth of and the bitrate the stream started with.
+     * @return The bitrate used, in the same units as kbps.
      */
     int set_bitrate(session_t &session, int kbps);
 
