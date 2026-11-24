@@ -115,6 +115,41 @@ const validateFallbackMode = (event) => {
             <a href="https://github.com/ExistentialAudio/BlackHole" target="_blank">BlackHole</a>.
           </template>
         </PlatformLayout>
+      </div>
+    </div>
+
+    <PlatformLayout :platform="platform">
+      <template #windows>
+        <!-- Virtual Sink -->
+        <div class="mb-3">
+          <label for="virtual_sink" class="form-label">{{ $t('config.virtual_sink') }}</label>
+          <input type="text" class="form-control" id="virtual_sink" :placeholder="$t('config.virtual_sink_placeholder')"
+                 v-model="config.virtual_sink" />
+          <div class="form-text pre-wrap">{{ $t('config.virtual_sink_desc') }}</div>
+        </div>
+        <!-- Install Steam Audio Drivers -->
+        <Checkbox class="mb-3"
+                  id="install_steam_audio_drivers"
+                  locale-prefix="config"
+                  v-model="config.install_steam_audio_drivers"
+                  default="true"
+        ></Checkbox>
+
+        <Checkbox class="mb-3"
+                  id="keep_sink_default"
+                  locale-prefix="config"
+                  v-model="config.keep_sink_default"
+                  default="true"
+        ></Checkbox>
+
+        <Checkbox class="mb-3"
+                  id="auto_capture_sink"
+                  locale-prefix="config"
+                  v-model="config.auto_capture_sink"
+                  default="true"
+        ></Checkbox>
+      </template>
+    </PlatformLayout>
 
     <AdapterNameSelector
         :platform="platform"
