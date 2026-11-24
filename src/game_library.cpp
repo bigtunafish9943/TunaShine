@@ -8,6 +8,11 @@
  * Microsoft Store and Xbox games, comes from the user's Start menu as Windows lists it
  * (Get-StartApps), read as the signed-in user. Nothing is started or changed.
  */
+// The rest of TunaStream uses Boost.Process v1, which must be selected before its headers are included
+#ifndef BOOST_PROCESS_VERSION
+  #define BOOST_PROCESS_VERSION 1
+#endif
+
 // standard includes
 #include <algorithm>
 #include <cctype>
