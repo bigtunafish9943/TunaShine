@@ -5,7 +5,9 @@
 #pragma once
 
 // standard includes
+#include <string>
 #include <utility>
+#include <vector>
 
 // lib includes
 #include <boost/asio.hpp>
@@ -62,6 +64,27 @@ namespace stream {
      * @return Number of connected clients the rumble was sent to.
      */
     int test_rumble();
+
+    /// How smoothly one client's stream is running, measured over the last few seconds.
+    struct health_t {
+      std::string device;  ///< Name of the paired device
+      int target_fps;  ///< Frame rate the client asked for
+      double fps;  ///< New frames sent per second
+      double skipped_per_sec;  ///< Game frames drawn but never sent, per second (the game outran the stream)
+      int gaps;  ///< Times no new frame was sent for more than two frame intervals
+      double pc_ms_avg;  ///< Average time from capture to sending, per frame
+      double pc_ms_max;  ///< Longest time from capture to sending
+      double send_ms_avg;  ///< Average time to put one frame on the network
+      double send_ms_max;  ///< Longest time to put one frame on the network
+      int recoveries;  ///< Times the client asked for lost video to be resent or repaired
+      int bitrate_kbps;  ///< Bitrate the client asked for
+      int send_rate_mbps;  ///< Rate packets are paced at
+      double window_s;  ///< Seconds the figures cover
+    };
+
+    /// Health of every running stream.
+    std::vector<health_t> health();
+
     state_e state(session_t &session);
     inline bool send(session_t& session, const std::string_view &payload);
   }  // namespace session

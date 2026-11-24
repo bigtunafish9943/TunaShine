@@ -754,6 +754,26 @@ namespace confighttp {
       });
     }
     output_tree["controllers"] = controllers;
+
+    nlohmann::json streams = nlohmann::json::array();
+    for (const auto &h : stream::session::health()) {
+      streams.push_back({
+        {"device", h.device},
+        {"targetFps", h.target_fps},
+        {"fps", h.fps},
+        {"skippedPerSec", h.skipped_per_sec},
+        {"gaps", h.gaps},
+        {"pcMsAvg", h.pc_ms_avg},
+        {"pcMsMax", h.pc_ms_max},
+        {"sendMsAvg", h.send_ms_avg},
+        {"sendMsMax", h.send_ms_max},
+        {"recoveries", h.recoveries},
+        {"bitrateKbps", h.bitrate_kbps},
+        {"sendRateMbps", h.send_rate_mbps},
+        {"windowS", h.window_s},
+      });
+    }
+    output_tree["streams"] = streams;
 #ifdef _WIN32
     output_tree["vdisplayFailed"] = proc::vdisplay_failed.load();
 #endif
