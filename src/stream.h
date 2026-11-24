@@ -35,6 +35,10 @@ namespace stream {
     int audioQosType;
     int videoQosType;
 
+    // The bitrate setting on the device, before room for error correction and audio was taken
+    // out of it. Zero when the device didn't say.
+    int configuredBitrateKbps = 0;
+
     uint32_t encryptionFlagsEnabled;
 
     std::optional<int> gcmap;
@@ -53,10 +57,19 @@ namespace stream {
 
     /**
      * @brief Ask the stream's encoder for a different bitrate, without a restart or key frame.
-     * @details Kept between a fifth of and the bitrate the device started the stream with.
-     * @return The bitrate actually asked for, in kbps.
+     * @details kbps is in the units of the device's own bitrate setting, and is scaled to the
+     *          encoder's share of it. Kept between a fifth of and the bitrate the stream started with.
+     * @return The bitrate used, in the same units as kbps.
      */
     int set_bitrate(session_t &session, int kbps);
+
+    /**
+     * @brief Ask the stream's encoder for a smaller or the full picture size, mid-stream.
+     * @details The game keeps drawing at the full size; only what is sent changes. The device
+     *          stretches it back to the screen. Costs one key frame and a brief pause.
+     * @return The percentage actually used: 100, 75, 67 or 50.
+     */
+    int set_picture_scale(session_t &session, int percent);
     bool uuid_match(const session_t& session, const std::string_view& uuid);
     bool update_device_info(session_t& session, const std::string& name, const crypto::PERM& newPerm);
     int start(session_t &session, const std::string &addr_string);
@@ -86,6 +99,7 @@ namespace stream {
       int recoveries;  ///< Times the client asked for lost video to be resent or repaired
       int bitrate_kbps;  ///< Bitrate the video is being sent at right now
       int fec_percent;  ///< Error correction being added to each frame right now
+      int picture_scale;  ///< Picture size in percent of what the device asked for
       int send_rate_mbps;  ///< Rate packets are paced at
       double window_s;  ///< Seconds the figures cover
     };
