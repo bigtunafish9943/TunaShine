@@ -85,6 +85,7 @@ set(TUNASTREAM_TARGET_FILES
         "${CMAKE_SOURCE_DIR}/src/httpcommon.h"
         "${CMAKE_SOURCE_DIR}/src/confighttp.cpp"
         "${CMAKE_SOURCE_DIR}/src/updater.cpp"
+        "${CMAKE_SOURCE_DIR}/src/game_library.cpp"
         "${CMAKE_SOURCE_DIR}/src/updater.h"
         "${CMAKE_SOURCE_DIR}/src/confighttp.h"
         "${CMAKE_SOURCE_DIR}/src/rtsp.cpp"

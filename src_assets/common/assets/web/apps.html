@@ -103,7 +103,40 @@
           </button>
         </div>
     </div>
-    <div v-if="!showEditForm">
+    <!-- Pick games and programs found on this PC -->
+    <section class="app-picker" v-if="showPicker && !showEditForm" aria-labelledby="app-picker-title">
+      <h2 class="h4" id="app-picker-title">{{ $t('apps.picker_title') }}</h2>
+      <p class="app-picker-lead">{{ $t('apps.picker_lead') }}</p>
+      <p class="app-picker-warning" v-if="currentApp">{{ $t('apps.picker_running') }}</p>
+      <input type="search" class="form-control app-picker-search" v-model="pickerSearch"
+             :placeholder="$t('apps.picker_search')" :aria-label="$t('apps.picker_search')" v-if="pickerGames.length">
+      <p v-if="pickerLoading" role="status">
+        <span class="spinner-border spinner-border-sm" aria-hidden="true"></span> {{ $t('apps.picker_loading') }}
+      </p>
+      <p v-else-if="!pickerGames.length">{{ $t('apps.picker_none') }}</p>
+      <template v-for="group in pickerGroups" :key="group.source">
+        <h3 class="app-picker-group">{{ $t('apps.picker_source_' + group.source) }} <span>{{ group.items.length }}</span></h3>
+        <ul class="app-picker-list">
+          <li v-for="g in group.items" :key="g.key">
+            <label class="app-picker-item" :class="{ 'app-picker-added': g.added, 'app-picker-chosen': pickerChosen.includes(g.key) }">
+              <input type="checkbox" class="form-check-input" :value="g.key" v-model="pickerChosen" :disabled="g.added">
+              <span class="app-picker-name">{{ g.name }}</span>
+              <span class="app-picker-badge" v-if="g.added">{{ $t('apps.picker_added') }}</span>
+            </label>
+          </li>
+        </ul>
+      </template>
+      <p class="app-picker-warning" v-if="pickerError">{{ pickerError }}</p>
+      <div class="app-picker-actions">
+        <button class="btn btn-outline-secondary" @click="showPicker = false" :disabled="pickerSaving">{{ $t('_common.cancel') }}</button>
+        <button class="btn btn-primary" @click="addPicked" :disabled="!pickerChosen.length || pickerSaving || !!currentApp">
+          <span class="spinner-border spinner-border-sm" v-if="pickerSaving" aria-hidden="true"></span>
+          {{ $t('apps.picker_add', { n: pickerChosen.length }) }}
+        </button>
+      </div>
+    </section>
+
+    <div v-if="!showEditForm && !showPicker">
       <ol class="app-list">
         <li
           v-for="(app,i) in apps"
@@ -141,7 +174,10 @@
         </li>
       </ol>
       <div class="app-list-footer">
-        <button class="btn btn-primary" @click="newApp" :disabled="actionDisabled">
+        <button class="btn btn-primary" @click="openPicker" :disabled="actionDisabled">
+          <i class="fas fa-magnifying-glass"></i> {{ $t('apps.add_from_pc') }}
+        </button>
+        <button class="btn btn-outline-primary" @click="newApp" :disabled="actionDisabled">
           <i class="fas fa-plus"></i> {{ $t('apps.add_new') }}
         </button>
         <button class="btn btn-warning" @click="saveOrder" :disabled="actionDisabled" v-if="listReordered">
@@ -565,6 +601,13 @@
       return {
         apps: [],
         showEditForm: false,
+        showPicker: false,
+        pickerLoading: false,
+        pickerGames: [],
+        pickerChosen: [],
+        pickerSearch: "",
+        pickerSaving: false,
+        pickerError: "",
         actionDisabled: false,
         editForm: null,
         detachedCmd: "",
@@ -587,6 +630,19 @@
       })
         .then(r => r.json())
         .then(r => this.platform = r.platform);
+    },
+    computed: {
+      /** Found games and programs, filtered by the search box and grouped by where they came from. */
+      pickerGroups() {
+        const q = this.pickerSearch.trim().toLowerCase();
+        const order = ['steam', 'epic', 'gog', 'program'];
+        return order
+          .map((source) => ({
+            source,
+            items: this.pickerGames.filter((g) => g.source === source && (!q || g.name.toLowerCase().includes(q))),
+          }))
+          .filter((group) => group.items.length);
+      },
     },
     methods: {
       onDragStart(e, idx) {
@@ -698,6 +754,53 @@
           this.hostUUID = r.host_uuid;
           this.listReordered = false;
         });
+      },
+      /** Look for games and programs on this PC and show them with checkboxes. */
+      async openPicker() {
+        this.showPicker = true;
+        this.pickerChosen = [];
+        this.pickerSearch = "";
+        this.pickerError = "";
+        this.pickerLoading = true;
+        try {
+          const r = await fetch("./api/apps/discover", { credentials: 'include' }).then((r) => r.json());
+          const existingNames = new Set(this.apps.map((a) => (a.name || "").toLowerCase()));
+          const existingCmds = new Set(this.apps.flatMap((a) => [a.cmd, ...(a.detached || [])]).filter(Boolean).map((c) => c.toLowerCase()));
+          this.pickerGames = (r.games || []).map((g) => ({
+            ...g,
+            key: g.source + ":" + g.id,
+            added: existingNames.has(g.name.toLowerCase()) ||
+              (!!g.cmd && existingCmds.has(g.cmd.toLowerCase())) ||
+              (!!g.detached && existingCmds.has(g.detached.toLowerCase())),
+          }));
+        } catch (e) {
+          console.error(e);
+          this.pickerGames = [];
+          this.pickerError = this.$t('apps.picker_failed');
+        }
+        this.pickerLoading = false;
+      },
+      async addPicked() {
+        this.pickerSaving = true;
+        this.pickerError = "";
+        const chosen = this.pickerGames.filter((g) => this.pickerChosen.includes(g.key));
+        try {
+          const r = await fetch("./api/apps/add-many", {
+            credentials: 'include',
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ apps: chosen.map((g) => ({ name: g.name, cmd: g.cmd, detached: g.detached, workingDir: g.workingDir })) }),
+          }).then((r) => r.json());
+          if (!r.status) {
+            this.pickerError = r.error || this.$t('apps.picker_failed');
+          } else {
+            this.showPicker = false;
+            await this.loadApps();
+          }
+        } catch (e) {
+          this.pickerError = this.$t('apps.picker_failed');
+        }
+        this.pickerSaving = false;
       },
       newApp() {
         this.editForm = Object.assign({}, newApp);

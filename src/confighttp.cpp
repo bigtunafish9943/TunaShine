@@ -40,6 +40,7 @@
 #include "process.h"
 #include "rtsp.h"
 #include "stream.h"
+#include "game_library.h"
 #include "updater.h"
 #include "utility.h"
 #include "uuid.h"
@@ -683,6 +684,105 @@ namespace confighttp {
     }
     catch (std::exception &e) {
       BOOST_LOG(warning) << "SaveApp: "sv << e.what();
+      bad_request(response, request, e.what());
+    }
+  }
+
+  /**
+   * @brief List the games and programs installed on this PC, to offer as new apps.
+   */
+  void discoverApps(resp_https_t response, req_https_t request) {
+    if (!authenticate(response, request)) {
+      return;
+    }
+
+    print_req(request);
+
+    nlohmann::json games = nlohmann::json::array();
+    for (const auto &game : game_library::find_installed_games()) {
+      games.push_back({
+        {"source", game.source},
+        {"id", game.id},
+        {"name", game.name},
+        {"cmd", game.cmd},
+        {"detached", game.detached},
+        {"workingDir", game.working_dir},
+      });
+    }
+
+    nlohmann::json output_tree;
+    output_tree["status"] = true;
+    output_tree["games"] = games;
+    send_response(response, output_tree);
+  }
+
+  /**
+   * @brief Add several apps at once, as picked from the list of installed games and programs.
+   * @details Body: {"apps": [{"name", "cmd", "detached", "workingDir"}]}. Refused while an app is
+   *          running, because reloading the app list ends it.
+   */
+  void addApps(resp_https_t response, req_https_t request) {
+    if (!validateContentType(response, request, "application/json") || !authenticate(response, request)) {
+      return;
+    }
+
+    print_req(request);
+
+    nlohmann::json output_tree;
+    if (proc::proc.running()) {
+      output_tree["status"] = false;
+      output_tree["error"] = "A game is running. End the session first, then add apps.";
+      send_response(response, output_tree);
+      return;
+    }
+
+    try {
+      std::stringstream ss;
+      ss << request->content.rdbuf();
+      auto input = nlohmann::json::parse(ss.str());
+
+      auto file_tree = nlohmann::json::parse(file_handler::read_file(config::stream.file_apps.c_str()));
+      int added = 0;
+      for (const auto &item : input.at("apps")) {
+        auto name = item.value("name", "");
+        auto cmd = item.value("cmd", "");
+        auto detached = item.value("detached", "");
+        if (name.empty() || (cmd.empty() && detached.empty())) {
+          continue;
+        }
+
+        nlohmann::json app {
+          {"name", name},
+          {"cmd", cmd},
+          {"working-dir", item.value("workingDir", "")},
+          {"detached", detached.empty() ? nlohmann::json::array() : nlohmann::json::array({detached})},
+          {"image-path", ""},
+          {"auto-detach", true},
+          {"wait-all", true},
+          {"exit-timeout", 5},
+          {"elevated", false},
+          {"exclude-global-prep-cmd", false},
+          {"exclude-global-state-cmd", false},
+          {"prep-cmd", nlohmann::json::array()},
+          {"state-cmd", nlohmann::json::array()},
+          {"scale-factor", 100},
+          {"allow-client-commands", true},
+          {"virtual-display", false},
+          {"terminate-on-pause", false},
+        };
+        proc::migrate_apps(&file_tree, &app);
+        ++added;
+      }
+
+      file_handler::write_file(config::stream.file_apps.c_str(), file_tree.dump(4));
+      proc::refresh(config::stream.file_apps);
+      BOOST_LOG(info) << "Added "sv << added << " apps from this PC"sv;
+
+      output_tree["status"] = true;
+      output_tree["added"] = added;
+      send_response(response, output_tree);
+    } catch (std::exception &e) {
+      BOOST_LOG(warning) << "AddApps: "sv << e.what();
       bad_request(response, request, e.what());
     }
   }
@@ -1745,6 +1845,8 @@ namespace confighttp {
     server.resource["^/api/update$"]["POST"] = startUpdate;
     server.resource["^/api/vdisplay/repair$"]["POST"] = repairVirtualDisplay;
     server.resource["^/api/apps/continue-here$"]["POST"] = continueHere;
+    server.resource["^/api/apps/discover$"]["GET"] = discoverApps;
+    server.resource["^/api/apps/add-many$"]["POST"] = addApps;
     server.resource["^/api/logs$"]["GET"] = getLogs;
     server.resource["^/api/config$"]["GET"] = getConfig;
     server.resource["^/api/config$"]["POST"] = saveConfig;
