@@ -1709,6 +1709,34 @@ namespace nvhttp {
     response->close_connection_after_response = true;
   }
 
+  /**
+   * Picture quality that adjusts itself: GET /tuna/bitrate?kbps=N asks the encoder of this
+   * device's own stream for a new bitrate. JSON {"applied", "kbps"}.
+   */
+  void tunaBitrate(resp_https_t response, req_https_t request) {
+    print_req<TunaStreamHTTPS>(request);
+    auto named_cert_p = get_verified_cert(request);
+    auto args = request->parse_query_string();
+    nlohmann::json out;
+    out["applied"] = false;
+    int kbps = 0;
+    try {
+      kbps = std::stoi(get_arg(args, "kbps", "0"));
+    } catch (...) {
+      kbps = 0;
+    }
+    auto session = rtsp_stream::find_session(named_cert_p->uuid);
+    if (session && kbps > 0) {
+      out["kbps"] = stream::session::set_bitrate(*session, kbps);
+      out["applied"] = true;
+    }
+    SimpleWeb::CaseInsensitiveMultimap headers;
+    headers.emplace("Content-Type", "application/json");
+    headers.emplace("Cache-Control", "no-store");
+    response->write(SimpleWeb::StatusCode::success_ok, out.dump(), headers);
+    response->close_connection_after_response = true;
+  }
+
   void getClipboard(resp_https_t response, req_https_t request) {
     print_req<TunaStreamHTTPS>(request);
 
@@ -1914,6 +1942,7 @@ namespace nvhttp {
     https_server.resource["^/cancel$"]["GET"] = cancel;
     https_server.resource["^/tuna/speedtest$"]["GET"] = speedtest;
     https_server.resource["^/tuna/files$"]["GET"] = tunaFiles;
+    https_server.resource["^/tuna/bitrate$"]["GET"] = tunaBitrate;
     https_server.resource["^/tuna/vdisplay$"]["GET"] = tunaVdisplay;
     https_server.resource["^/tuna/vdisplay/repair$"]["GET"] = tunaVdisplay;
     https_server.resource["^/tuna/file$"]["GET"] = tunaFile;

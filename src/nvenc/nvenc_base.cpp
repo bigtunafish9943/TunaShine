@@ -386,6 +386,14 @@ namespace nvenc {
       return false;
     }
 
+    // Remember how the encoder was set up, so its bitrate can be changed mid-stream
+    saved_enc_config = enc_config;
+    saved_init_params = init_params;
+    saved_init_params.encodeConfig = &saved_enc_config;
+    saved_framerate = client_config.framerate > 0 ? client_config.framerate : 60;
+    saved_vbv_percentage_increase = config.vbv_percentage_increase;
+    reconfigure_ready = true;
+
     if (async_event_handle) {
       NV_ENC_EVENT_PARAMS event_params = {min_struct_version(NV_ENC_EVENT_PARAMS_VER)};
       event_params.completionEvent = async_event_handle;
@@ -569,6 +577,35 @@ namespace nvenc {
     encoder_state.frame_size_logger.collect_and_log(encoded_frame.data.size() / 1000.);
 
     return encoded_frame;
+  }
+
+  bool nvenc_base::set_bitrate(uint32_t kbps) {
+    if (!encoder || !reconfigure_ready || kbps == 0) {
+      return false;
+    }
+
+    saved_enc_config.rcParams.averageBitRate = kbps * 1000;
+    if (saved_enc_config.rcParams.vbvBufferSize > 0) {
+      // Same one-frame buffer as at the start, for the new rate
+      uint32_t vbv = kbps * 1000 / saved_framerate;
+      if (saved_vbv_percentage_increase > 0) {
+        vbv += vbv * saved_vbv_percentage_increase / 100;
+      }
+      saved_enc_config.rcParams.vbvBufferSize = vbv;
+    }
+
+    NV_ENC_RECONFIGURE_PARAMS params = {min_struct_version(NV_ENC_RECONFIGURE_PARAMS_VER)};
+    params.reInitEncodeParams = saved_init_params;
+    params.reInitEncodeParams.encodeConfig = &saved_enc_config;
+    params.resetEncoder = 0;
+    params.forceIDR = 0;
+
+    if (nvenc_failed(nvenc->nvEncReconfigureEncoder(encoder, &params))) {
+      BOOST_LOG(warning) << "NvEnc: couldn't change the bitrate to " << kbps << " kbps: " << last_nvenc_error_string;
+      return false;
+    }
+    BOOST_LOG(info) << "NvEnc: bitrate now " << kbps << " kbps";
+    return true;
   }
 
   bool nvenc_base::invalidate_ref_frames(uint64_t first_frame, uint64_t last_frame) {

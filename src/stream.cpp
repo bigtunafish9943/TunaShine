@@ -377,6 +377,7 @@ namespace stream {
 
       safe::mail_raw_t::event_t<bool> idr_events;
       safe::mail_raw_t::event_t<std::pair<int64_t, int64_t>> invalidate_ref_frames_events;
+      safe::mail_raw_t::event_t<int> bitrate_events;
 
       std::unique_ptr<platf::deinit_t> qos;
     } video;
@@ -2191,6 +2192,14 @@ namespace stream {
       return session.device_uuid;
     }
 
+    int set_bitrate(session_t &session, int kbps) {
+      // Never above what the device asked for when the stream started, never below a fifth of it
+      const int asked = session.config.monitor.bitrate;
+      const int clamped = std::clamp(kbps, std::max(1000, asked / 5), asked);
+      session.video.bitrate_events->raise(clamped);
+      return clamped;
+    }
+
     bool uuid_match(const session_t &session, const std::string_view& uuid) {
       return session.device_uuid == uuid;
     }
@@ -2407,6 +2416,7 @@ namespace stream {
 
       session->video.idr_events = mail->event<bool>(mail::idr);
       session->video.invalidate_ref_frames_events = mail->event<std::pair<int64_t, int64_t>>(mail::invalidate_ref_frames);
+      session->video.bitrate_events = mail->event<int>(mail::bitrate);
       session->video.lowseq = 0;
       session->video.ping_payload = launch_session.av_ping_payload;
       if (config.encryptionFlagsEnabled & SS_ENC_VIDEO) {
