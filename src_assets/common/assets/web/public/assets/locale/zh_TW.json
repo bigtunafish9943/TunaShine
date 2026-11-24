@@ -28,10 +28,8 @@
   "apps": {
     "actions": "行動",
     "add_cmds": "新增指令",
-    "add_new": "新增",
     "app_name": "應用程式名稱",
     "app_name_desc": "應用程式名稱（在 Moonlight 上顯示的名稱）",
-    "applications_desc": "應用程式清單僅在用戶端重新啟動時更新",
     "applications_title": "應用程式一覽",
     "auto_detach": "即使應用程式瞬間關閉，仍會繼續串流。",
     "auto_detach_desc": "此功能會自動偵測那些在啟動其他程式或自身的另一個執行個體後，立即關閉的啟動器類應用程式。一旦偵測到這類應用程式，系統會將其視為獨立運行的應用程式。",
@@ -61,7 +59,6 @@
     "env_qres_example": "範例 - 用於解析度自動化的 QRes：",
     "env_qres_path": "qres 路徑",
     "env_var_name": "變數名稱",
-    "env_vars_about": "關於環境變數",
     "env_vars_desc": "所有指令預設會獲得這些環境變數：",
     "env_xrandr_example": "範例 - 用於解析度自動化的 Xrandr：",
     "exit_timeout": "結束逾時設定",
@@ -393,7 +390,6 @@
     "configuration": "組態",
     "home": "首頁",
     "password": "變更密碼",
-    "pin": "Pin 碼",
     "theme_auto": "自動",
     "theme_dark": "深色主題",
     "theme_light": "淺色主題",
@@ -409,21 +405,15 @@
     "success_msg": "密碼已成功變更！此頁面將很快重新載入，您的瀏覽器將要求輸入新的憑證。"
   },
   "pin": {
-    "device_name": "裝置名稱",
     "pair_failure": "配對失敗：請確認 PIN 碼是否輸入正確",
-    "pair_success": "成功！請檢查 Moonlight 來繼續",
-    "pin_pairing": "PIN 碼配對",
-    "send": "發送",
     "warning_msg": "請確保您可以存取要配對的用戶端。此軟體可讓對方完全控制您的電腦，請小心使用！"
   },
   "resource_card": {
-    "github_discussions": "GitHub 討論區",
     "legal": "法律資訊",
     "legal_desc": "繼續使用本軟體即表示您同意下列文件中的條款和條件。",
     "license": "許可證",
     "lizardbyte_website": "LizardByte 網站",
     "resources": "資源",
-    "resources_desc": "TunaStream 相關資源！",
     "third_party_notice": "第三方通知"
   },
   "troubleshooting": {
@@ -452,11 +442,6 @@
     "unpair_title": "解除配對裝置"
   },
   "welcome": {
-    "confirm_password": "確認密碼",
-    "create_creds": "在開始之前，我們需要您建立新的使用者名稱和密碼，以便存取 Web UI。",
-    "create_creds_alert": "存取 TunaStream 的 Web UI 需要以下憑證。請妥善保管，因為您將無法再查看這些憑證！",
-    "greeting": "歡迎來到 TunaStream！",
-    "login": "登入",
-    "welcome_success": "此頁面將很快重新載入，您的瀏覽器會要求您提供新的憑證"
+    "confirm_password": "確認密碼"
   }
 }
