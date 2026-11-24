@@ -5,6 +5,10 @@ name: Build Windows
 on:
   push:
     branches: ['**']
+    # Documentation-only pushes do not need a build
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
   workflow_dispatch:
 
 permissions:
@@ -12,7 +16,8 @@ permissions:
 
 concurrency:
   group: build-windows-${{ github.ref }}
-  cancel-in-progress: true
+  # Let a running build finish; a newer push waits its turn instead of restarting it
+  cancel-in-progress: false
 
 jobs:
   build:
