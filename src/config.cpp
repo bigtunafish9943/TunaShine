@@ -567,7 +567,8 @@ namespace config {
       platf::supported_gamepads(nullptr).front().name.size(),
     },  // Default gamepad
     true,  // back as touchpad click enabled (manual DS4 only)
-    true,  // client gamepads with motion events are emulated as DS4
+    false,  // client gamepads with motion events are emulated as DS4: off, so Xbox-style pads with a
+            // gyro (8BitDo, Switch Pro) stay Xbox 360, which rumbles more reliably in PC games
     true,  // client gamepads with touchpads are emulated as DS4
     true,  // ds5_inputtino_randomize_mac
 
