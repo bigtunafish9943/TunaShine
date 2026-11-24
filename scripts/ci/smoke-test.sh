@@ -34,9 +34,17 @@ bat_win=$(cygpath -w "$root/scripts/coexist-setup.bat")
 conf="$root/config/tunastream.conf"
 run_bat() { cmd.exe //c "$bat_win" > "$work/bat.out" 2>&1; echo "exit=$?" >> "$work/bat.out"; }
 
+# This part creates and deletes a stand-in SunshineService. On a PC with a real Sunshine or Apollo
+# that would remove the real service, so refuse to run anywhere one is installed.
+for real_service in SunshineService ApolloService; do
+  if sc.exe query "$real_service" > /dev/null 2>&1; then
+    echo "::error::$real_service is installed on this machine. This test deletes that service, so it only runs on a clean build machine."
+    echo "RESULT: 1 failure(s)"
+    exit 1
+  fi
+done
+
 # No other host installed: nothing should be written
-sc.exe delete SunshineService > /dev/null 2>&1
-sc.exe delete ApolloService > /dev/null 2>&1
 run_bat
 expect "script exits cleanly with no other host" "$(cat "$work/bat.out")" "exit=0"
 if [ -f "$conf" ]; then fail "config left alone with no other host (file was created)"; else pass "config left alone with no other host"; fi
@@ -161,6 +169,8 @@ expect "setup done is read back" "$(get /api/config | json setup_complete)" "ena
 expect "status reports virtual screen repair state" "$(get /api/status | json vdisplayRepairing)" "False"
 expect "play-here refuses with nothing paused" "$(post /api/apps/continue-here '{}' | json status)" "False"
 expect "installed games and programs can be listed" "$(get /api/apps/discover | json status)" "True"
+expect "status lists other streaming hosts" "$(get /api/status | json otherHosts)" "["
+expect "other-host control refuses unknown services" "$(post /api/other-hosts '{"service":"Spooler","run":false}' | json status)" "False"
 expect "end session answers with nothing running" "$(post /api/apps/close '{}' | json status)" "True"
 expect "picked apps can be added" "$(post /api/apps/add-many '{"apps":[{"name":"Smoke Test App","cmd":"cmd.exe /c exit","detached":"","workingDir":""}]}' | json added)" "1"
 expect "added app is in the app list" "$(get /api/apps)" "Smoke Test App"

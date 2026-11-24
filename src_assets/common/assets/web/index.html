@@ -53,6 +53,25 @@
       <a href="./troubleshooting#restart">{{ $t('index.vdisplay_failed_fix') }}</a>
     </div>
 
+    <!-- The PC's own monitor did not come back as the main display -->
+    <div class="alert alert-warning" v-if="displayRestoreFailed" role="alert">
+      {{ $t('index.display_restore_failed') }}
+    </div>
+
+    <!-- Another streaming host running on this PC -->
+    <div class="home-other-host" v-for="host in otherHosts" :key="host.service">
+      <p v-if="host.running">
+        <i class="fas fa-triangle-exclamation" aria-hidden="true"></i>
+        {{ $t('index.other_host_running', { name: host.name }) }}
+      </p>
+      <p v-else class="home-other-host-paused">{{ $t('index.other_host_paused', { name: host.name }) }}</p>
+      <button type="button" class="btn btn-sm" :class="host.running ? 'btn-warning' : 'btn-outline-secondary'"
+              :disabled="hostBusy === host.service" @click="setOtherHost(host, !host.running)">
+        {{ host.running ? $t('index.other_host_pause', { name: host.name }) : $t('index.other_host_start', { name: host.name }) }}
+      </button>
+      <span class="home-other-host-error" v-if="hostError && hostErrorFor === host.service">{{ hostError }}</span>
+    </div>
+
     <!-- A game left open on the stream's screen, with nobody streaming it -->
     <div class="home-paused" v-if="currentAppName && pausedOnStreamScreen">
       <div>
@@ -197,6 +216,11 @@
         hostName: "",
         currentAppName: "",
         pausedOnStreamScreen: false,
+        displayRestoreFailed: false,
+        otherHosts: [],
+        hostBusy: "",
+        hostError: "",
+        hostErrorFor: "",
         continuing: false,
         continueError: "",
         clientCount: null,
@@ -301,6 +325,28 @@
         this.update = { ...this.update, stage: 'failed', error: this.$t('index.update_no_restart') };
       },
       /** Quit the app that is being streamed, which also disconnects whoever is playing. */
+      /** Pause or start Sunshine or Apollo when they are installed next to TunaStream. */
+      async setOtherHost(host, run) {
+        this.hostBusy = host.service;
+        this.hostError = "";
+        try {
+          const r = await fetch("./api/other-hosts", {
+            credentials: 'include',
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ service: host.service, run }),
+          }).then((r) => r.json());
+          if (!r.status) {
+            this.hostError = r.error || this.$t('index.other_host_failed');
+            this.hostErrorFor = host.service;
+          }
+        } catch (e) {
+          this.hostError = this.$t('index.other_host_failed');
+          this.hostErrorFor = host.service;
+        }
+        this.hostBusy = "";
+        await this.loadStatus();
+      },
       /** Move the paused game from the stream's screen onto this PC's monitor. */
       async continueHere() {
         this.continuing = true;
@@ -389,6 +435,10 @@
             this.vdisplayStatus = status.vdisplayStatus;
           }
           this.pausedOnStreamScreen = !!(status && status.onVirtualDisplay && status.sessions === 0);
+          this.displayRestoreFailed = !!(status && status.displayRestoreFailed);
+          if (!this.hostBusy) {
+            this.otherHosts = (status && status.otherHosts) || [];
+          }
           // One entry per connected device, with the controllers it brought
           const names = [...new Set([...connected, ...controllers.map((c) => c.device)])];
           const streams = (status && status.streams) || [];
