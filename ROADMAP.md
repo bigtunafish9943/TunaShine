@@ -47,6 +47,8 @@ way. What it would add over stock Moonlight:
 - **Smooth-video defaults** that match TunaStream's frame-rate matching, and the stream health readout on screen.
 - **TunaStream actions from the couch**: end the session, play it on the PC, repair the virtual screen.
 - Pairing without typing a PIN, by scanning a code shown on the TunaStream home page.
+- **Send files from the PC to the device**: a *Send to device* button on the TunaStream home page, delivered
+  over the existing paired connection, with no extra app or login. Until then, LocalSend does the job.
 
 Built and published by GitHub Actions like the host. Starts once the host has settled on real hardware.
 

@@ -319,12 +319,12 @@ namespace proc {
     }
 
 #ifdef _WIN32
-    if (
+    const bool wants_virtual_display =
       config::video.headless_mode        // Headless mode
       || launch_session->virtual_display // User requested virtual display
       || _app.virtual_display            // App is configured to use virtual display
-      || !video::allow_encoder_probing() // No active display presents
-    ) {
+      || !video::allow_encoder_probing(); // No active display presents
+    if (wants_virtual_display) {
       if (vDisplayDriverStatus != VDISPLAY::DRIVER_STATUS::OK) {
         // Try init driver again
         initVDisplayDriver();
@@ -462,6 +462,13 @@ namespace proc {
         vdisplay_failed = true;
         BOOST_LOG(warning) << "Streaming the PC's own monitor because the virtual display driver isn't working"sv;
       }
+    }
+
+    // The stream should be on its own screen but isn't: refuse it rather than put the PC's own
+    // monitor on the device. The fail guard ends the launch and removes anything half made.
+    if (wants_virtual_display && config::video.virtual_display_only && !this->virtual_display) {
+      BOOST_LOG(warning) << "Not starting the stream: its virtual display couldn't be made, and streaming the PC's own monitor is turned off"sv;
+      return 424;
     }
 
     display_device::configure_display(config::video, *launch_session);
