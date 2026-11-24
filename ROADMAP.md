@@ -10,8 +10,8 @@ What TunaShine is working toward, roughly in order. Nothing here is a promise or
 - **Returning to the PC when the client disconnects.** Restoring the physical display, resolution and window
   positions when a stream ends is unreliable. Needs investigation in the display restore code.
 - **Easier setup and a better web UI.** Done so far: new theme, status home page with first-device steps, settings
-  in a side menu, a single Devices page for pairing and permissions. Still to do: the Applications page, the app
-  editor, and a guided first run.
+  in a side menu, a single Devices page for pairing and permissions. The app editor now shows the few fields most apps
+  need and folds the rest away. Still to do: the Applications list itself.
 
 ## Next
 
