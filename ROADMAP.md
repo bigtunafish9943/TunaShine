@@ -21,6 +21,11 @@ Everything here is built and passes the automated checks, but has not yet been c
 - **Installs next to another streaming host**, on its own port.
 - **Releases you can download without a GitHub account**, published from every passing build of `master`, with a
   branded installer.
+- **A stream that fits itself to the connection.** With TunaReceive, the bitrate steps down when frames start
+  arriving slowly (before any are lost) and back up when the connection clears; the picture size follows once the
+  bitrate is too thin for it (4K to 1440p and back); and packet-loss protection uses less on a clean connection
+  and more on a rough one. Windows doesn't scan for other Wi-Fi networks mid-stream, and the home page says when
+  the PC itself is on Wi-Fi.
 - **See who is playing.** The home page lists each streaming device and what its controllers are presented to
   games as.
 - **Translations** of TunaStream's own screens in German, Spanish, French, Italian, Brazilian Portuguese, Russian,
@@ -65,8 +70,6 @@ Still to come:
   Tailscale and the PC is added by its Tailscale address. To make that easy: show the PC's Tailscale address on the
   home page, treat it as a trusted address for pairing, pick a picture that fits the home's upload speed, and say
   when the connection is being relayed instead of going direct.
-- **Picture size that adjusts itself.** The bitrate and packet-loss protection already follow the connection; the
-  picture size (4K down to 1440p and back) could follow it too.
 - **Two people using one PC independently.** Today a stream shares the mouse, keyboard and window focus with
   whoever is at the PC. Fully separate use means a separate Windows session for each person, which is what Duo
   does by patching Remote Desktop. That is a large project with licensing questions, not a setting.

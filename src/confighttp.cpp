@@ -898,6 +898,7 @@ namespace confighttp {
         {"bitrateKbps", h.bitrate_kbps},
         {"sendRateMbps", h.send_rate_mbps},
         {"fecPercent", h.fec_percent},
+        {"pictureScale", h.picture_scale},
         {"windowS", h.window_s},
       });
     }
