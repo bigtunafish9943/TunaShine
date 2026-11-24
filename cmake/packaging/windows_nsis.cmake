@@ -43,10 +43,12 @@ set(CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS
             /SD IDNO IDNO NoSudoVDA
             nsExec::ExecToLog '\\\"$INSTDIR\\\\drivers\\\\sudovda\\\\uninstall.bat\\\"'; skipped if no
         NoSudoVDA:
-        MessageBox MB_YESNO|MB_ICONQUESTION \
-            'Do you want to remove $INSTDIR (this includes the configuration, cover images, and settings)?' \
+        MessageBox MB_YESNO|MB_ICONQUESTION|MB_DEFBUTTON2 \
+            'Also delete your settings, apps and paired devices? Choose No to keep them for a reinstall.' \
             /SD IDNO IDNO NoDelete
             RMDir /r \\\"$INSTDIR\\\"; skipped if no
+            ReadEnvStr $R0 PROGRAMDATA
+            RMDir /r \\\"$R0\\\\TunaStream\\\\backup\\\"; settings backup, removed only with the settings
         nsExec::ExecToLog '\\\"$INSTDIR\\\\scripts\\\\update-path.bat\\\" remove'
         NoDelete:
         ")
