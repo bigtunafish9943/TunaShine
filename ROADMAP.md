@@ -38,19 +38,21 @@ Everything here is built and passes the automated checks, but has not yet been c
 
 ## TunaReceive: our own client
 
-A TunaStream build of Moonlight for Android and Android TV (starting with NVIDIA Shield), sideloaded as an APK
-from this repository's releases. Moonlight for Android is GPL-3.0, like TunaStream, so it can be forked the same
-way. What it would add over stock Moonlight:
+[TunaReceive](https://github.com/bigtunafish9943/TunaReceive) is TunaStream's app for Android TV (starting with the
+NVIDIA Shield), phones and tablets, built on Artemis and Moonlight for Android. It is out, and updates itself.
 
-- **Controller rumble that works over Bluetooth and with 2.4G adapters**, including 8BitDo controllers
+Done: setup on first start, a short settings page, updates from inside the app, going straight to the PC's games
+(waking it if needed), a connection test that fits the picture quality to the Wi-Fi, the quick menu on a held Home
+button, plain-words stream stats, and TunaStream's look.
+
+Still to come:
+
+- **Rumble over Bluetooth for 8BitDo controllers**, and their 2.4G adapter on a TV box
   ([moonlight-android#1442](https://github.com/moonlight-stream/moonlight-android/issues/1442)).
-- **Smooth-video defaults** that match TunaStream's frame-rate matching, and the stream health readout on screen.
-- **TunaStream actions from the couch**: end the session, play it on the PC, repair the virtual screen.
+- **TunaStream actions from the couch**: play it on the PC, repair the virtual screen.
 - Pairing without typing a PIN, by scanning a code shown on the TunaStream home page.
 - **Send files from the PC to the device**: a *Send to device* button on the TunaStream home page, delivered
   over the existing paired connection, with no extra app or login. Until then, LocalSend does the job.
-
-Built and published by GitHub Actions like the host. Starts once the host has settled on real hardware.
 
 ## Later (needs testing on real hardware for each change)
 

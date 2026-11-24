@@ -4,7 +4,7 @@
 
 <p align="center">
   Play your PC's games on your phone, tablet, handheld or TV.<br>
-  A self-hosted streaming host for Windows that works with <a href="https://moonlight-stream.org">Moonlight</a> clients.
+  A self-hosted streaming host for Windows. Play with <a href="https://github.com/bigtunafish9943/TunaReceive">TunaReceive</a> on Android TV and phones, or any <a href="https://moonlight-stream.org">Moonlight</a> client.
 </p>
 
 <p align="center">
