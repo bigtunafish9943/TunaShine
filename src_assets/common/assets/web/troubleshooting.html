@@ -59,6 +59,25 @@
         </div>
       </div>
     </div>
+    <!-- Rumble test -->
+    <div class="card p-2 my-4">
+      <div class="card-body">
+        <h2 id="rumble_test">{{ $t('troubleshooting.rumble_test') }}</h2>
+        <br>
+        <p>{{ $t('troubleshooting.rumble_test_desc') }}</p>
+        <div class="alert alert-success" v-if="rumbleClients > 0">
+          {{ $t('troubleshooting.rumble_test_sent', { count: rumbleClients }) }}
+        </div>
+        <div class="alert alert-warning" v-if="rumbleClients === 0">
+          {{ $t('troubleshooting.rumble_test_none') }}
+        </div>
+        <div>
+          <button class="btn btn-primary" :disabled="rumblePressed" @click="rumbleTest">
+            {{ $t('troubleshooting.rumble_test_button') }}
+          </button>
+        </div>
+      </div>
+    </div>
     <!-- Restart TunaShine -->
     <div class="card p-2 my-4">
       <div class="card-body">
@@ -145,6 +164,8 @@
         return {
           clients: [],
           closeAppPressed: false,
+          rumblePressed: false,
+          rumbleClients: null,
           closeAppStatus: null,
           ddResetPressed: false,
           ddResetStatus: null,
@@ -202,6 +223,28 @@
               this.logs = text;
             })
             .catch(error => console.error("Error fetching logs:", error));
+        },
+        rumbleTest() {
+          this.rumblePressed = true;
+          this.rumbleClients = null;
+          fetch("./api/rumble-test", {
+            credentials: 'include',
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          })
+            .then((r) => r.json())
+            .then((r) => {
+              this.rumbleClients = r.clients ?? 0;
+            })
+            .catch((error) => {
+              console.error("Rumble test failed:", error);
+              this.rumbleClients = 0;
+            })
+            .finally(() => {
+              this.rumblePressed = false;
+            });
         },
         closeApp() {
           this.closeAppPressed = true;
