@@ -17,20 +17,32 @@
 <body id="app" v-cloak>
   <Navbar></Navbar>
   <div class="container">
-    <h1 class="my-4">{{ $t('config.configuration') }}</h1>
+    <div class="settings-title">
+      <h1 class="my-4">{{ $t('config.configuration') }}</h1>
+      <a class="btn btn-outline-primary" href="./setup"><i class="fas fa-wand-magic-sparkles"></i> {{ $t('config.run_setup') }}</a>
+    </div>
+    <p class="settings-intro">{{ $t('config.settings_intro') }}</p>
     <div class="form settings-layout" v-if="config">
       <!-- Settings menu -->
       <nav class="settings-menu" aria-label="Settings sections">
         <ul class="nav nav-pills flex-column">
-          <li class="nav-item" v-for="tab in tabs" :key="tab.id">
-            <a class="nav-link" :class="{'active': tab.id === currentTab}" href="#"
-              :aria-current="tab.id === currentTab ? 'page' : null"
-              @click.prevent="currentTab = tab.id">{{tab.name}}</a>
-          </li>
+          <template v-for="tab in tabs" :key="tab.id">
+            <li class="settings-menu-heading" v-if="tab.id === 'files'">{{ $t('config.menu_experts') }}</li>
+            <li class="nav-item">
+              <a class="nav-link" :class="{'active': tab.id === currentTab}" href="#"
+                :aria-current="tab.id === currentTab ? 'page' : null"
+                @click.prevent="currentTab = tab.id">{{ $t('config.tab_' + tab.id) }}</a>
+            </li>
+          </template>
         </ul>
       </nav>
 
       <div class="settings-content">
+
+      <!-- Sections most people never need -->
+      <p class="experts-note" v-if="!['general', 'input', 'av', 'network'].includes(currentTab)">
+        {{ $t('config.experts_note') }}
+      </p>
 
       <!-- General Tab -->
       <general

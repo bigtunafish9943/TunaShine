@@ -15,7 +15,7 @@ which half is broken first.
 **The controller buzzed.** TunaStream, the network and the client are fine. The game is not sending rumble to the
 virtual gamepad.
 
-- Set **Configuration > Input > Emulated Gamepad Type** to **X360** and reconnect the controller. Most PC games
+- Set **Settings > Controls > Controller type the PC sees** to **Xbox 360** and reconnect the controller. Most PC games
   only rumble an Xbox controller. By default, controllers that report motion sensors or a touchpad (PlayStation,
   Switch Pro, many handhelds) are emulated as a PlayStation 4 controller, which fewer games rumble.
 - Check the game's own vibration setting.
@@ -27,7 +27,7 @@ virtual gamepad.
 - Check that rumble is turned on in the client app's settings.
 - Controllers connected to the client over Bluetooth only rumble if the device's operating system supports
   rumble for that controller. Try the same controller with a cable, or in another app on that device.
-- Make sure **Configuration > Input > Forward Rumble Messages** is on.
+- Make sure **Settings > Controls > Rumble** is on.
 - The log should show `Rumble test sent to 1 client(s)`. If it says no device is streaming, the stream was not
   running when you pressed the button.
 
@@ -53,8 +53,8 @@ virtual gamepad.
   there. The log shows `Virtual Display created at` followed by `Virtual Display set as the primary display`.
 - `Virtual Display creation failed` means the display driver did not respond. The home page shows *Driver
   problem*. Restart TunaStream from the Troubleshooting page; if it persists, reinstall TunaStream.
-- To stream your real monitor instead, turn off **Always stream on a virtual display** under
-  **Configuration > Audio/Video**.
+- To stream your real monitor instead, turn off **Give each stream its own screen** under
+  **Settings > Screen and sound**.
 
 ## Stopping and starting
 
@@ -71,5 +71,5 @@ What TunaStream does depends on how the stream ended.
   If it is missing or says `Couldn't`, press Win+P and choose *PC screen only*, then tell us in an issue.
 - **The client says an app is already running.** Reconnect to resume it, or press **End session** on the home
   page.
-- **A game is still running after everyone left.** That is the default. Turn on **End session when the last
-  client disconnects** under **Configuration > General**, or *Terminate on Pause* for one app.
+- **A game is still running after everyone left.** That is the default. Turn on **Quit the game when the last
+  device disconnects** under **Settings > General**, or *Terminate on Pause* for one app.
