@@ -470,7 +470,7 @@
     "save_password": "Remember Password"
   },
   "index": {
-    "custom_port": "TunaShine is using port {port} instead of the default. If your client does not find this PC by itself, add it by hand as {host}:{port}.",
+    "custom_port": "TunaShine is using port {port} instead of the default. If your client does not find this PC by itself, add it by hand using this PC's IP address followed by :{port}, for example 192.168.1.20:{port}.",
     "description": "TunaShine is a self-hosted game stream host for Moonlight.",
     "devices_none": "None yet",
     "download": "Download",
