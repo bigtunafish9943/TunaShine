@@ -67,6 +67,14 @@ const validateFallbackMode = (event) => {
     ></Checkbox>
 
     <Checkbox class="mb-3"
+              id="virtual_display_only"
+              locale-prefix="config"
+              v-model="config.virtual_display_only"
+              default="true"
+              v-if="platform === 'windows' && config.headless_mode !== 'disabled'"
+    ></Checkbox>
+
+    <Checkbox class="mb-3"
               id="virtual_display_primary"
               locale-prefix="config"
               v-model="config.virtual_display_primary"

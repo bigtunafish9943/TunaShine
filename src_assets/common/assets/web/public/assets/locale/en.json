@@ -512,6 +512,8 @@
     "vaapi_strict_rc_buffer_desc": "Enabling this option can avoid dropped frames over the network during scene changes, but video quality may be reduced during motion.",
     "video_send_rate": "Video send speed (Mbps)",
     "video_send_rate_desc": "How fast each frame is sent. 0 picks it from the stream's bitrate, which suits Wi-Fi. Raise it only on a wired 2.5 or 10 gigabit network.",
+    "virtual_display_only": "Never show my monitor on the device (recommended)",
+    "virtual_display_only_desc": "If the stream's own screen can't be made, the stream doesn't start and the device says why, instead of showing everything on your monitor. Turn off to fall back to your monitor.",
     "virtual_display_primary": "Open games on the stream's screen",
     "virtual_display_primary_desc": "While someone is streaming, games and new windows open on their screen instead of yours. Turn this off only if games are opening on the wrong screen in a setup you have arranged yourself.",
     "virtual_sink": "Virtual Sink",
