@@ -1,6 +1,6 @@
 /**
  * @file src/config.cpp
- * @brief Definitions for the configuration of Sunshine.
+ * @brief Definitions for the configuration of TunaStream.
  */
 // standard includes
 #include <algorithm>
@@ -437,7 +437,7 @@ namespace config {
   }  // namespace dd
 
   video_t video {
-    false, // headless_mode
+    true, // headless_mode: stream on a virtual display unless turned off
     true, // limit_framerate
     false, // double_refreshrate
 
@@ -456,7 +456,7 @@ namespace config {
     {},  // nv
     true,  // nv_realtime_hags
     true,  // nv_opengl_vulkan_on_dxgi
-    true,  // nv_sunshine_high_power_mode
+    true,  // nv_tunastream_high_power_mode
     {},  // nv_legacy
 
     {
@@ -516,6 +516,7 @@ namespace config {
     "1920x1080x60",  // fallback_mode
     false, // isolated Display
     false, // ignore_encoder_probe_failure
+    true, // virtual_display_primary
   };
 
   audio_t audio {
@@ -544,8 +545,8 @@ namespace config {
     PRIVATE_KEY_FILE,
     CERTIFICATE_FILE,
 
-    platf::get_host_name(),  // sunshine_name,
-    "sunshine_state.json"s,  // file_state
+    platf::get_host_name(),  // tunastream_name,
+    "tunastream_state.json"s,  // file_state
     {},  // external_ip
   };
 
@@ -578,7 +579,7 @@ namespace config {
     true, // forward_rumble
   };
 
-  sunshine_t sunshine {
+  tunastream_t tunastream {
     false, // hide_tray_controls
     true, // enable_pairing
     true, // enable_discovery
@@ -590,11 +591,11 @@ namespace config {
     {},  // Username
     {},  // Password
     {},  // Password Salt
-    platf::appdata().string() + "/sunshine.conf",  // config file
+    platf::appdata().string() + "/tunastream.conf",  // config file
     {},  // cmd args
     47989,  // Base port number
     "ipv4",  // Address family
-    platf::appdata().string() + "/sunshine.log",  // log file
+    platf::appdata().string() + "/tunastream.log",  // log file
     false,  // notify_pre_releases
     false,  // legacy_ordering
     true,  // system_tray
@@ -1009,7 +1010,7 @@ namespace config {
     }
 
     // The framerate list must be cleared before adding values from the file configuration.
-    // If the list is not cleared, then the specified parameters do not affect the behavior of the sunshine server.
+    // If the list is not cleared, then the specified parameters do not affect the behavior of the tunastream server.
     // That is, if you set only 30 fps in the configuration file, it will not work because by default, during initialization the list includes 10, 30, 60, 90 and 120 fps.
     input.clear();
     for (auto &el : list) {
@@ -1056,16 +1057,16 @@ namespace config {
     while (*line != '\0') {
       switch (*line) {
         case '0':
-          config::sunshine.flags[config::flag::PIN_STDIN].flip();
+          config::tunastream.flags[config::flag::PIN_STDIN].flip();
           break;
         case '1':
-          config::sunshine.flags[config::flag::FRESH_STATE].flip();
+          config::tunastream.flags[config::flag::FRESH_STATE].flip();
           break;
         case '2':
-          config::sunshine.flags[config::flag::FORCE_VIDEO_HEADER_REPLACE].flip();
+          config::tunastream.flags[config::flag::FORCE_VIDEO_HEADER_REPLACE].flip();
           break;
         case 'p':
-          config::sunshine.flags[config::flag::UPNP].flip();
+          config::tunastream.flags[config::flag::UPNP].flip();
           break;
         default:
           BOOST_LOG(warning) << "config: Unrecognized flag: ["sv << *line << ']' << std::endl;
@@ -1092,7 +1093,7 @@ namespace config {
 #ifndef __ANDROID__
     // TODO: Android can possibly support this
     if (!fs::exists(stream.file_apps.c_str())) {
-      fs::copy_file(SUNSHINE_ASSETS_DIR "/apps.json", stream.file_apps);
+      fs::copy_file(TUNASTREAM_ASSETS_DIR "/apps.json", stream.file_apps);
     }
 #endif
 
@@ -1126,7 +1127,7 @@ namespace config {
     bool_f(vars, "nvenc_intra_refresh", video.nv.intra_refresh);
     bool_f(vars, "nvenc_realtime_hags", video.nv_realtime_hags);
     bool_f(vars, "nvenc_opengl_vulkan_on_dxgi", video.nv_opengl_vulkan_on_dxgi);
-    bool_f(vars, "nvenc_latency_over_power", video.nv_sunshine_high_power_mode);
+    bool_f(vars, "nvenc_latency_over_power", video.nv_tunastream_high_power_mode);
 
 #if !defined(__ANDROID__) && !defined(__APPLE__)
     video.nv_legacy.preset = video.nv.quality_preset + 11;
@@ -1209,22 +1210,23 @@ namespace config {
 
     string_f(vars, "fallback_mode", video.fallback_mode);
     bool_f(vars, "isolated_virtual_display_option", video.isolated_virtual_display_option);
+    bool_f(vars, "virtual_display_primary", video.virtual_display_primary);
     bool_f(vars, "ignore_encoder_probe_failure", video.ignore_encoder_probe_failure);
 
     path_f(vars, "pkey", nvhttp.pkey);
     path_f(vars, "cert", nvhttp.cert);
-    string_f(vars, "sunshine_name", nvhttp.sunshine_name);
-    path_f(vars, "log_path", config::sunshine.log_file);
+    string_f(vars, "tunastream_name", nvhttp.tunastream_name);
+    path_f(vars, "log_path", config::tunastream.log_file);
     path_f(vars, "file_state", nvhttp.file_state);
 
     // Must be run after "file_state"
-    config::sunshine.credentials_file = config::nvhttp.file_state;
-    path_f(vars, "credentials_file", config::sunshine.credentials_file);
+    config::tunastream.credentials_file = config::nvhttp.file_state;
+    path_f(vars, "credentials_file", config::tunastream.credentials_file);
 
     string_f(vars, "external_ip", nvhttp.external_ip);
-    list_prep_cmd_f(vars, "global_prep_cmd", config::sunshine.prep_cmds);
-    list_prep_cmd_f(vars, "global_state_cmd", config::sunshine.state_cmds);
-    list_server_cmd_f(vars, "server_cmd", config::sunshine.server_cmds);
+    list_prep_cmd_f(vars, "global_prep_cmd", config::tunastream.prep_cmds);
+    list_prep_cmd_f(vars, "global_state_cmd", config::tunastream.state_cmds);
+    list_server_cmd_f(vars, "server_cmd", config::tunastream.server_cmds);
 
     string_f(vars, "audio_sink", audio.sink);
     string_f(vars, "virtual_sink", audio.virtual_sink);
@@ -1294,30 +1296,30 @@ namespace config {
     bool_f(vars, "native_pen_touch", input.native_pen_touch);
     bool_f(vars, "enable_input_only_mode", input.enable_input_only_mode);
 
-    bool_f(vars, "system_tray", sunshine.system_tray);
-    bool_f(vars, "hide_tray_controls", sunshine.hide_tray_controls);
-    bool_f(vars, "end_session_on_disconnect", sunshine.end_session_on_disconnect);
-    bool_f(vars, "enable_pairing", sunshine.enable_pairing);
-    bool_f(vars, "enable_discovery", sunshine.enable_discovery);
-    bool_f(vars, "envvar_compatibility_mode", sunshine.envvar_compatibility_mode);
-    bool_f(vars, "notify_pre_releases", sunshine.notify_pre_releases);
-    bool_f(vars, "legacy_ordering", sunshine.legacy_ordering);
+    bool_f(vars, "system_tray", tunastream.system_tray);
+    bool_f(vars, "hide_tray_controls", tunastream.hide_tray_controls);
+    bool_f(vars, "end_session_on_disconnect", tunastream.end_session_on_disconnect);
+    bool_f(vars, "enable_pairing", tunastream.enable_pairing);
+    bool_f(vars, "enable_discovery", tunastream.enable_discovery);
+    bool_f(vars, "envvar_compatibility_mode", tunastream.envvar_compatibility_mode);
+    bool_f(vars, "notify_pre_releases", tunastream.notify_pre_releases);
+    bool_f(vars, "legacy_ordering", tunastream.legacy_ordering);
     bool_f(vars, "forward_rumble", input.forward_rumble);
 
-    int port = sunshine.port;
+    int port = tunastream.port;
     int_between_f(vars, "port"s, port, {1024 + nvhttp::PORT_HTTPS, 65535 - rtsp_stream::RTSP_SETUP_PORT});
-    sunshine.port = (std::uint16_t) port;
+    tunastream.port = (std::uint16_t) port;
 
-    string_restricted_f(vars, "address_family", sunshine.address_family, {"ipv4"sv, "both"sv});
+    string_restricted_f(vars, "address_family", tunastream.address_family, {"ipv4"sv, "both"sv});
 
     bool upnp = false;
     bool_f(vars, "upnp"s, upnp);
 
     if (upnp) {
-      config::sunshine.flags[config::flag::UPNP].flip();
+      config::tunastream.flags[config::flag::UPNP].flip();
     }
 
-    string_restricted_f(vars, "locale", config::sunshine.locale, {
+    string_restricted_f(vars, "locale", config::tunastream.locale, {
                                                                    "bg"sv,  // Bulgarian
                                                                    "cs"sv,  // Czech
                                                                    "de"sv,  // German
@@ -1347,24 +1349,24 @@ namespace config {
 
     if (!log_level_string.empty()) {
       if (log_level_string == "verbose"sv) {
-        sunshine.min_log_level = 0;
+        tunastream.min_log_level = 0;
       } else if (log_level_string == "debug"sv) {
-        sunshine.min_log_level = 1;
+        tunastream.min_log_level = 1;
       } else if (log_level_string == "info"sv) {
-        sunshine.min_log_level = 2;
+        tunastream.min_log_level = 2;
       } else if (log_level_string == "warning"sv) {
-        sunshine.min_log_level = 3;
+        tunastream.min_log_level = 3;
       } else if (log_level_string == "error"sv) {
-        sunshine.min_log_level = 4;
+        tunastream.min_log_level = 4;
       } else if (log_level_string == "fatal"sv) {
-        sunshine.min_log_level = 5;
+        tunastream.min_log_level = 5;
       } else if (log_level_string == "none"sv) {
-        sunshine.min_log_level = 6;
+        tunastream.min_log_level = 6;
       } else {
         // accept digit directly
         auto val = log_level_string[0];
         if (val >= '0' && val < '7') {
-          sunshine.min_log_level = val - '0';
+          tunastream.min_log_level = val - '0';
         }
       }
     }
@@ -1376,7 +1378,7 @@ namespace config {
       vars.erase(it);
     }
 
-    if (sunshine.min_log_level <= 3) {
+    if (tunastream.min_log_level <= 3) {
       for (auto &[var, _] : vars) {
         std::cout << "Warning: Unrecognized configurable option ["sv << var << ']' << std::endl;
       }
@@ -1409,9 +1411,9 @@ namespace config {
 #endif
       else if (*line == '-') {
         if (*(line + 1) == '-') {
-          sunshine.cmd.name = line + 2;
-          sunshine.cmd.argc = argc - x - 1;
-          sunshine.cmd.argv = argv + x + 1;
+          tunastream.cmd.name = line + 2;
+          tunastream.cmd.argc = argc - x - 1;
+          tunastream.cmd.argv = argv + x + 1;
 
           break;
         }
@@ -1424,7 +1426,7 @@ namespace config {
 
         auto pos = std::find(line, line_end, '=');
         if (pos == line_end) {
-          sunshine.config_file = line;
+          tunastream.config_file = line;
         } else {
           TUPLE_EL(var, 1, parse_option(line, line_end));
           if (!var) {
@@ -1450,15 +1452,15 @@ namespace config {
       file_handler::make_directory(platf::appdata().string());
 
       // Create empty config file if it does not exist
-      if (!fs::exists(sunshine.config_file)) {
-        auto cfg_file = std::ofstream {sunshine.config_file};
+      if (!fs::exists(tunastream.config_file)) {
+        auto cfg_file = std::ofstream {tunastream.config_file};
       #ifdef _WIN32
         cfg_file << "server_cmd = [{\"name\":\"Bubbles\",\"cmd\":\"bubbles.scr\",\"elevated\":false}]\n";
       #endif
       }
 
       // Read config file
-      auto vars = parse_config(file_handler::read_file(sunshine.config_file.c_str()));
+      auto vars = parse_config(file_handler::read_file(tunastream.config_file.c_str()));
 
       for (auto &[name, value] : cmd_vars) {
         vars.insert_or_assign(std::move(name), std::move(value));
@@ -1481,7 +1483,7 @@ namespace config {
     // so that service instance will do the work instead.
 
     if (!config_loaded && !shortcut_launch) {
-      BOOST_LOG(fatal) << "To relaunch TunaShine successfully, use the shortcut in the Start Menu. Do not run sunshine.exe manually."sv;
+      BOOST_LOG(fatal) << "To relaunch TunaStream successfully, use the shortcut in the Start Menu. Do not run tunastream.exe manually."sv;
       std::this_thread::sleep_for(10s);
 #else
     if (!config_loaded) {
@@ -1498,7 +1500,7 @@ namespace config {
       // This is a relaunch as admin to start the service
       service_ctrl::start_service();
 
-      // Always return 1 to ensure Sunshine doesn't start normally
+      // Always return 1 to ensure TunaStream doesn't start normally
       return 1;
     }
     if (shortcut_launch) {
@@ -1531,7 +1533,7 @@ namespace config {
       // Launch the web UI
       launch_ui();
 
-      // Always return 1 to ensure Sunshine doesn't start normally
+      // Always return 1 to ensure TunaStream doesn't start normally
       return 1;
     }
 #endif

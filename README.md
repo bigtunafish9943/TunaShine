@@ -15,7 +15,7 @@ TunaStream runs on your gaming PC and streams it to another device over your net
 set up and pleasant to use.
 
 > [!WARNING]
-> TunaStream is new. Every build passes automated checks, but it has had very little testing on real hardware.
+> TunaStream is new. Every release passes automated checks, but it has had very little testing on real hardware.
 > Expect rough edges.
 
 ## What it does
@@ -41,10 +41,9 @@ set up and pleasant to use.
 
 ## Install
 
-1. **Download the installer.** There are no tagged releases yet. Open the
-   [Actions](https://github.com/bigtunafish9943/TunaStream/actions) page while signed in to GitHub, pick the newest run
-   with a green tick, and download `windows-installer` under **Artifacts**.
-2. **Run `TunaStream.exe`** from the zip. Windows will warn about an unknown publisher because the installer is not
+1. **Download the installer.** Open [Releases](https://github.com/bigtunafish9943/TunaStream/releases/latest)
+   and download `TunaStream-<version>-setup.exe`.
+2. **Run it.** Windows will warn about an unknown publisher because the installer is not
    code-signed; choose **More info**, then **Run anyway**. The installer also sets up the virtual display and
    virtual gamepad drivers.
 3. **Open TunaStream** from the Start menu or its tray icon, and create the username and password you will use
@@ -106,7 +105,8 @@ See the [roadmap](ROADMAP.md). Found a bug or have an idea?
 
 ## Building
 
-Every push builds the Windows installer with GitHub Actions and runs a smoke test against it; see
+Every push builds the Windows installer with GitHub Actions and runs a smoke test against it, and every build of
+`master` is published as a release; see
 [`build-windows.yml`](.github/workflows/build-windows.yml). To build on your own PC, follow
 [docs/building.md](docs/building.md).
 

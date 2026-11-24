@@ -148,7 +148,7 @@ const validateFallbackMode = (event) => {
               id="headless_mode"
               locale-prefix="config"
               v-model="config.headless_mode"
-              default="false"
+              default="true"
               v-if="platform === 'windows'"
     ></Checkbox>
 
@@ -158,6 +158,15 @@ const validateFallbackMode = (event) => {
               locale-prefix="config"
               v-model="config.double_refreshrate"
               default="false"
+              v-if="platform === 'windows'"
+    ></Checkbox>
+
+    <!-- Virtual display becomes the main display -->
+    <Checkbox class="mb-3"
+              id="virtual_display_primary"
+              locale-prefix="config"
+              v-model="config.virtual_display_primary"
+              default="true"
               v-if="platform === 'windows'"
     ></Checkbox>
 

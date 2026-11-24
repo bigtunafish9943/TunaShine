@@ -8,6 +8,7 @@
  #define BOOST_PROCESS_VERSION 1
 #endif
 // standard includes
+#include <atomic>
 #include <filesystem>
 #include <string>
 #include <thread>
@@ -28,6 +29,7 @@
 #include "crypto.h"
 #include "display_device.h"
 #include "file_handler.h"
+#include "globals.h"
 #include "logging.h"
 #include "platform/common.h"
 #include "process.h"
@@ -46,13 +48,17 @@
   #include <share.h>
 #endif
 
-#define DEFAULT_APP_IMAGE_PATH SUNSHINE_ASSETS_DIR "/box.png"
+#define DEFAULT_APP_IMAGE_PATH TUNASTREAM_ASSETS_DIR "/box.png"
 
 namespace proc {
   using namespace std::literals;
   namespace pt = boost::property_tree;
 
   proc_t proc;
+
+  // Bumped whenever the session resumes, ends or is replaced, so a pending
+  // "end the session if nobody reconnects" task can tell it is out of date.
+  static std::atomic_uint64_t session_generation {0};
 
   int input_only_app_id = -1;
   std::string input_only_app_id_str;
@@ -170,7 +176,7 @@ namespace proc {
     allow_client_commands = false;
     placebo = true;
 
-#if defined SUNSHINE_TRAY && SUNSHINE_TRAY >= 1
+#if defined TUNASTREAM_TRAY && TUNASTREAM_TRAY >= 1
     system_tray::update_tray_playing(_app_name);
 #endif
   }
@@ -288,6 +294,11 @@ namespace proc {
           target_fps *= 2;
         }
 
+        // Note which display is primary before the virtual display exists. Windows remembers
+        // display arrangements, so a virtual display that was primary last time can come back
+        // as primary the moment it is created, and by then it is too late to ask.
+        const std::wstring primary_before_vdisplay = VDISPLAY::getPrimaryDisplay();
+
         std::wstring vdisplayName = VDISPLAY::createVirtualDisplay(
           device_uuid_str.c_str(),
           device_name.c_str(),
@@ -314,6 +325,24 @@ namespace proc {
           if (config::video.isolated_virtual_display_option == true) {
             // Apply the isolated display settings
             VDISPLAY::changeDisplaySettings2(vdisplayName.c_str(), render_width, render_height, target_fps, true);
+          }
+
+          // Games and new windows open on the primary display, so make the virtual display
+          // primary for them to show up in the stream. The other displays stay active, and
+          // Windows picks its usual primary again once the virtual display is removed.
+          if (config::video.virtual_display_primary) {
+            // Remember what was primary so it can be handed back while nobody is streaming
+            if (!primary_before_vdisplay.empty() && primary_before_vdisplay != vdisplayName) {
+              this->previous_primary_display = platf::to_utf8(primary_before_vdisplay);
+            }
+
+            if (VDISPLAY::getPrimaryDisplay() == vdisplayName) {
+              BOOST_LOG(info) << "Virtual Display is already the primary display";
+            } else if (VDISPLAY::setPrimaryDisplay(vdisplayName.c_str())) {
+              BOOST_LOG(info) << "Virtual Display set as the primary display";
+            } else {
+              BOOST_LOG(warning) << "Couldn't set the Virtual Display as the primary display";
+            }
           }
 
           // Set virtual_display to true when everything went fine
@@ -366,51 +395,37 @@ namespace proc {
     fps_str = fps_buf;
 
     // Add Stream-specific environment variables
-    // Sunshine Compatibility
-    _env["SUNSHINE_APP_ID"] = _app.id;
-    _env["SUNSHINE_APP_NAME"] = _app.name;
-    _env["SUNSHINE_CLIENT_WIDTH"] = std::to_string(render_width);
-    _env["SUNSHINE_CLIENT_HEIGHT"] = std::to_string(render_height);
-    _env["SUNSHINE_CLIENT_FPS"] = config::sunshine.envvar_compatibility_mode ? std::to_string(std::round((float)launch_session->fps / 1000.0f)) : fps_str;
-    _env["SUNSHINE_CLIENT_HDR"] = launch_session->enable_hdr ? "true" : "false";
-    _env["SUNSHINE_CLIENT_GCMAP"] = std::to_string(launch_session->gcmap);
-    _env["SUNSHINE_CLIENT_HOST_AUDIO"] = launch_session->host_audio ? "true" : "false";
-    _env["SUNSHINE_CLIENT_ENABLE_SOPS"] = launch_session->enable_sops ? "true" : "false";
-
-    _env["APOLLO_APP_ID"] = _app.id;
-    _env["APOLLO_APP_NAME"] = _app.name;
-    _env["APOLLO_APP_UUID"] = _app.uuid;
-    _env["APOLLO_APP_STATUS"] = "STARTING";
-    _env["APOLLO_CLIENT_UUID"] = launch_session->unique_id;
-    _env["APOLLO_CLIENT_NAME"] = launch_session->device_name;
-    _env["APOLLO_CLIENT_WIDTH"] = std::to_string(render_width);
-    _env["APOLLO_CLIENT_HEIGHT"] = std::to_string(render_height);
-    _env["APOLLO_CLIENT_RENDER_WIDTH"] = std::to_string(launch_session->width);
-    _env["APOLLO_CLIENT_RENDER_HEIGHT"] = std::to_string(launch_session->height);
-    _env["APOLLO_CLIENT_SCALE_FACTOR"] = std::to_string(scale_factor);
-    _env["APOLLO_CLIENT_FPS"] = fps_str;
-    _env["APOLLO_CLIENT_HDR"] = launch_session->enable_hdr ? "true" : "false";
-    _env["APOLLO_CLIENT_GCMAP"] = std::to_string(launch_session->gcmap);
-    _env["APOLLO_CLIENT_HOST_AUDIO"] = launch_session->host_audio ? "true" : "false";
-    _env["APOLLO_CLIENT_ENABLE_SOPS"] = launch_session->enable_sops ? "true" : "false";
+    _env["TUNASTREAM_APP_ID"] = _app.id;
+    _env["TUNASTREAM_APP_NAME"] = _app.name;
+    _env["TUNASTREAM_APP_UUID"] = _app.uuid;
+    _env["TUNASTREAM_APP_STATUS"] = "STARTING";
+    _env["TUNASTREAM_CLIENT_UUID"] = launch_session->unique_id;
+    _env["TUNASTREAM_CLIENT_NAME"] = launch_session->device_name;
+    _env["TUNASTREAM_CLIENT_WIDTH"] = std::to_string(render_width);
+    _env["TUNASTREAM_CLIENT_HEIGHT"] = std::to_string(render_height);
+    _env["TUNASTREAM_CLIENT_RENDER_WIDTH"] = std::to_string(launch_session->width);
+    _env["TUNASTREAM_CLIENT_RENDER_HEIGHT"] = std::to_string(launch_session->height);
+    _env["TUNASTREAM_CLIENT_SCALE_FACTOR"] = std::to_string(scale_factor);
+    // Compatibility mode gives scripts a whole number instead of e.g. 59.940
+    _env["TUNASTREAM_CLIENT_FPS"] = config::tunastream.envvar_compatibility_mode ? std::to_string(std::round((float)launch_session->fps / 1000.0f)) : fps_str;
+    _env["TUNASTREAM_CLIENT_HDR"] = launch_session->enable_hdr ? "true" : "false";
+    _env["TUNASTREAM_CLIENT_GCMAP"] = std::to_string(launch_session->gcmap);
+    _env["TUNASTREAM_CLIENT_HOST_AUDIO"] = launch_session->host_audio ? "true" : "false";
+    _env["TUNASTREAM_CLIENT_ENABLE_SOPS"] = launch_session->enable_sops ? "true" : "false";
 
     int channelCount = launch_session->surround_info & 65535;
     switch (channelCount) {
       case 2:
-        _env["SUNSHINE_CLIENT_AUDIO_CONFIGURATION"] = "2.0";
-        _env["APOLLO_CLIENT_AUDIO_CONFIGURATION"] = "2.0";
+        _env["TUNASTREAM_CLIENT_AUDIO_CONFIGURATION"] = "2.0";
         break;
       case 6:
-        _env["SUNSHINE_CLIENT_AUDIO_CONFIGURATION"] = "5.1";
-        _env["APOLLO_CLIENT_AUDIO_CONFIGURATION"] = "5.1";
+        _env["TUNASTREAM_CLIENT_AUDIO_CONFIGURATION"] = "5.1";
         break;
       case 8:
-        _env["SUNSHINE_CLIENT_AUDIO_CONFIGURATION"] = "7.1";
-        _env["APOLLO_CLIENT_AUDIO_CONFIGURATION"] = "7.1";
+        _env["TUNASTREAM_CLIENT_AUDIO_CONFIGURATION"] = "7.1";
         break;
     }
-    _env["SUNSHINE_CLIENT_AUDIO_SURROUND_PARAMS"] = launch_session->surround_params;
-    _env["APOLLO_CLIENT_AUDIO_SURROUND_PARAMS"] = launch_session->surround_params;
+    _env["TUNASTREAM_CLIENT_AUDIO_SURROUND_PARAMS"] = launch_session->surround_params;
 
     if (!_app.output.empty() && _app.output != "null"sv) {
 #ifdef _WIN32
@@ -448,7 +463,7 @@ namespace proc {
       if (ec) {
         BOOST_LOG(error) << "Couldn't run ["sv << cmd.do_cmd << "]: System: "sv << ec.message();
         // We don't want any prep commands failing launch of the desktop.
-        // This is to prevent the issue where users reboot their PC and need to log in with Sunshine.
+        // This is to prevent the issue where users reboot their PC and need to log in with TunaStream.
         // permission_denied is typically returned when the user impersonation fails, which can happen when user is not signed in yet.
         if (!(_app.cmd.empty() && ec == std::errc::permission_denied)) {
           return -1;
@@ -463,7 +478,7 @@ namespace proc {
       }
     }
 
-    _env["APOLLO_APP_STATUS"] = "RUNNING";
+    _env["TUNASTREAM_APP_STATUS"] = "RUNNING";
 
     for (auto &cmd : _app.detached) {
       boost::filesystem::path working_dir = _app.working_dir.empty() ?
@@ -553,7 +568,7 @@ namespace proc {
 
     fg.disable();
 
-#if defined SUNSHINE_TRAY && SUNSHINE_TRAY >= 1
+#if defined TUNASTREAM_TRAY && TUNASTREAM_TRAY >= 1
     system_tray::update_tray_playing(_app.name);
 #endif
 
@@ -584,7 +599,7 @@ namespace proc {
       BOOST_LOG(info) << "Adjust this behavior in the Applications tab or apps.json if this is not what you want."sv;
       placebo = true;
 
-    #if defined SUNSHINE_TRAY && SUNSHINE_TRAY >= 1
+    #if defined TUNASTREAM_TRAY && TUNASTREAM_TRAY >= 1
       if (_process.native_exit_code() != 0) {
         system_tray::update_tray_launch_error(proc::proc.get_last_run_app_name(), _process.native_exit_code());
       }
@@ -601,13 +616,38 @@ namespace proc {
     return 0;
   }
 
+  void proc_t::reclaim_primary_display() {
+#ifdef _WIN32
+    // The primary display is handed back to the PC while nobody is streaming (see pause()).
+    // Make the virtual display primary again now that a client is back.
+    if (this->virtual_display && config::video.virtual_display_primary && !this->display_name.empty()) {
+      auto vdisplay_name = platf::from_utf8(this->display_name);
+      auto current_primary = VDISPLAY::getPrimaryDisplay();
+      if (current_primary != vdisplay_name) {
+        if (this->previous_primary_display.empty()) {
+          this->previous_primary_display = platf::to_utf8(current_primary);
+        }
+        if (VDISPLAY::setPrimaryDisplay(vdisplay_name.c_str())) {
+          BOOST_LOG(info) << "Virtual Display set as the primary display again";
+        } else {
+          BOOST_LOG(warning) << "Couldn't set the Virtual Display as the primary display again";
+        }
+      }
+    }
+#endif
+  }
+
   void proc_t::resume() {
+    ++session_generation;
     BOOST_LOG(info) << "Session resuming for app [" << _app_name << "].";
+
+    // Normally already done by the resume request, before capture starts
+    reclaim_primary_display();
 
     if (!_app.state_cmds.empty()) {
       auto exec_thread = std::thread([cmd_list = _app.state_cmds, app_working_dir = _app.working_dir, _env = _env]() mutable {
 
-        _env["APOLLO_APP_STATUS"] = "RESUMING";
+        _env["TUNASTREAM_APP_STATUS"] = "RESUMING";
 
         std::error_code ec;
         auto _state_resume_it = std::begin(cmd_list);
@@ -645,24 +685,64 @@ namespace proc {
     }
   }
 
-  void proc_t::pause() {
+  void proc_t::pause(bool connection_lost) {
     if (!running()) {
       BOOST_LOG(info) << "Session already stopped, do not run pause commands.";
       return;
     }
 
     // Either the app asks for this, or the global "end session on disconnect" setting does
-    if (_app.terminate_on_pause || config::sunshine.end_session_on_disconnect) {
-      BOOST_LOG(info) << "Terminating app [" << _app_name << "] when all clients are disconnected. Pause commands are skipped.";
-      terminate();
-      return;
+    if (_app.terminate_on_pause || config::tunastream.end_session_on_disconnect) {
+      if (!connection_lost) {
+        BOOST_LOG(info) << "Terminating app [" << _app_name << "] when all clients are disconnected. Pause commands are skipped.";
+        terminate();
+        return;
+      }
+
+      // The client did not leave on purpose: its connection dropped. Keep the app running
+      // for a while so a Wi-Fi hiccup or a sleeping device does not quit a game in progress.
+      // The session is ended later only if nobody has come back by then.
+      BOOST_LOG(info) << "Connection to the last client was lost. Keeping app [" << _app_name << "] running for "
+                      << reconnect_grace_period.count() << " seconds so it can reconnect.";
+
+      task_pool.pushDelayed([generation = session_generation.load()]() {
+        if (generation != session_generation.load()) {
+          // A client reconnected, or the session was ended or replaced in the meantime
+          return;
+        }
+        if (rtsp_stream::session_count() > 0 || !proc.running()) {
+          return;
+        }
+
+        BOOST_LOG(info) << "No client reconnected in time. Terminating app [" << proc.get_last_run_app_name() << "].";
+        // Terminating can wait on the app to exit, so keep it off the shared task pool
+        std::thread([]() {
+          proc.terminate();
+        }).detach();
+      }, reconnect_grace_period);
     }
 
     BOOST_LOG(info) << "Session pausing for app [" << _app_name << "].";
 
+#ifdef _WIN32
+    // Nobody is watching the virtual display now. Give the primary display back to the PC so
+    // new windows and the taskbar are not stranded on a screen nobody can see. The app stays
+    // where it is, and resume() makes the virtual display primary again.
+    if (this->virtual_display && !this->previous_primary_display.empty()) {
+      auto previous_primary = platf::from_utf8(this->previous_primary_display);
+      if (VDISPLAY::getPrimaryDisplay() != previous_primary) {
+        if (VDISPLAY::setPrimaryDisplay(previous_primary.c_str())) {
+          BOOST_LOG(info) << "Primary display handed back to " << this->previous_primary_display;
+        } else {
+          BOOST_LOG(warning) << "Couldn't hand the primary display back to " << this->previous_primary_display;
+        }
+      }
+    }
+#endif
+
     if (!_app.state_cmds.empty()) {
       auto exec_thread = std::thread([cmd_list = _app.state_cmds, app_working_dir = _app.working_dir, _env = _env]() mutable {
-        _env["APOLLO_APP_STATUS"] = "PAUSING";
+        _env["TUNASTREAM_APP_STATUS"] = "PAUSING";
 
         std::error_code ec;
         auto _state_pause_it = std::begin(cmd_list);
@@ -699,12 +779,13 @@ namespace proc {
       exec_thread.detach();
     }
 
-#if defined SUNSHINE_TRAY && SUNSHINE_TRAY >= 1
+#if defined TUNASTREAM_TRAY && TUNASTREAM_TRAY >= 1
     system_tray::update_tray_pausing(proc::proc.get_last_run_app_name());
 #endif
   }
 
   void proc_t::terminate(bool immediate, bool needs_refresh) {
+    ++session_generation;
     std::error_code ec;
     placebo = false;
 
@@ -715,7 +796,7 @@ namespace proc {
     _process = boost::process::v1::child();
     _process_group = boost::process::v1::group();
 
-    _env["APOLLO_APP_STATUS"] = "TERMINATING";
+    _env["TUNASTREAM_APP_STATUS"] = "TERMINATING";
 
     for (; _app_prep_it != _app_prep_begin; --_app_prep_it) {
       auto &cmd = *(_app_prep_it - 1);
@@ -781,7 +862,7 @@ namespace proc {
       display_device::revert_configuration();
 #endif
 
-#if defined SUNSHINE_TRAY && SUNSHINE_TRAY >= 1
+#if defined TUNASTREAM_TRAY && TUNASTREAM_TRAY >= 1
       system_tray::update_tray_stopped(proc::proc.get_last_run_app_name());
 #endif
     }
@@ -801,6 +882,7 @@ namespace proc {
     display_name.clear();
     initial_display.clear();
     mode_changed_display.clear();
+    previous_primary_display.clear();
     _launch_session.reset();
     virtual_display = false;
     allow_client_commands = false;
@@ -948,12 +1030,12 @@ namespace proc {
     }
 
     // check if image is in assets directory
-    auto full_image_path = std::filesystem::path(SUNSHINE_ASSETS_DIR) / app_image_path;
+    auto full_image_path = std::filesystem::path(TUNASTREAM_ASSETS_DIR) / app_image_path;
     if (std::filesystem::exists(full_image_path)) {
       return full_image_path.string();
     } else if (app_image_path == "./assets/steam.png") {
       // handle old default steam image definition
-      return SUNSHINE_ASSETS_DIR "/steam.png";
+      return TUNASTREAM_ASSETS_DIR "/steam.png";
     }
 
     // check if specified image exists
@@ -1050,7 +1132,7 @@ namespace proc {
    * Additionally, empty keys (such as "prep-cmd" or "detached") and keys no longer needed ("launching", "index")
    * are removed from the input.
    *
-   * Legacy versions of Sunshine/Apollo stored boolean and integer values as strings.
+   * Legacy versions stored boolean and integer values as strings.
    * The following keys are converted:
    *   - Boolean keys: "exclude-global-prep-cmd", "elevated", "auto-detach", "wait-all",
    *                     "use-app-identity", "per-client-app-identity", "virtual-display"
@@ -1274,8 +1356,8 @@ namespace proc {
           std::vector<proc::cmd_t> prep_cmds;
           bool exclude_global_prep = app_node.value("exclude-global-prep-cmd", false);
           if (!exclude_global_prep) {
-            prep_cmds.reserve(config::sunshine.prep_cmds.size());
-            for (auto &prep_cmd : config::sunshine.prep_cmds) {
+            prep_cmds.reserve(config::tunastream.prep_cmds.size());
+            for (auto &prep_cmd : config::tunastream.prep_cmds) {
               auto do_cmd = parse_env_val(this_env, prep_cmd.do_cmd);
               auto undo_cmd = parse_env_val(this_env, prep_cmd.undo_cmd);
               prep_cmds.emplace_back(
@@ -1302,8 +1384,8 @@ namespace proc {
           std::vector<proc::cmd_t> state_cmds;
           bool exclude_global_state_cmds = app_node.value("exclude-global-state-cmd", false);
           if (!exclude_global_state_cmds) {
-            state_cmds.reserve(config::sunshine.state_cmds.size());
-            for (auto &state_cmd : config::sunshine.state_cmds) {
+            state_cmds.reserve(config::tunastream.state_cmds.size());
+            for (auto &state_cmd : config::tunastream.state_cmds) {
               auto do_cmd = parse_env_val(this_env, state_cmd.do_cmd);
               auto undo_cmd = parse_env_val(this_env, state_cmd.undo_cmd);
               state_cmds.emplace_back(

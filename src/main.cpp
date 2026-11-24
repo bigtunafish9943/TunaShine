@@ -1,6 +1,6 @@
 /**
  * @file src/main.cpp
- * @brief Definitions for the main entry point for Sunshine.
+ * @brief Definitions for the main entry point for TunaStream.
  */
 // standard includes
 #include <codecvt>
@@ -79,7 +79,7 @@ LRESULT CALLBACK SessionMonitorWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, L
       {
         // Terminate ourselves with a blocking exit call
         std::cout << "Received WM_ENDSESSION"sv << std::endl;
-        lifetime::exit_sunshine(0, false);
+        lifetime::exit_tunastream(0, false);
         return 0;
       }
     default:
@@ -90,13 +90,13 @@ LRESULT CALLBACK SessionMonitorWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, L
 WINAPI BOOL ConsoleCtrlHandler(DWORD type) {
   if (type == CTRL_CLOSE_EVENT) {
     BOOST_LOG(info) << "Console closed handler called";
-    lifetime::exit_sunshine(0, false);
+    lifetime::exit_tunastream(0, false);
   }
   return FALSE;
 }
 #endif
 
-#if defined SUNSHINE_TRAY && SUNSHINE_TRAY >= 1
+#if defined TUNASTREAM_TRAY && TUNASTREAM_TRAY >= 1
 constexpr bool tray_is_enabled = true;
 #else
 constexpr bool tray_is_enabled = false;
@@ -120,7 +120,7 @@ void mainThreadLoop(const std::shared_ptr<safe::event_t<bool>> &shutdown_event) 
   while (true) {
     if (shutdown_event->peek()) {
       BOOST_LOG(info) << "Shutdown event detected, breaking main loop"sv;
-      if (tray_is_enabled && config::sunshine.system_tray) {
+      if (tray_is_enabled && config::tunastream.system_tray) {
         system_tray::end_tray();
       }
       break;
@@ -163,7 +163,7 @@ int main(int argc, char *argv[]) {
     return 0;
   }
 
-  auto log_deinit_guard = logging::init(config::sunshine.min_log_level, config::sunshine.log_file);
+  auto log_deinit_guard = logging::init(config::tunastream.min_log_level, config::tunastream.log_file);
   if (!log_deinit_guard) {
     BOOST_LOG(error) << "Logging failed to initialize"sv;
   }
@@ -182,10 +182,10 @@ int main(int argc, char *argv[]) {
   }
   config::modified_config_settings.clear();
 
-  if (!config::sunshine.cmd.name.empty()) {
-    auto fn = cmd_to_func.find(config::sunshine.cmd.name);
+  if (!config::tunastream.cmd.name.empty()) {
+    auto fn = cmd_to_func.find(config::tunastream.cmd.name);
     if (fn == std::end(cmd_to_func)) {
-      BOOST_LOG(fatal) << "Unknown command: "sv << config::sunshine.cmd.name;
+      BOOST_LOG(fatal) << "Unknown command: "sv << config::tunastream.cmd.name;
 
       BOOST_LOG(info) << "Possible commands:"sv;
       for (auto &[key, _] : cmd_to_func) {
@@ -195,7 +195,7 @@ int main(int argc, char *argv[]) {
       return 7;
     }
 
-    return fn->second(argv[0], config::sunshine.cmd.argc, config::sunshine.cmd.argv);
+    return fn->second(argv[0], config::tunastream.cmd.argc, config::tunastream.cmd.argv);
   }
 
   // Adding guard here first as it also performs recovery after crash,
@@ -209,9 +209,9 @@ int main(int argc, char *argv[]) {
 #ifdef _WIN32
   // Modify relevant NVIDIA control panel settings if the system has corresponding gpu
   if (nvprefs_instance.load()) {
-    // Restore global settings to the undo file left by improper termination of sunshine.exe
+    // Restore global settings to the undo file left by improper termination of tunastream.exe
     nvprefs_instance.restore_from_and_delete_undo_file_if_exists();
-    // Modify application settings for sunshine.exe
+    // Modify application settings for tunastream.exe
     nvprefs_instance.modify_application_profile();
     // Modify global settings, undo file is produced in the process to restore after improper termination
     nvprefs_instance.modify_global_profile();
@@ -219,7 +219,7 @@ int main(int argc, char *argv[]) {
     nvprefs_instance.unload();
   }
 
-  // Wait as long as possible to terminate Sunshine.exe during logoff/shutdown
+  // Wait as long as possible to terminate TunaStream.exe during logoff/shutdown
   SetProcessShutdownParameters(0x100, SHUTDOWN_NORETRY);
 
   // We must create a hidden window to receive shutdown notifications since we load gdi32.dll
@@ -232,7 +232,7 @@ int main(int argc, char *argv[]) {
     session_monitor_join_thread_promise.set_value_at_thread_exit();
 
     WNDCLASSA wnd_class {};
-    wnd_class.lpszClassName = "SunshineSessionMonitorClass";
+    wnd_class.lpszClassName = "TunaStreamSessionMonitorClass";
     wnd_class.lpfnWndProc = SessionMonitorWindowProc;
     if (!RegisterClassA(&wnd_class)) {
       session_monitor_hwnd_promise.set_value(nullptr);
@@ -243,7 +243,7 @@ int main(int argc, char *argv[]) {
     auto wnd = CreateWindowExA(
       0,
       wnd_class.lpszClassName,
-      "Sunshine Session Monitor Window",
+      "TunaStream Session Monitor Window",
       0,
       CW_USEDEFAULT,
       CW_USEDEFAULT,
@@ -301,7 +301,7 @@ int main(int argc, char *argv[]) {
     BOOST_LOG(info) << "Interrupt handler called"sv;
 
     auto task = []() {
-      BOOST_LOG(fatal) << "10 seconds passed, yet Sunshine's still running: Forcing shutdown"sv;
+      BOOST_LOG(fatal) << "10 seconds passed, yet TunaStream's still running: Forcing shutdown"sv;
       logging::log_flush();
       lifetime::debug_trap();
     };
@@ -318,7 +318,7 @@ int main(int argc, char *argv[]) {
     BOOST_LOG(info) << "Terminate handler called"sv;
 
     auto task = []() {
-      BOOST_LOG(fatal) << "10 seconds passed, yet Sunshine's still running: Forcing shutdown"sv;
+      BOOST_LOG(fatal) << "10 seconds passed, yet TunaStream's still running: Forcing shutdown"sv;
       logging::log_flush();
       lifetime::debug_trap();
     };
@@ -335,7 +335,7 @@ int main(int argc, char *argv[]) {
 
   proc::refresh(config::stream.file_apps);
 
-  // If any of the following fail, we log an error and continue event though sunshine will not function correctly.
+  // If any of the following fail, we log an error and continue event though tunastream will not function correctly.
   // This allows access to the UI to fix configuration problems or view the logs.
 
   auto platf_deinit_guard = platf::init();
@@ -403,7 +403,7 @@ int main(int argc, char *argv[]) {
     BOOST_LOG(fatal) << "HTTP interface failed to initialize"sv;
 
 #ifdef _WIN32
-    BOOST_LOG(fatal) << "To relaunch TunaShine successfully, use the shortcut in the Start Menu. Do not run sunshine.exe manually."sv;
+    BOOST_LOG(fatal) << "To relaunch TunaStream successfully, use the shortcut in the Start Menu. Do not run tunastream.exe manually."sv;
     std::this_thread::sleep_for(10s);
 #endif
 
@@ -412,7 +412,7 @@ int main(int argc, char *argv[]) {
 
   std::unique_ptr<platf::deinit_t> mDNS;
   auto sync_mDNS = std::async(std::launch::async, [&mDNS]() {
-    if (config::sunshine.enable_discovery) {
+    if (config::tunastream.enable_discovery) {
       mDNS = platf::publish::start();
     }
   });
@@ -433,17 +433,17 @@ int main(int argc, char *argv[]) {
 
 #ifdef _WIN32
   // If we're using the default port and GameStream is enabled, warn the user
-  if (config::sunshine.port == 47989 && is_gamestream_enabled()) {
-    BOOST_LOG(fatal) << "GameStream is still enabled in GeForce Experience! This *will* cause streaming problems with TunaShine!"sv;
-    BOOST_LOG(fatal) << "Disable GameStream on the SHIELD tab in GeForce Experience or change the Port setting on the Advanced tab in the TunaShine Web UI."sv;
+  if (config::tunastream.port == 47989 && is_gamestream_enabled()) {
+    BOOST_LOG(fatal) << "GameStream is still enabled in GeForce Experience! This *will* cause streaming problems with TunaStream!"sv;
+    BOOST_LOG(fatal) << "Disable GameStream on the SHIELD tab in GeForce Experience or change the Port setting on the Advanced tab in the TunaStream Web UI."sv;
   }
 #endif
 
-  if (tray_is_enabled && config::sunshine.system_tray) {
+  if (tray_is_enabled && config::tunastream.system_tray) {
     BOOST_LOG(info) << "Starting system tray"sv;
 #ifdef _WIN32
     // TODO: Windows has a weird bug where when running as a service and on the first Windows boot,
-    // he tray icon would not appear even though Sunshine is running correctly otherwise.
+    // he tray icon would not appear even though TunaStream is running correctly otherwise.
     // Restarting the service would allow the icon to appear normally.
     // For now we will keep the Windows tray icon on a separate thread.
     // Ideally, we would run the system tray on the main thread for all platforms.
@@ -473,7 +473,7 @@ int main(int argc, char *argv[]) {
   }
 
   // Stop the threaded tray if it was started
-  if (tray_is_enabled && config::sunshine.system_tray) {
+  if (tray_is_enabled && config::tunastream.system_tray) {
     system_tray::end_tray_threaded();
   }
 #endif

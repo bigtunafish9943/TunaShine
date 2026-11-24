@@ -54,6 +54,14 @@ namespace stream {
     void stop(session_t &session);
     void graceful_stop(session_t& session);
     void join(session_t &session);
+
+    /**
+     * @brief Rumble the controllers of every connected client for a moment.
+     * @details Goes straight to the clients, bypassing games and the virtual gamepad driver,
+     *          so it tells whether the host-to-controller path works.
+     * @return Number of connected clients the rumble was sent to.
+     */
+    int test_rumble();
     state_e state(session_t &session);
     inline bool send(session_t& session, const std::string_view &payload);
   }  // namespace session

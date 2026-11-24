@@ -107,24 +107,6 @@ jobs:
           cpack -G ZIP 2>&1 | tee -a ../package.log
           ls -la cpack_artifacts
 
-      - name: Report errors
-        if: failure()
-        shell: bash
-        run: |
-          # Publish the tail of whichever log failed as an annotation, so the
-          # cause is visible without downloading the full log.
-          for f in package.log build.log configure.log; do
-            if [ -f "$f" ]; then log="$f"; break; fi
-          done
-          if [ -z "${log:-}" ]; then echo "::error::Failed before any log was written"; exit 0; fi
-          {
-            grep -n -E "error:|error |FAILED:|undefined reference|No such file|CMake Error" "$log" | head -n 60
-            echo "--- last lines of $log ---"
-            tail -n 40 "$log"
-          } | cut -c1-260 > excerpt.txt
-          msg=$(sed -e 's/%/%25/g' excerpt.txt | tr -d '\r' | awk '{printf "%s%%0A", $0}')
-          echo "::error title=$log::$msg"
-
       - name: Upload installer
         uses: actions/upload-artifact@v4
         with:
@@ -133,6 +115,41 @@ jobs:
             build/cpack_artifacts/*.exe
             build/cpack_artifacts/*.zip
           if-no-files-found: error
+
+      - name: Smoke test
+        # Starts the packaged program on this machine and checks that it serves its web
+        # interface and that TunaStream's own settings and actions respond. Runs after the
+        # upload so a failing test still leaves an installer to inspect.
+        shell: bash
+        run: |
+          set -o pipefail
+          bash scripts/ci/smoke-test.sh build/cpack_artifacts/*.zip "$PWD" "$BUILD_VERSION" 2>&1 | tee smoke.log
+
+      - name: Report smoke test summary
+        if: success()
+        shell: bash
+        run: |
+          passed=$(grep -c "^PASS:" smoke.log || true)
+          msg=$(grep -E "^(PASS|RESULT):|Warning:|Error:|Fatal:" smoke.log | cut -c1-200 | head -n 70 | sed -e 's/%/%25/g' | tr -d '\r' | awk '{printf "%s%%0A", $0}')
+          echo "::notice title=Smoke test passed ($passed checks)::$msg"
+
+      - name: Report errors
+        if: failure()
+        shell: bash
+        run: |
+          # Publish the tail of whichever log failed as an annotation, so the
+          # cause is visible without downloading the full log.
+          for f in smoke.log package.log build.log configure.log; do
+            if [ -f "$f" ]; then log="$f"; break; fi
+          done
+          if [ -z "${log:-}" ]; then echo "::error::Failed before any log was written"; exit 0; fi
+          {
+            grep -n -E "^FAIL:|error:|error |FAILED:|undefined reference|No such file|CMake Error" "$log" | head -n 60
+            echo "--- last lines of $log ---"
+            tail -n 45 "$log"
+          } | cut -c1-260 > excerpt.txt
+          msg=$(sed -e 's/%/%25/g' excerpt.txt | tr -d '\r' | awk '{printf "%s%%0A", $0}')
+          echo "::error title=$log::$msg"
 
   web-preview:
     # Publishes the built web UI to the web-preview branch so its pages can be
@@ -167,3 +184,56 @@ jobs:
               -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
               commit -q -m "Web UI build for ${GITHUB_SHA}"
           git push -f "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" web-preview
+
+  release:
+    # Every successful build of master is published as a release, so the installer can be
+    # downloaded without signing in to GitHub, and the update check in the app can see it.
+    name: Publish release
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    env:
+      VERSION: 0.1.${{ github.run_number }}
+    steps:
+      - name: Download installer
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-installer
+          path: dist
+
+      - name: Name the files after the version
+        run: |
+          cd dist
+          ls -la
+          for f in *.exe; do mv "$f" "TunaStream-${VERSION}-setup.exe"; done
+          for f in *.zip; do mv "$f" "TunaStream-${VERSION}-portable.zip"; done
+          ls -la
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo "Automatic build from master, commit ${GITHUB_SHA::7}."
+            echo
+            echo "**Download** \`TunaStream-${VERSION}-setup.exe\` and run it. Windows warns about an unknown"
+            echo "publisher because the installer is not code-signed: choose **More info**, then **Run anyway**."
+            echo
+            echo "The portable zip runs without installing, but does not set up the virtual display or"
+            echo "virtual gamepad drivers."
+            echo
+            echo "### Changes"
+            git_log=$(curl -s -H "Authorization: Bearer ${GH_TOKEN}" \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits?sha=${GITHUB_SHA}&per_page=15" \
+              | python3 -c "import json,sys; [print('- ' + c['commit']['message'].split(chr(10))[0]) for c in json.load(sys.stdin) if not c['commit']['message'].startswith('Merge')]" || true)
+            echo "${git_log}"
+          } > notes.md
+          gh release create "v${VERSION}" dist/* \
+            --repo "${GITHUB_REPOSITORY}" \
+            --target "${GITHUB_SHA}" \
+            --title "TunaStream ${VERSION}" \
+            --notes-file notes.md \
+            --latest

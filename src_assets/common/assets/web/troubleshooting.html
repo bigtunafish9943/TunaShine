@@ -59,37 +59,56 @@
         </div>
       </div>
     </div>
-    <!-- Restart TunaShine -->
+    <!-- Rumble test -->
     <div class="card p-2 my-4">
       <div class="card-body">
-        <h2 id="restart">{{ $t('troubleshooting.restart_apollo') }}</h2>
+        <h2 id="rumble_test">{{ $t('troubleshooting.rumble_test') }}</h2>
         <br>
-        <p>{{ $t('troubleshooting.restart_apollo_desc') }}</p>
-        <div class="alert alert-success" v-if="serverRestarting">
-          {{ $t('troubleshooting.restart_apollo_success') }}
+        <p>{{ $t('troubleshooting.rumble_test_desc') }}</p>
+        <div class="alert alert-success" v-if="rumbleClients > 0">
+          {{ $t('troubleshooting.rumble_test_sent', { count: rumbleClients }) }}
+        </div>
+        <div class="alert alert-warning" v-if="rumbleClients === 0">
+          {{ $t('troubleshooting.rumble_test_none') }}
         </div>
         <div>
-          <button class="btn btn-warning" :disabled="serverQuitting || serverRestarting" @click="restart">
-            {{ $t('troubleshooting.restart_apollo') }}
+          <button class="btn btn-primary" :disabled="rumblePressed" @click="rumbleTest">
+            {{ $t('troubleshooting.rumble_test_button') }}
           </button>
         </div>
       </div>
     </div>
-    <!-- Quit TunaShine -->
+    <!-- Restart TunaStream -->
     <div class="card p-2 my-4">
       <div class="card-body">
-        <h2 id="quit">{{ $t('troubleshooting.quit_apollo') }}</h2>
+        <h2 id="restart">{{ $t('troubleshooting.restart_tunastream') }}</h2>
         <br>
-        <p>{{ $t('troubleshooting.quit_apollo_desc') }}</p>
+        <p>{{ $t('troubleshooting.restart_tunastream_desc') }}</p>
+        <div class="alert alert-success" v-if="serverRestarting">
+          {{ $t('troubleshooting.restart_tunastream_success') }}
+        </div>
+        <div>
+          <button class="btn btn-warning" :disabled="serverQuitting || serverRestarting" @click="restart">
+            {{ $t('troubleshooting.restart_tunastream') }}
+          </button>
+        </div>
+      </div>
+    </div>
+    <!-- Quit TunaStream -->
+    <div class="card p-2 my-4">
+      <div class="card-body">
+        <h2 id="quit">{{ $t('troubleshooting.quit_tunastream') }}</h2>
+        <br>
+        <p>{{ $t('troubleshooting.quit_tunastream_desc') }}</p>
         <div class="alert alert-success" v-if="serverQuit">
-          {{ $t('troubleshooting.quit_apollo_success') }}
+          {{ $t('troubleshooting.quit_tunastream_success') }}
         </div>
         <div class="alert alert-success" v-if="serverQuitting">
-          {{ $t('troubleshooting.quit_apollo_success_ongoing') }}
+          {{ $t('troubleshooting.quit_tunastream_success_ongoing') }}
         </div>
         <div>
           <button class="btn btn-warning" :disabled="serverQuitting || serverRestarting" @click="quit">
-            {{ $t('troubleshooting.quit_apollo') }}
+            {{ $t('troubleshooting.quit_tunastream') }}
           </button>
         </div>
       </div>
@@ -145,6 +164,8 @@
         return {
           clients: [],
           closeAppPressed: false,
+          rumblePressed: false,
+          rumbleClients: null,
           closeAppStatus: null,
           ddResetPressed: false,
           ddResetStatus: null,
@@ -203,6 +224,28 @@
             })
             .catch(error => console.error("Error fetching logs:", error));
         },
+        rumbleTest() {
+          this.rumblePressed = true;
+          this.rumbleClients = null;
+          fetch("./api/rumble-test", {
+            credentials: 'include',
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          })
+            .then((r) => r.json())
+            .then((r) => {
+              this.rumbleClients = r.clients ?? 0;
+            })
+            .catch((error) => {
+              console.error("Rumble test failed:", error);
+              this.rumbleClients = 0;
+            })
+            .finally(() => {
+              this.rumblePressed = false;
+            });
+        },
         closeApp() {
           this.closeAppPressed = true;
           fetch("./api/apps/close", {
@@ -254,7 +297,7 @@
           });
         },
         quit() {
-          if (window.confirm(this.i18n.t('troubleshooting.quit_apollo_confirm'))) {
+          if (window.confirm(this.i18n.t('troubleshooting.quit_tunastream_confirm'))) {
             this.serverQuitting = true;
             fetch("./api/quit", {
               credentials: 'include',

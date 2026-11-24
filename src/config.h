@@ -1,6 +1,6 @@
 /**
  * @file src/config.h
- * @brief Declarations for the configuration of Sunshine.
+ * @brief Declarations for the configuration of TunaStream.
  */
 #pragma once
 
@@ -40,7 +40,7 @@ namespace config {
     nvenc::nvenc_config nv;
     bool nv_realtime_hags;
     bool nv_opengl_vulkan_on_dxgi;
-    bool nv_sunshine_high_power_mode;
+    bool nv_tunastream_high_power_mode;
 
     struct {
       int preset;
@@ -149,6 +149,7 @@ namespace config {
     std::string fallback_mode;
     bool isolated_virtual_display_option;
     bool ignore_encoder_probe_failure;
+    bool virtual_display_primary;  ///< Make the virtual display the primary display while it exists
   };
 
   struct audio_t {
@@ -184,7 +185,7 @@ namespace config {
     std::string pkey;
     std::string cert;
 
-    std::string sunshine_name;
+    std::string tunastream_name;
 
     std::string file_state;
 
@@ -256,7 +257,7 @@ namespace config {
     bool elevated;
   };
 
-  struct sunshine_t {
+  struct tunastream_t {
     bool hide_tray_controls;
     bool enable_pairing;
     bool enable_discovery;
@@ -296,7 +297,7 @@ namespace config {
   extern stream_t stream;
   extern nvhttp_t nvhttp;
   extern input_t input;
-  extern sunshine_t sunshine;
+  extern tunastream_t tunastream;
 
   int parse(int argc, char *argv[]);
   std::unordered_map<std::string, std::string> parse_config(const std::string_view &file_content);
