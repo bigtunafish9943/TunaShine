@@ -558,9 +558,13 @@ html[data-bs-theme=dark] body .btn-outline-secondary {
 .app-list-footer {
     display: flex;
     flex-wrap: wrap;
-    justify-content: space-between;
     gap: 0.5rem;
     margin-top: 1rem;
+}
+
+/* Adding apps on the left, list tools on the right */
+.app-list-footer > :last-child {
+    margin-left: auto;
 }
 
 .app-tips ul {
