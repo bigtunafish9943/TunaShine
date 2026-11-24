@@ -79,7 +79,6 @@
     "working_dir_desc": "Katalog roboczy, który powinien zostać przekazany do procesu. Na przykład, niektóre aplikacje używają katalogu roboczego do wyszukiwania plików konfiguracyjnych. Jeśli nie zostanie ustawiony, TunaStream domyślnie wybierze katalog nadrzędny polecenia"
   },
   "config": {
-    "adapter_name": "Nazwa adaptera",
     "adapter_name_desc_linux_1": "Ręczne określenie procesora graficznego używanego do przechwytywania.",
     "adapter_name_desc_linux_2": "aby znaleźć wszystkie urządzenia obsługujące VAAPI",
     "adapter_name_desc_linux_3": "Zastąp ``renderD129`` urządzeniem z powyższej listy, aby wyświetlić nazwę i możliwości urządzenia. Aby być obsługiwanym przez TunaStream, musi mieć co najmniej:",

@@ -86,7 +86,6 @@
     "working_dir_desc": "Das Arbeitsverzeichnis, das an den Prozess übergeben werden soll. Zum Beispiel verwenden einige Anwendungen das Arbeitsverzeichnis, um nach Konfigurationsdateien zu suchen. Falls nicht gesetzt, wird TunaStream standardmäßig das übergeordnete Verzeichnis des Befehls verwenden"
   },
   "config": {
-    "adapter_name": "Adaptername",
     "adapter_name_desc_linux_1": "Geben Sie eine GPU für die Aufnahme manuell an.",
     "adapter_name_desc_linux_2": "um alle Geräte zu finden, die VAAPI nutzen können",
     "adapter_name_desc_linux_3": "Ersetze ``renderD129`` durch das Gerät von oben, um den Namen und die Fähigkeiten des Geräts aufzulisten. Um von TunaStream unterstützt zu werden, muss es zumindest über folgende Punkte verfügen:",

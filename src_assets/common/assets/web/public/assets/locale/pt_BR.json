@@ -116,7 +116,6 @@
     "generic_moonlight_clients_desc": "Clientes genéricos Moonlight ainda funcionam com o TunaStream."
   },
   "config": {
-    "adapter_name": "Nome da GPU",
     "adapter_name_desc_linux_1": "Especificar manualmente uma GPU a ser usada para captura.",
     "adapter_name_desc_linux_2": "para encontrar todos os dispositivos compatíveis com VAAPI",
     "adapter_name_desc_linux_3": "Substitua ``renderD129`` pelo dispositivo acima para listar o nome e os recursos do dispositivo. Para ser suportado pelo TunaStream, ele precisa ter, no mínimo:",

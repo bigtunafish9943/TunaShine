@@ -109,7 +109,6 @@
     "generic_moonlight_clients_desc": "Generiska Moonlight-klienter som kan användas med TunaStream"
   },
   "config": {
-    "adapter_name": "Adapternamn",
     "adapter_name_desc_linux_1": "Ange manuellt vilket grafikkort (GPU) som ska användas för skärminspelning.",
     "adapter_name_desc_linux_2": "att hitta alla enheter kapabla till VAAPI",
     "adapter_name_desc_linux_3": "Ersätt ``renderD129`` med enheten ovanifrån för att lista enhetens namn och egenskaper. För att stödjas av TunaStream, måste det som minst ha:",

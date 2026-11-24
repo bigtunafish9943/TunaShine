@@ -79,7 +79,6 @@
     "working_dir_desc": "Pracovní adresář, který má být předán procesu. Některé aplikace například používají pracovní adresář k vyhledávání konfiguračních souborů. Pokud není nastaven, bude TunaStream implicitně nastaven na nadřazený adresář příkazu"
   },
   "config": {
-    "adapter_name": "Název adaptéru",
     "adapter_name_desc_linux_1": "Ruční zadání GPU, která se má použít pro snímání.",
     "adapter_name_desc_linux_2": "najít všechna zařízení schopná VAAPI",
     "adapter_name_desc_linux_3": "Nahraďte ``renderD129`` zařízením z výše uvedeného seznamu, abyste vypsali název a schopnosti zařízení. Aby bylo zařízení TunaStream podporováno, musí mít minimálně:",

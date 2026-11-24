@@ -86,7 +86,6 @@
     "working_dir_desc": "Le répertoire de démarrage qui doit être passé au processus. Par exemple, certaines applications utilisent le répertoire de démarrage \n pour rechercher des fichiers de configuration. Si non défini, TunaStream utilisera par défaut le répertoire parent de la commande"
   },
   "config": {
-    "adapter_name": "Nom de l'adaptateur",
     "adapter_name_desc_linux_1": "Spécifiez manuellement un GPU à utiliser pour la capture.",
     "adapter_name_desc_linux_2": "pour trouver tous les appareils capables d'utiliser l'interface VAAPI",
     "adapter_name_desc_linux_3": "Remplacez ``renderD129`` par le dispositif ci-dessus pour énumérer le nom et les capacités du dispositif. Pour être pris en charge par TunaStream, il doit avoir au minimum les caractéristiques suivantes :",
