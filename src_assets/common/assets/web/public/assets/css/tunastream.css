@@ -993,3 +993,39 @@ body .dropdown-menu {
     border-top: 1px solid var(--ts-surface-border);
     border-radius: 0 0 0.75rem 0.75rem;
 }
+
+/* ---------- Update banner, on every page ---------- */
+.update-banner {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 1rem;
+    background-color: var(--ts-navy);
+    color: #fff;
+    border-bottom: 2px solid var(--ts-accent);
+}
+
+.update-banner > i {
+    color: var(--ts-accent);
+    font-size: 1.1rem;
+}
+
+.update-banner-text {
+    flex: 1;
+    font-weight: 500;
+}
+
+.update-banner-close {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.75);
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.35rem;
+    line-height: 1;
+}
+
+.update-banner-close:hover,
+.update-banner-close:focus-visible {
+    color: #fff;
+    background-color: rgba(255, 255, 255, 0.12);
+}

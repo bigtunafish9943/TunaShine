@@ -611,7 +611,10 @@
     "theme_dark": "Dark",
     "theme_light": "Light",
     "toggle_theme": "Theme",
-    "troubleshoot": "Troubleshooting"
+    "troubleshoot": "Troubleshooting",
+    "update_banner": "TunaStream {version} is available.",
+    "update_banner_action": "Update now",
+    "update_banner_close": "Hide until the next update"
   },
   "password": {
     "confirm_password": "Confirm Password",

@@ -122,7 +122,7 @@
     </div>
 
     <!-- Version -->
-    <div class="card p-2 my-4" v-if="version && (buildVersionIsDirty || installedVersionNotStable || stableBuildAvailable || (notifyPreReleases && preReleaseBuildAvailable))">
+    <div class="card p-2 my-4" id="update" v-if="version && (buildVersionIsDirty || installedVersionNotStable || stableBuildAvailable || (notifyPreReleases && preReleaseBuildAvailable))">
       <div class="card-body">
         <h2>{{ $t('index.updates') }}</h2>
         <div class="alert alert-success" v-if="buildVersionIsDirty">
