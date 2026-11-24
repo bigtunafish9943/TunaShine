@@ -826,9 +826,9 @@ namespace video {
       },
       {
         // SDR-specific options
-        {"profile"s, [](const config_t &cfg) {
-           if (cfg.profile == 66) return "baseline"s;
-           if (cfg.profile == 77) return "main"s;
+        // config_t carries no requested H.264 profile; the encoder context always uses
+        // High for 4:2:0 SDR, so ask AMF for the same.
+        {"profile"s, [](const config_t &) {
            return "high"s;
          }},
       },
