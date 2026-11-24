@@ -259,7 +259,8 @@
         const latest = await fetch("https://api.github.com/repos/bigtunafish9943/TunaStream/releases/latest").then((r) => r.ok ? r.json() : null);
         this.githubVersion = latest ? new TunaStreamVersion(latest, null) : null;
         console.log("GitHub Version: ", this.githubVersion && this.githubVersion.version)
-        if (this.githubVersion) {
+        // Pre-releases are only looked up for people who asked to hear about them
+        if (this.githubVersion && this.notifyPreReleases) {
           const pre = (await fetch("https://api.github.com/repos/bigtunafish9943/TunaStream/releases").then((r) => r.ok ? r.json() : [])).find(release => release.prerelease);
           this.preReleaseVersion = pre ? new TunaStreamVersion(pre, null) : null;
           console.log("Pre-Release Version: ", this.preReleaseVersion && this.preReleaseVersion.version)
