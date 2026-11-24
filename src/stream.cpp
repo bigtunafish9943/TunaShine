@@ -1513,7 +1513,7 @@ namespace stream {
     auto &f = session.fec;
     const auto now = std::chrono::steady_clock::now();
     const int low = std::min(base, std::max(8, base / 2));
-    const int high = std::clamp(base + 10, base, 50);
+    const int high = std::max(base, std::min(base + 10, 50));
     const auto events = session.loss_events.load();
 
     if (f.percent == 0) {
@@ -1554,10 +1554,10 @@ namespace stream {
       }
       f.last_loss = now;
     } else if (now - f.last_change > 20s && now - f.last_loss > 20s) {
-      const int floor = now < f.floor_until ? std::max(low, f.floor) : low;
-      if (f.percent > floor) {
+      const int lowest = now < f.floor_until ? std::max(low, f.floor) : low;
+      if (f.percent > lowest) {
         const int before = f.percent;
-        f.percent = std::max(floor, f.percent - 2);
+        f.percent = std::max(lowest, f.percent - 2);
         BOOST_LOG(debug) << "Error correction for "sv << session.device_name << ": "sv << before << "% to "sv << f.percent << "% (connection is clean)"sv;
       }
       f.last_change = now;
