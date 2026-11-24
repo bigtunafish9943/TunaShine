@@ -311,3 +311,54 @@ body .list-group-item-light {
 .config-page {
     padding: 1em;
 }
+
+/* ---------- Home page ---------- */
+.home-lead {
+    color: var(--bs-secondary-color);
+}
+
+.home-status {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+    gap: 0;
+    background-color: var(--ts-surface);
+    border: 1px solid var(--ts-surface-border);
+    border-radius: 0.75rem;
+    overflow: hidden;
+}
+
+.home-status-item {
+    padding: 1.1rem 1.4rem 1.2rem;
+    border-left: 4px solid transparent;
+}
+
+.home-status-item + .home-status-item {
+    box-shadow: -1px 0 0 var(--ts-surface-border);
+}
+
+.home-status-item dt {
+    font-weight: 400;
+    color: var(--bs-secondary-color);
+}
+
+.home-status-item dd {
+    font-family: var(--ts-display);
+    font-size: 1.6rem;
+    font-weight: 600;
+    color: var(--bs-emphasis-color);
+    margin: 0.1rem 0 0.4rem;
+}
+
+.home-status-bad {
+    border-left-color: var(--bs-danger);
+}
+
+.home-steps {
+    margin: 1rem 0 1.25rem;
+    padding-left: 1.3rem;
+    max-width: 44rem;
+}
+
+.home-steps li {
+    margin-bottom: 0.45rem;
+}
