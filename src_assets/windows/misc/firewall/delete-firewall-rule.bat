@@ -1,6 +1,6 @@
 @echo off
 
-set RULE_NAME=TunaShine
+set RULE_NAME=TunaStream
 
 rem Delete the rule
 netsh advfirewall firewall delete rule name=%RULE_NAME%

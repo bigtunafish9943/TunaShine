@@ -71,7 +71,7 @@
           </div>
           <br />
           <p class="mb-0">{{ $t('pin.device_management_desc') }}</p>
-          <p class="mb-0">{{ $t('pin.device_management_warning') }} <a href="https://github.com/ClassicOldSong/Apollo/wiki/Permission-System" target="_blank">{{ $t('_common.learn_more') }}</a></p>
+          <p class="mb-0">{{ $t('pin.device_management_warning') }}</p>
           <div id="apply-alert" class="alert alert-success d-flex align-items-center mt-3" :style="{ 'display': (showApplyMessage ? 'flex !important': 'none !important') }">
             <div class="me-2"><b>{{ $t('_common.success') }}</b> {{ $t('pin.unpair_single_success') }}</div>
             <button class="btn btn-success ms-auto apply" @click="clickedApplyBanner">{{ $t('_common.dismiss') }}</button>
@@ -97,6 +97,12 @@
               </div>
               <div class="me-2 btn btn-success" @click="saveClient(client)"><i class="fas fa-check"></i></div>
               <div class="me-2 btn btn-secondary" @click="cancelEdit(client)"><i class="fas fa-times"></i></div>
+            </div>
+            <div class="d-flex flex-wrap align-items-center justify-content-center gap-2 my-2">
+              <span>{{ $t('pin.presets') }}</span>
+              <button type="button" class="btn btn-sm btn-outline-secondary" @click="applyPreset(client, 'controller')">{{ $t('pin.preset_controller') }}</button>
+              <button type="button" class="btn btn-sm btn-outline-secondary" @click="applyPreset(client, 'watch')">{{ $t('pin.preset_watch') }}</button>
+              <button type="button" class="btn btn-sm btn-outline-secondary" @click="applyPreset(client, 'everything')">{{ $t('pin.preset_everything') }}</button>
             </div>
             <div class="align-items-top d-flex flex-row justify-content-center">
               <div v-for="group in permissionGroups" class="d-flex flex-column mx-2">
@@ -136,7 +142,7 @@
                 placeholder="1920x1080x59.94"
                 @input="validateModeOverride"
               />
-              <div class="form-text">{{ $t('pin.display_mode_override_desc') }} <a href="https://github.com/ClassicOldSong/Apollo/wiki/Display-Mode-Override" target="_blank">{{ $t('_common.learn_more') }}</a></div>
+              <div class="form-text">{{ $t('pin.display_mode_override_desc') }}</div>
             </div>
 
             <!-- Allow client commands -->
@@ -151,7 +157,7 @@
             <!-- connect/disconnect commands -->
             <div class="mb-3 mt-2 d-flex flex-column" v-for="cmdType in ['do', 'undo']" v-if="client.editAllowClientCommands">
               <label class="mb-0 orm-label">{{ $t(`pin.client_${cmdType}_cmd`) }}</label>
-              <div class="form-text">{{ $t(`pin.client_${cmdType}_cmd_desc`) }} <a href="https://github.com/ClassicOldSong/Apollo/wiki/Client-Commands" target="_blank">{{ $t('_common.learn_more') }}</a></div>
+              <div class="form-text">{{ $t(`pin.client_${cmdType}_cmd_desc`) }}</div>
               <table class="mt-2 table" v-if="client[`edit_${cmdType}`].length > 0">
                 <thead>
                   <tr>
@@ -625,6 +631,18 @@
           }
         }
         return false;
+      },
+      /** Replace the edited device's permissions with a common combination. */
+      applyPreset(client, preset) {
+        const m = permissionMapping;
+        const presets = {
+          // Play with a gamepad, but cannot move this PC's mouse or type on it
+          controller: m.list | m.view | m.launch | m.input_controller,
+          // See the stream only
+          watch: m.list | m.view,
+          everything: m._all,
+        };
+        client.editPerm = presets[preset];
       },
       togglePermission(client, permission) {
         client.editPerm ^= permissionMapping[permission];

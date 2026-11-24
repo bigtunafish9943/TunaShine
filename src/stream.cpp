@@ -67,13 +67,13 @@ static const short packetTypes[] = {
   0x0302,  // IDR frame
   0x0001,  // fully encrypted
   0x010e,  // HDR mode
-  0x5500,  // Rumble triggers (Sunshine protocol extension)
-  0x5501,  // Set motion event (Sunshine protocol extension)
-  0x5502,  // Set RGB LED (Sunshine protocol extension)
-  0x3000,  // Execute Server Command (Apollo protocol extension)
-  0x3001,  // Set Clipboard (Apollo protocol extension)
-  0x3002,  // File transfer nonce request (Apollo protocol extension)
-  0x5503,  // Set Adaptive triggers (Sunshine protocol extension)
+  0x5500,  // Rumble triggers (TunaStream protocol extension)
+  0x5501,  // Set motion event (TunaStream protocol extension)
+  0x5502,  // Set RGB LED (TunaStream protocol extension)
+  0x3000,  // Execute Server Command (TunaStream protocol extension)
+  0x3001,  // Set Clipboard (TunaStream protocol extension)
+  0x3002,  // File transfer nonce request (TunaStream protocol extension)
+  0x5503,  // Set Adaptive triggers (TunaStream protocol extension)
 };
 
 namespace asio = boost::asio;
@@ -100,7 +100,7 @@ namespace stream {
 
     std::uint8_t headerType;  // Always 0x01 for short headers
 
-    // Sunshine extension
+    // TunaStream extension
     // Frame processing latency, in 1/10 ms units
     //     zero when the frame is repeated or there is no backend implementation
     boost::endian::little_uint16_at frame_processing_latency;
@@ -113,7 +113,7 @@ namespace stream {
     std::uint8_t frameType;
 
     // Length of the final packet payload for codecs that cannot handle
-    // zero padding, such as AV1 (Sunshine extension).
+    // zero padding, such as AV1 (TunaStream extension).
     boost::endian::little_uint16_at lastPayloadLen;
 
     std::uint8_t unknown[2];
@@ -215,7 +215,7 @@ namespace stream {
 
     std::uint8_t enabled;
 
-    // Sunshine protocol extension
+    // TunaStream protocol extension
     SS_HDR_METADATA metadata;
   };
 
@@ -423,6 +423,10 @@ namespace stream {
     safe::signal_t controlEnd;
 
     std::atomic<session::state_e> state;
+
+    // Set when the session is stopped because the client went silent, as opposed to
+    // the client disconnecting on purpose.
+    std::atomic_bool connection_lost {false};
   };
 
   /**
@@ -586,7 +590,11 @@ namespace stream {
         return;
       }
 
-      session->pingTimeout = std::chrono::steady_clock::now() + config::stream.ping_timeout;
+      // pingTimeout is pushed forward every time the client is heard from, so it also
+      // tells how long the client had been silent before this event.
+      const auto now = std::chrono::steady_clock::now();
+      const auto silent_for = now - (session->pingTimeout - config::stream.ping_timeout);
+      session->pingTimeout = now + config::stream.ping_timeout;
 
       switch (event.type) {
         case ENET_EVENT_TYPE_RECEIVE:
@@ -603,7 +611,15 @@ namespace stream {
           BOOST_LOG(info) << "CLIENT CONNECTED"sv;
           break;
         case ENET_EVENT_TYPE_DISCONNECT:
-          BOOST_LOG(info) << "CLIENT DISCONNECTED"sv;
+          // ENet reports its own timeout with the same event as a disconnect the client asked
+          // for. A client that leaves on purpose was sending packets right up to that moment;
+          // one whose connection dropped had been silent for seconds first.
+          if (silent_for > 2s) {
+            BOOST_LOG(info) << "CLIENT DISCONNECTED (connection lost)"sv;
+            session->connection_lost = true;
+          } else {
+            BOOST_LOG(info) << "CLIENT DISCONNECTED"sv;
+          }
           // No more clients to send video data to ^_^
           if (session->state == session::state_e::RUNNING) {
             session::stop(*session);
@@ -1011,8 +1027,8 @@ namespace stream {
 
       uint8_t cmdIndex = *(uint8_t*)payload.data();
 
-      if (cmdIndex < config::sunshine.server_cmds.size()) {
-        const auto& cmd = config::sunshine.server_cmds[cmdIndex];
+      if (cmdIndex < config::tunastream.server_cmds.size()) {
+        const auto& cmd = config::tunastream.server_cmds[cmdIndex];
         BOOST_LOG(info) << "Executing server command: " << cmd.cmd_name;
 
         auto exec_thread = std::thread([&cmd]{
@@ -1145,6 +1161,7 @@ namespace stream {
           if (now > session->pingTimeout) {
             auto address = session->control.peer ? platf::from_sockaddr((sockaddr *) &session->control.peer->address.address) : session->control.expected_peer_address;
             BOOST_LOG(info) << address << ": Ping Timeout"sv;
+            session->connection_lost = true;
             session::stop(*session);
           }
 
@@ -1756,7 +1773,7 @@ namespace stream {
   }
 
   int start_broadcast(broadcast_ctx_t &ctx) {
-    auto address_family = net::af_from_enum_string(config::sunshine.address_family);
+    auto address_family = net::af_from_enum_string(config::tunastream.address_family);
     auto protocol = address_family == net::IPV4 ? udp::v4() : udp::v6();
     auto control_port = net::map_port(CONTROL_PORT);
     auto video_port = net::map_port(VIDEO_STREAM_PORT);
@@ -1947,6 +1964,50 @@ namespace stream {
   namespace session {
     std::atomic_uint running_sessions;
 
+    /**
+     * @brief Queue the same rumble for the first four controllers of every connected client.
+     * @return Number of connected clients it was queued for.
+     */
+    static int raise_rumble_all(std::uint16_t lowfreq, std::uint16_t highfreq) {
+      // Don't touch the broadcast context when nothing is streaming: taking a
+      // reference would start it.
+      if (running_sessions == 0) {
+        return 0;
+      }
+
+      auto ref = broadcast.ref();
+      if (!ref) {
+        return 0;
+      }
+
+      int clients = 0;
+      auto lg = ref->control_server._sessions.lock();
+      for (auto *session : *ref->control_server._sessions) {
+        if (!session->control.peer || !session->control.feedback_queue) {
+          continue;
+        }
+
+        for (std::uint16_t id = 0; id < 4; ++id) {
+          session->control.feedback_queue->raise(platf::gamepad_feedback_msg_t::make_rumble(id, lowfreq, highfreq));
+        }
+        ++clients;
+      }
+
+      return clients;
+    }
+
+    int test_rumble() {
+      auto clients = raise_rumble_all(0xC000, 0xC000);
+      if (clients > 0) {
+        BOOST_LOG(info) << "Rumble test sent to "sv << clients << " client(s)"sv;
+        task_pool.pushDelayed([]() {
+          raise_rumble_all(0, 0);
+        }, 700ms);
+      }
+
+      return clients;
+    }
+
     state_e state(session_t &session) {
       return session.state.load(std::memory_order_relaxed);
     }
@@ -2028,7 +2089,7 @@ namespace stream {
     void join(session_t &session) {
       // Current Nvidia drivers have a bug where NVENC can deadlock the encoder thread with hardware-accelerated
       // GPU scheduling enabled. If this happens, we will terminate ourselves and the service can restart.
-      // The alternative is that Sunshine can never start another session until it's manually restarted.
+      // The alternative is that TunaStream can never start another session until it's manually restarted.
       auto task = []() {
         BOOST_LOG(fatal) << "Hang detected! Session failed to terminate in 10 seconds."sv;
         logging::log_flush();
@@ -2073,7 +2134,7 @@ namespace stream {
       if (--running_sessions == 0) {
         bool revert_display_config {config::video.dd.config_revert_on_disconnect};
         if (proc::proc.running()) {
-          proc::proc.pause();
+          proc::proc.pause(session.connection_lost);
         } else {
           // We have no app running and also no clients anymore.
           revert_display_config = true;
@@ -2090,7 +2151,7 @@ namespace stream {
     }
 
     int start(session_t &session, const std::string &addr_string) {
-      session.input = input::alloc(session.mail);
+      session.input = input::alloc(session.mail, session.device_name);
 
       session.broadcast_ref = broadcast.ref();
       if (!session.broadcast_ref) {

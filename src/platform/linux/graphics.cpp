@@ -23,8 +23,8 @@ extern "C" {
 #define fourcc_mod_code(vendor, val) ((((uint64_t) vendor) << 56) | ((val) & 0x00ffffffffffffffULL))
 #define DRM_FORMAT_MOD_INVALID fourcc_mod_code(0, ((1ULL << 56) - 1))
 
-#if !defined(SUNSHINE_SHADERS_DIR)  // for testing this needs to be defined in cmake as we don't do an install
-  #define SUNSHINE_SHADERS_DIR SUNSHINE_ASSETS_DIR "/shaders/opengl"
+#if !defined(TUNASTREAM_SHADERS_DIR)  // for testing this needs to be defined in cmake as we don't do an install
+  #define TUNASTREAM_SHADERS_DIR TUNASTREAM_ASSETS_DIR "/shaders/opengl"
 #endif
 
 using namespace std::literals;
@@ -697,7 +697,7 @@ namespace egl {
     return nv12;
   }
 
-  void sws_t::apply_colorspace(const video::sunshine_colorspace_t &colorspace) {
+  void sws_t::apply_colorspace(const video::tunastream_colorspace_t &colorspace) {
     auto color_p = video::color_vectors_from_colorspace(colorspace);
 
     std::string_view members[] {
@@ -741,11 +741,11 @@ namespace egl {
 
     {
       const char *sources[] {
-        SUNSHINE_SHADERS_DIR "/ConvertUV.frag",
-        SUNSHINE_SHADERS_DIR "/ConvertUV.vert",
-        SUNSHINE_SHADERS_DIR "/ConvertY.frag",
-        SUNSHINE_SHADERS_DIR "/Scene.vert",
-        SUNSHINE_SHADERS_DIR "/Scene.frag",
+        TUNASTREAM_SHADERS_DIR "/ConvertUV.frag",
+        TUNASTREAM_SHADERS_DIR "/ConvertUV.vert",
+        TUNASTREAM_SHADERS_DIR "/ConvertY.frag",
+        TUNASTREAM_SHADERS_DIR "/Scene.vert",
+        TUNASTREAM_SHADERS_DIR "/Scene.frag",
       };
 
       GLenum shader_type[2] {

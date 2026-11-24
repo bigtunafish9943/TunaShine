@@ -50,13 +50,13 @@ namespace proc {
 
   /**
    * pre_cmds -- guaranteed to be executed unless any of the commands fail.
-   * detached -- commands detached from Sunshine
+   * detached -- commands detached from TunaStream
    * cmd -- Runs indefinitely until:
    *    No session is running and a different set of commands it to be executed
    *    Command exits
    * working_dir -- the process working directory. This is required for some games to run properly.
    * cmd_output --
-   *    empty    -- The output of the commands are appended to the output of sunshine
+   *    empty    -- The output of the commands are appended to the output of tunastream
    *    "null"   -- The output of the commands are discarded
    *    filename -- The output of the commands are appended to filename
    */
@@ -107,6 +107,7 @@ namespace proc {
     std::string display_name;
     std::string initial_display;
     std::string mode_changed_display;
+    std::string previous_primary_display;  ///< Primary display before the virtual display took over, if it did
     bool initial_hdr = false;
     bool virtual_display = false;
     bool allow_client_commands = false;
@@ -137,8 +138,22 @@ namespace proc {
     std::string get_running_app_uuid();
     boost::process::v1::environment get_env();
     void resume();
-    void pause();
+
+    /**
+     * @brief Make the virtual display primary again after it was handed back in pause().
+     * @details Does nothing unless a virtual display is in use and it is not primary.
+     */
+    void reclaim_primary_display();
+    /**
+     * @brief Called when the last client is gone.
+     * @param connection_lost True if the client went silent rather than disconnecting on purpose.
+     */
+    void pause(bool connection_lost = false);
     void terminate(bool immediate = false, bool needs_refresh = true);
+
+    /// How long an app is kept running after its last client's connection drops,
+    /// when it would otherwise be ended on disconnect.
+    static constexpr std::chrono::seconds reconnect_grace_period {120};
 
   private:
     int _app_id = 0;

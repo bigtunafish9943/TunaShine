@@ -13,6 +13,9 @@
       <template v-if="hostName">{{ $t('index.running_on', { host: hostName }) }}</template>
       {{ $t('index.version_is', { version: version.version }) }}
     </p>
+    <div class="alert alert-info" v-if="customPort">
+      {{ $t('index.custom_port', { port: customPort }) }}
+    </div>
     <div class="alert alert-danger" v-if="fancyLogs.find(x => x.level === 'Fatal')">
       <p v-html="$t('index.startup_errors')"></p>
       <ul>
@@ -26,6 +29,9 @@
       <div class="home-status-item">
         <dt>{{ $t('index.status_streaming') }}</dt>
         <dd>{{ currentAppName || $t('index.streaming_nothing') }}</dd>
+        <button v-if="currentAppName" type="button" class="btn btn-sm btn-danger me-2" :disabled="ending" @click="endSession">
+          {{ $t('index.end_session') }}
+        </button>
         <a href="./apps">{{ $t('index.manage_apps') }}</a>
       </div>
       <div class="home-status-item">
@@ -41,6 +47,21 @@
         <a href="./config">{{ $t('index.vdisplay_settings') }}</a>
       </div>
     </dl>
+
+    <!-- Who is playing, and what their controllers look like to games -->
+    <div class="home-players" v-if="players.length">
+      <h2 class="h5">{{ $t('index.players_title') }}</h2>
+      <ul>
+        <li v-for="player in players" :key="player.device">
+          <span class="home-player-name">{{ player.device || $t('index.unnamed_device') }}</span>
+          <span v-if="player.controllers.length === 0" class="home-player-detail">{{ $t('index.no_controllers') }}</span>
+          <span v-for="c in player.controllers" class="home-controller" :title="$t('index.controller_hint')">
+            <i class="fas fa-gamepad"></i>
+            {{ $t('index.controller_n', { n: c.controller + 1 }) }}: {{ c.emulated || $t('index.controller_unknown') }}
+          </span>
+        </li>
+      </ul>
+    </div>
 
     <!-- First-time setup, shown until a device is paired -->
     <div class="card p-2 my-4" v-if="clientCount === 0">
@@ -107,9 +128,9 @@
   import { initApp } from './init'
   import Navbar from './Navbar.vue'
   import ResourceCard from './ResourceCard.vue'
-  import ApolloVersion from './apollo_version'
+  import TunaStreamVersion from './tunastream_version'
 
-  console.log("Hello, TunaShine!")
+  console.log("Hello, TunaStream!")
   let app = createApp({
     components: {
       Navbar,
@@ -128,23 +149,34 @@
         hostName: "",
         currentAppName: "",
         clientCount: null,
+        customPort: null,
+        ending: false,
+        players: [],
+        statusTimer: null,
       }
     },
     async created() {
       try {
         let config = await fetch("./api/config").then((r) => r.json());
         this.notifyPreReleases = config.notify_pre_releases;
-        this.version = new ApolloVersion(null, config.version);
+        this.version = new TunaStreamVersion(null, config.version);
         this.platform = config.platform;
         this.vdisplayStatus = config.vdisplayStatus ?? 0;
+        // Set when TunaStream is not on the default port, e.g. installed next to TunaStream
+        const port = parseInt(config.port, 10);
+        this.customPort = (port && port !== 47989) ? port : null;
         this.loadStatus();
+        // Keep the status row current while the page is open
+        this.statusTimer = setInterval(() => {
+          if (!document.hidden && !this.ending) this.loadStatus();
+        }, 5000);
         console.log("Version: ", this.version.version)
-        const latest = await fetch("https://api.github.com/repos/bigtunafish9943/TunaShine/releases/latest").then((r) => r.ok ? r.json() : null);
-        this.githubVersion = latest ? new ApolloVersion(latest, null) : null;
+        const latest = await fetch("https://api.github.com/repos/bigtunafish9943/TunaStream/releases/latest").then((r) => r.ok ? r.json() : null);
+        this.githubVersion = latest ? new TunaStreamVersion(latest, null) : null;
         console.log("GitHub Version: ", this.githubVersion && this.githubVersion.version)
         if (this.githubVersion) {
-          const pre = (await fetch("https://api.github.com/repos/bigtunafish9943/TunaShine/releases").then((r) => r.ok ? r.json() : [])).find(release => release.prerelease);
-          this.preReleaseVersion = pre ? new ApolloVersion(pre, null) : null;
+          const pre = (await fetch("https://api.github.com/repos/bigtunafish9943/TunaStream/releases").then((r) => r.ok ? r.json() : [])).find(release => release.prerelease);
+          this.preReleaseVersion = pre ? new TunaStreamVersion(pre, null) : null;
           console.log("Pre-Release Version: ", this.preReleaseVersion && this.preReleaseVersion.version)
         }
       } catch (e) {
@@ -158,6 +190,24 @@
       this.loading = false;
     },
     methods: {
+      /** Quit the app that is being streamed, which also disconnects whoever is playing. */
+      async endSession() {
+        if (!confirm(this.$t('index.end_session_confirm', { app: this.currentAppName }))) {
+          return;
+        }
+        this.ending = true;
+        try {
+          await fetch("./api/apps/close", {
+            credentials: 'include',
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+          });
+        } catch (e) {
+          console.error(e);
+        }
+        await this.loadStatus();
+        this.ending = false;
+      },
       /** Load what the status row shows. Each part is optional, so failures only leave a blank. */
       async loadStatus() {
         try {
@@ -168,9 +218,23 @@
         } catch (e) {
           console.error(e);
         }
+        let connected = [];
         try {
           const clients = await fetch("./api/clients/list").then((r) => r.json());
           this.clientCount = (clients.named_certs || []).length;
+          connected = (clients.named_certs || []).filter((c) => c.connected).map((c) => c.name);
+        } catch (e) {
+          console.error(e);
+        }
+        try {
+          const status = await fetch("./api/status").then((r) => r.ok ? r.json() : null);
+          const controllers = (status && status.controllers) || [];
+          // One entry per connected device, with the controllers it brought
+          const names = [...new Set([...connected, ...controllers.map((c) => c.device)])];
+          this.players = names.map((device) => ({
+            device,
+            controllers: controllers.filter((c) => c.device === device),
+          }));
         } catch (e) {
           console.error(e);
         }

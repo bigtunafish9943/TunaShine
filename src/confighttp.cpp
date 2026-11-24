@@ -36,7 +36,10 @@
 #include "network.h"
 #include "nvhttp.h"
 #include "platform/common.h"
+#include "input.h"
 #include "process.h"
+#include "rtsp.h"
+#include "stream.h"
 #include "utility.h"
 #include "uuid.h"
 
@@ -180,7 +183,7 @@ namespace confighttp {
     if (!checkIPOrigin(response, request))
       return false;
     // If credentials not set, redirect to welcome.
-    if (config::sunshine.username.empty()) {
+    if (config::tunastream.username.empty()) {
       send_redirect(response, request, "/welcome");
       return false;
     }
@@ -206,7 +209,7 @@ namespace confighttp {
       return false;
     auto authCookie = getCookieValue(cookies->second, "auth");
     if (authCookie.empty() ||
-        util::hex(crypto::hash(authCookie + config::sunshine.salt)).to_string() != sessionCookie)
+        util::hex(crypto::hash(authCookie + config::tunastream.salt)).to_string() != sessionCookie)
       return false;
     fg.disable();
     return true;
@@ -420,7 +423,7 @@ namespace confighttp {
       return;
     }
 
-    if (config::sunshine.username.empty()) {
+    if (config::tunastream.username.empty()) {
       send_redirect(response, request, "/welcome");
       return;
     }
@@ -441,7 +444,7 @@ namespace confighttp {
   void getWelcomePage(resp_https_t response, req_https_t request) {
     print_req(request);
 
-    if (!config::sunshine.username.empty()) {
+    if (!config::tunastream.username.empty()) {
       send_redirect(response, request, "/");
       return;
     }
@@ -482,7 +485,7 @@ namespace confighttp {
   void getFaviconImage(resp_https_t response, req_https_t request) {
     print_req(request);
 
-    std::ifstream in(WEB_DIR "images/apollo.ico", std::ios::binary);
+    std::ifstream in(WEB_DIR "images/tunastream.ico", std::ios::binary);
     SimpleWeb::CaseInsensitiveMultimap headers;
     headers.emplace("Content-Type", "image/x-icon");
     headers.emplace("X-Frame-Options", "DENY");
@@ -491,17 +494,17 @@ namespace confighttp {
   }
 
   /**
-   * @brief Get the Apollo logo image.
+   * @brief Get the TunaStream logo image.
    * @param response The HTTP response object.
    * @param request The HTTP request object.
    *
    * @todo combine function with getFaviconImage and possibly getNodeModules
    * @todo use mime_types map
    */
-  void getApolloLogoImage(resp_https_t response, req_https_t request) {
+  void getTunaStreamLogoImage(resp_https_t response, req_https_t request) {
     print_req(request);
 
-    std::ifstream in(WEB_DIR "images/logo-apollo-45.png", std::ios::binary);
+    std::ifstream in(WEB_DIR "images/logo-tunastream-45.png", std::ios::binary);
     SimpleWeb::CaseInsensitiveMultimap headers;
     headers.emplace("Content-Type", "image/png");
     headers.emplace("X-Frame-Options", "DENY");
@@ -582,7 +585,7 @@ namespace confighttp {
 
       file_tree["current_app"] = proc::proc.get_running_app_uuid();
       file_tree["host_uuid"] = http::unique_id;
-      file_tree["host_name"] = config::nvhttp.sunshine_name;
+      file_tree["host_name"] = config::nvhttp.tunastream_name;
 
       send_response(response, file_tree);
     } catch (std::exception &e) {
@@ -680,6 +683,56 @@ namespace confighttp {
     proc::proc.terminate();
     nlohmann::json output_tree;
     output_tree["status"] = true;
+    send_response(response, output_tree);
+  }
+
+  /**
+   * @brief Rumble the controllers of every connected client for a moment.
+   * @param response The HTTP response object.
+   * @param request The HTTP request object.
+   *
+   * @api_examples{/api/rumble-test| POST| null}
+   */
+  void rumbleTest(resp_https_t response, req_https_t request) {
+    if (!validateContentType(response, request, "application/json") || !authenticate(response, request)) {
+      return;
+    }
+
+    print_req(request);
+
+    nlohmann::json output_tree;
+    output_tree["status"] = true;
+    output_tree["clients"] = stream::session::test_rumble();
+    send_response(response, output_tree);
+  }
+
+  /**
+   * @brief What is being streamed right now: the running app and each connected controller.
+   * @param response The HTTP response object.
+   * @param request The HTTP request object.
+   *
+   * @api_examples{/api/status| GET| null}
+   */
+  void getStatus(resp_https_t response, req_https_t request) {
+    if (!authenticate(response, request)) {
+      return;
+    }
+
+    print_req(request);
+
+    nlohmann::json output_tree;
+    output_tree["status"] = true;
+    output_tree["app"] = proc::proc.get_last_run_app_name();
+    output_tree["sessions"] = rtsp_stream::session_count();
+    nlohmann::json controllers = nlohmann::json::array();
+    for (const auto &gamepad : input::gamepad_status()) {
+      controllers.push_back({
+        {"device", gamepad.device},
+        {"controller", gamepad.controller},
+        {"emulated", gamepad.emulated},
+      });
+    }
+    output_tree["controllers"] = controllers;
     send_response(response, output_tree);
   }
 
@@ -1003,12 +1056,12 @@ namespace confighttp {
 
     nlohmann::json output_tree;
     output_tree["status"] = true;
-    output_tree["platform"] = SUNSHINE_PLATFORM;
+    output_tree["platform"] = TUNASTREAM_PLATFORM;
     output_tree["version"] = PROJECT_VERSION;
 #ifdef _WIN32
     output_tree["vdisplayStatus"] = (int)proc::vDisplayDriverStatus;
 #endif
-    auto vars = config::parse_config(file_handler::read_file(config::sunshine.config_file.c_str()));
+    auto vars = config::parse_config(file_handler::read_file(config::tunastream.config_file.c_str()));
     for (auto &[name, value] : vars) {
       output_tree[name] = value;
     }
@@ -1027,7 +1080,7 @@ namespace confighttp {
 
     nlohmann::json output_tree;
     output_tree["status"] = true;
-    output_tree["locale"] = config::sunshine.locale;
+    output_tree["locale"] = config::tunastream.locale;
     send_response(response, output_tree);
   }
 
@@ -1069,7 +1122,7 @@ namespace confighttp {
         // we should migrate the config file to straight json and get rid of all this nonsense
         config_stream << k << " = " << (v.is_string() ? v.get<std::string>() : v.dump()) << std::endl;
       }
-      file_handler::write_file(config::sunshine.config_file.c_str(), config_stream.str());
+      file_handler::write_file(config::tunastream.config_file.c_str(), config_stream.str());
       output_tree["status"] = true;
       send_response(response, output_tree);
     } catch (std::exception &e) {
@@ -1141,7 +1194,7 @@ namespace confighttp {
     }
 
     print_req(request);
-    std::string content = file_handler::read_file(config::sunshine.log_file.c_str());
+    std::string content = file_handler::read_file(config::tunastream.log_file.c_str());
     SimpleWeb::CaseInsensitiveMultimap headers;
     std::string contentType = "text/plain";
   #ifdef _WIN32
@@ -1173,7 +1226,7 @@ namespace confighttp {
    * @api_examples{/api/password| POST| {"currentUsername":"admin","currentPassword":"admin","newUsername":"admin","newPassword":"admin","confirmNewPassword":"admin"}}
    */
   void savePassword(resp_https_t response, req_https_t request) {
-    if ((!config::sunshine.username.empty() && !authenticate(response, request)) || !validateContentType(response, request, "application/json"))
+    if ((!config::tunastream.username.empty() && !authenticate(response, request)) || !validateContentType(response, request, "application/json"))
       return;
     print_req(request);
     std::vector<std::string> errors;
@@ -1192,14 +1245,14 @@ namespace confighttp {
       if (newUsername.empty()) {
         errors.push_back("Invalid Username");
       } else {
-        auto hash = util::hex(crypto::hash(password + config::sunshine.salt)).to_string();
-        if (config::sunshine.username.empty() ||
-            (boost::iequals(username, config::sunshine.username) && hash == config::sunshine.password)) {
+        auto hash = util::hex(crypto::hash(password + config::tunastream.salt)).to_string();
+        if (config::tunastream.username.empty() ||
+            (boost::iequals(username, config::tunastream.username) && hash == config::tunastream.password)) {
           if (newPassword.empty() || newPassword != confirmPassword)
             errors.push_back("Password Mismatch");
           else {
-            http::save_user_creds(config::sunshine.credentials_file, newUsername, newPassword);
-            http::reload_user_creds(config::sunshine.credentials_file);
+            http::save_user_creds(config::tunastream.credentials_file, newUsername, newPassword);
+            http::reload_user_creds(config::tunastream.credentials_file);
             sessionCookie.clear(); // force re-login
             output_tree["status"] = true;
           }
@@ -1251,7 +1304,7 @@ namespace confighttp {
       std::string deviceName = input_tree.value("deviceName", "");
       output_tree["otp"] = nvhttp::request_otp(passphrase, deviceName);
       output_tree["ip"] = platf::get_local_ip_for_gateway();
-      output_tree["name"] = config::nvhttp.sunshine_name;
+      output_tree["name"] = config::nvhttp.tunastream_name;
       output_tree["status"] = true;
       output_tree["message"] = "OTP created, effective within 3 minutes.";
       send_response(response, output_tree);
@@ -1318,7 +1371,7 @@ namespace confighttp {
   }
 
   /**
-   * @brief Restart Apollo.
+   * @brief Restart TunaStream.
    * @param response The HTTP response object.
    * @param request The HTTP request object.
    *
@@ -1338,7 +1391,7 @@ namespace confighttp {
   }
 
   /**
-   * @brief Quit Apollo.
+   * @brief Quit TunaStream.
    * @param response The HTTP response object.
    * @param request The HTTP request object.
    *
@@ -1357,11 +1410,11 @@ namespace confighttp {
 
 #ifdef _WIN32
     if (GetConsoleWindow() == NULL) {
-      lifetime::exit_sunshine(ERROR_SHUTDOWN_IN_PROGRESS, true);
+      lifetime::exit_tunastream(ERROR_SHUTDOWN_IN_PROGRESS, true);
     } else
 #endif
     {
-      lifetime::exit_sunshine(0, true);
+      lifetime::exit_tunastream(0, true);
     }
     // If exit fails, write a response after 5 seconds.
     std::thread write_resp([response]{
@@ -1481,11 +1534,11 @@ namespace confighttp {
       nlohmann::json input_tree = nlohmann::json::parse(ss.str());
       std::string username = input_tree.value("username", "");
       std::string password = input_tree.value("password", "");
-      std::string hash = util::hex(crypto::hash(password + config::sunshine.salt)).to_string();
-      if (!boost::iequals(username, config::sunshine.username) || hash != config::sunshine.password)
+      std::string hash = util::hex(crypto::hash(password + config::tunastream.salt)).to_string();
+      if (!boost::iequals(username, config::tunastream.username) || hash != config::tunastream.password)
         return;
       std::string sessionCookieRaw = crypto::rand_alphabet(64);
-      sessionCookie = util::hex(crypto::hash(sessionCookieRaw + config::sunshine.salt)).to_string();
+      sessionCookie = util::hex(crypto::hash(sessionCookieRaw + config::tunastream.salt)).to_string();
       cookie_creation_time = std::chrono::steady_clock::now();
       const SimpleWeb::CaseInsensitiveMultimap headers {
         { "Set-Cookie", "auth=" + sessionCookieRaw + "; Secure; SameSite=Strict; Max-Age=2592000; Path=/" }
@@ -1507,7 +1560,7 @@ namespace confighttp {
   void start() {
     auto shutdown_event = mail::man->event<bool>(mail::shutdown);
     auto port_https = net::map_port(PORT_HTTPS);
-    auto address_family = net::af_from_enum_string(config::sunshine.address_family);
+    auto address_family = net::af_from_enum_string(config::tunastream.address_family);
     https_server_t server { config::nvhttp.cert, config::nvhttp.pkey };
     server.default_resource["DELETE"] = [](resp_https_t response, req_https_t request) {
       bad_request(response, request);
@@ -1539,6 +1592,8 @@ namespace confighttp {
     server.resource["^/api/apps/delete$"]["POST"] = deleteApp;
     server.resource["^/api/apps/launch$"]["POST"] = launchApp;
     server.resource["^/api/apps/close$"]["POST"] = closeApp;
+    server.resource["^/api/rumble-test$"]["POST"] = rumbleTest;
+    server.resource["^/api/status$"]["GET"] = getStatus;
     server.resource["^/api/logs$"]["GET"] = getLogs;
     server.resource["^/api/config$"]["GET"] = getConfig;
     server.resource["^/api/config$"]["POST"] = saveConfig;
@@ -1553,8 +1608,8 @@ namespace confighttp {
     server.resource["^/api/clients/unpair$"]["POST"] = unpair;
     server.resource["^/api/clients/disconnect$"]["POST"] = disconnect;
     server.resource["^/api/covers/upload$"]["POST"] = uploadCover;
-    server.resource["^/images/apollo.ico$"]["GET"] = getFaviconImage;
-    server.resource["^/images/logo-apollo-45.png$"]["GET"] = getApolloLogoImage;
+    server.resource["^/images/tunastream.ico$"]["GET"] = getFaviconImage;
+    server.resource["^/images/logo-tunastream-45.png$"]["GET"] = getTunaStreamLogoImage;
     server.resource["^/assets\\/.+$"]["GET"] = getNodeModules;
     server.config.reuse_address = true;
     server.config.address = net::af_to_any_address_string(address_family);

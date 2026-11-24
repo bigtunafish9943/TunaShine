@@ -1,3 +1,17 @@
+TunaStream
+Copyright (C) 2026 TunaStream contributors
+
+TunaStream is a modified version of Apollo (https://github.com/ClassicOldSong/Apollo),
+which is itself a modified version of Sunshine (https://github.com/LizardByte/Sunshine).
+Both are licensed under the GNU General Public License, version 3, and so is TunaStream.
+Copyright in the original work remains with its authors: the Sunshine contributors
+(LizardByte) and ClassicOldSong. The changes made for TunaStream began in November 2026
+and are recorded in this repository's history.
+
+This notice is kept because the license requires it.
+
+--------------------------------------------------------------------------------
+
 ©2018 Valve Corporation. Steam and the Steam logo are trademarks and/or
 registered trademarks of Valve Corporation in the U.S. and/or other countries. All
 rights reserved.
