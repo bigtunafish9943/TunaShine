@@ -47,6 +47,8 @@ namespace proc {
   extern VDISPLAY::DRIVER_STATUS vDisplayDriverStatus;
   /// True when the last stream could not create its virtual display and showed the PC's own screen
   extern std::atomic_bool vdisplay_failed;
+  /// True when the last stream ended but the PC's own monitor could not be made the main display again
+  extern std::atomic_bool display_restore_failed;
 
   /**
    * @brief Reinstall the virtual display driver and reconnect to it, in the background.
