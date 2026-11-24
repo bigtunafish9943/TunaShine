@@ -29,6 +29,9 @@
           <li class="nav-item">
             <a class="nav-link" href="./troubleshooting"><i class="fas fa-fw fa-info"></i> {{ $t('navbar.troubleshoot') }}</a>
           </li>
+          <li class="nav-item">
+            <a class="nav-link" href="./help"><i class="fas fa-fw fa-life-ring"></i> {{ $t('navbar.help') }}</a>
+          </li>
           <li class="nav-item nav-item-theme">
             <ThemeToggle/>
           </li>
