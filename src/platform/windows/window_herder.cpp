@@ -25,6 +25,7 @@
 // platform includes
 #include <windows.h>
 #include <dwmapi.h>
+#include <tlhelp32.h>
 
 // local includes
 #include "misc.h"
@@ -129,6 +130,25 @@ namespace platf {
         }
       }
       return true;
+    }
+
+    // The process that started this one, or 0 if it can't be found
+    DWORD parent_of(DWORD pid) {
+      HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+      if (snapshot == INVALID_HANDLE_VALUE) {
+        return 0;
+      }
+      auto close = util::fail_guard([snapshot]() {
+        CloseHandle(snapshot);
+      });
+      PROCESSENTRY32W entry {};
+      entry.dwSize = sizeof(entry);
+      for (BOOL more = Process32FirstW(snapshot, &entry); more; more = Process32NextW(snapshot, &entry)) {
+        if (entry.th32ProcessID == pid) {
+          return entry.th32ParentProcessID;
+        }
+      }
+      return 0;
     }
 
     bool is_steam(const std::wstring &exe) {
@@ -237,6 +257,15 @@ namespace platf {
             // Opened by a program that was already running: the person at the PC's, so leave it
             existing.insert(hwnd);
             continue;
+          }
+          if (started_for_stream && !is_steam(proc.exe)) {
+            // Started from the taskbar, Start menu or desktop: the person at the PC opened it
+            process_info_t parent;
+            DWORD parent_pid = parent_of(pid);
+            if (parent_pid && process_info(parent_pid, parent) && parent.exe == L"explorer.exe") {
+              existing.insert(hwnd);
+              continue;
+            }
           }
 
           int &moves = move_count[hwnd];
