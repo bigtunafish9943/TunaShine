@@ -3,8 +3,10 @@
  * @brief Finds games and programs installed on this PC, so they can be added as apps.
  *
  * Each launcher keeps its own record of what is installed: Steam in its library manifests,
- * the Epic Games Launcher in JSON manifests under ProgramData, and GOG Galaxy in the registry.
- * Other programs are found through their Start menu shortcuts. Nothing is started or changed.
+ * the Epic Games Launcher in JSON manifests under ProgramData, GOG Galaxy and Ubisoft Connect in
+ * the registry, and Amazon Games and EA in their uninstall entries. Everything else, including
+ * Microsoft Store and Xbox games, comes from the user's Start menu as Windows lists it
+ * (Get-StartApps), read as the signed-in user. Nothing is started or changed.
  */
 // standard includes
 #include <algorithm>
@@ -13,13 +15,18 @@
 #include <fstream>
 #include <set>
 #include <sstream>
+#include <thread>
 
 // lib includes
+#include <boost/filesystem.hpp>
+#include <boost/process/v1/child.hpp>
+#include <boost/process/v1/environment.hpp>
 #include <nlohmann/json.hpp>
 
 // local includes
 #include "game_library.h"
 #include "logging.h"
+#include "platform/common.h"
 #include "utility.h"
 
 #ifdef _WIN32
@@ -220,6 +227,218 @@ namespace game_library {
       RegCloseKey(key);
     }
 
+    /// One uninstall entry from the registry.
+    struct uninstall_entry_t {
+      std::string name;
+      std::string publisher;
+      std::string uninstall;
+      std::string icon;
+      std::string location;
+    };
+
+    /// Uninstall entries for the whole PC (both registry views) and for each signed-in user.
+    std::vector<uninstall_entry_t> uninstall_entries() {
+      std::vector<std::pair<HKEY, std::wstring>> roots {
+        {HKEY_LOCAL_MACHINE, L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall"},
+        {HKEY_LOCAL_MACHINE, L"SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall"},
+      };
+      // Per-user installs (Amazon Games installs this way) live in each user's hive
+      wchar_t sid[256];
+      for (DWORD i = 0;; ++i) {
+        DWORD length = 256;
+        if (RegEnumKeyExW(HKEY_USERS, i, sid, &length, nullptr, nullptr, nullptr, nullptr) != ERROR_SUCCESS) {
+          break;
+        }
+        std::wstring s {sid};
+        if (s.starts_with(L"S-1-5-21-") && !s.ends_with(L"_Classes")) {
+          roots.push_back({HKEY_USERS, s + L"\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall"});
+        }
+      }
+
+      std::vector<uninstall_entry_t> out;
+      for (const auto &[root, path] : roots) {
+        HKEY key;
+        if (RegOpenKeyExW(root, path.c_str(), 0, KEY_READ, &key) != ERROR_SUCCESS) {
+          continue;
+        }
+        wchar_t sub[256];
+        for (DWORD i = 0;; ++i) {
+          DWORD length = 256;
+          if (RegEnumKeyExW(key, i, sub, &length, nullptr, nullptr, nullptr, nullptr) != ERROR_SUCCESS) {
+            break;
+          }
+          auto entry = path + L"\\" + sub;
+          uninstall_entry_t e {
+            to_utf8(reg_string(root, entry, L"DisplayName")),
+            to_utf8(reg_string(root, entry, L"Publisher")),
+            to_utf8(reg_string(root, entry, L"UninstallString")),
+            to_utf8(reg_string(root, entry, L"DisplayIcon")),
+            to_utf8(reg_string(root, entry, L"InstallLocation")),
+          };
+          if (!e.name.empty()) {
+            out.push_back(std::move(e));
+          }
+        }
+        RegCloseKey(key);
+      }
+      return out;
+    }
+
+    /// The program an uninstall entry's icon points at, if it is an .exe that exists.
+    std::string icon_exe(const std::string &icon) {
+      auto path = icon;
+      if (auto comma = path.rfind(','); comma != std::string::npos && comma > path.rfind('\\')) {
+        path.erase(comma);
+      }
+      path.erase(std::remove(path.begin(), path.end(), '"'), path.end());
+      std::error_code ec;
+      if (lower(fs::path {platf::from_utf8(path)}.extension().string()) != ".exe" || !fs::exists(fs::path {platf::from_utf8(path)}, ec)) {
+        return {};
+      }
+      return path;
+    }
+
+    void find_uninstall_games(std::vector<game_t> &out) {
+      for (const auto &e : uninstall_entries()) {
+        auto luninstall = lower(e.uninstall);
+        // Amazon Games: "...Amazon Game Remover.exe" -m Game -p <product id>
+        if (luninstall.find("amazon game remover") != std::string::npos) {
+          auto p = e.uninstall.find(" -p ");
+          if (p != std::string::npos) {
+            auto id = e.uninstall.substr(p + 4);
+            id = id.substr(0, id.find(' '));
+            id.erase(std::remove(id.begin(), id.end(), '"'), id.end());
+            if (!id.empty()) {
+              out.push_back({"amazon", id, e.name, {}, "amazon-games://play/" + id, {}});
+            }
+          }
+          continue;
+        }
+        // EA games register as Electronic Arts; the EA app itself is left out
+        if (lower(e.publisher).find("electronic arts") != std::string::npos && lower(e.name) != "ea app" && lower(e.name).find("origin") == std::string::npos) {
+          auto exe = icon_exe(e.icon);
+          if (!exe.empty()) {
+            out.push_back({"ea", lower(exe), e.name, "\"" + exe + "\"", {}, fs::path {platf::from_utf8(exe)}.parent_path().string()});
+          }
+        }
+      }
+    }
+
+    void find_ubisoft_games(std::vector<game_t> &out) {
+      const std::wstring installs = L"SOFTWARE\\WOW6432Node\\Ubisoft\\Launcher\\Installs";
+      HKEY key;
+      if (RegOpenKeyExW(HKEY_LOCAL_MACHINE, installs.c_str(), 0, KEY_READ, &key) != ERROR_SUCCESS) {
+        return;
+      }
+      wchar_t sub[64];
+      for (DWORD i = 0;; ++i) {
+        DWORD length = 64;
+        if (RegEnumKeyExW(key, i, sub, &length, nullptr, nullptr, nullptr, nullptr) != ERROR_SUCCESS) {
+          break;
+        }
+        auto dir = reg_string(HKEY_LOCAL_MACHINE, installs + L"\\" + sub, L"InstallDir");
+        std::error_code ec;
+        if (dir.empty() || !fs::is_directory(dir, ec)) {
+          continue;
+        }
+        // Ubisoft Connect names its uninstall entry "Uplay Install <id>"
+        auto name = reg_string(HKEY_LOCAL_MACHINE, L"SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Uplay Install " + std::wstring {sub}, L"DisplayName");
+        if (name.empty()) {
+          auto folder = fs::path {dir};
+          name = (folder.has_filename() ? folder.filename() : folder.parent_path().filename()).wstring();
+        }
+        out.push_back({"ubisoft", to_utf8(sub), to_utf8(name), {}, "uplay://launch/" + to_utf8(sub) + "/0", {}});
+      }
+      RegCloseKey(key);
+    }
+
+    /**
+     * @brief Everything in the signed-in user's Start menu, as Windows lists it.
+     * @details Runs Get-StartApps as that user, which covers ordinary programs, Microsoft Store and
+     *          Xbox games, and the shortcuts other launchers create. Each is started through the
+     *          Start menu's own entry. False if it could not run, e.g. when nobody is signed in.
+     */
+    bool find_start_apps(std::vector<game_t> &out, const std::set<std::string> &taken_names) {
+      auto file_path = fs::temp_directory_path() / "tunastream-start-apps.json";
+      std::error_code ec;
+      fs::remove(file_path, ec);
+      FILE *file = _wfopen(file_path.wstring().c_str(), L"wb");
+      if (!file) {
+        return false;
+      }
+      auto close_file = util::fail_guard([&file]() {
+        if (file) {
+          fclose(file);
+        }
+      });
+
+      const std::string cmd =
+        "powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "
+        "\"[Console]::OutputEncoding = [Text.Encoding]::UTF8; Get-StartApps | Select-Object Name, AppID | ConvertTo-Json -Compress\"";
+      boost::filesystem::path working_dir;
+      boost::process::v1::environment env = boost::this_process::environment();
+      auto child = platf::run_command(false, false, cmd, working_dir, env, file, ec, nullptr);
+      if (ec) {
+        BOOST_LOG(warning) << "Couldn't list Start menu apps: "sv << ec.message();
+        return false;
+      }
+      for (int i = 0; i < 300 && child.running(); ++i) {
+        std::this_thread::sleep_for(100ms);
+      }
+      if (child.running()) {
+        child.terminate();
+        BOOST_LOG(warning) << "Listing Start menu apps took too long"sv;
+        return false;
+      }
+      fclose(file);
+      file = nullptr;
+
+      nlohmann::json list;
+      try {
+        auto text = read_file(file_path);
+        if (text.starts_with("\xEF\xBB\xBF")) {
+          text.erase(0, 3);
+        }
+        list = nlohmann::json::parse(text);
+      } catch (const std::exception &e) {
+        BOOST_LOG(warning) << "Couldn't read the Start menu app list: "sv << e.what();
+        return false;
+      }
+      fs::remove(file_path, ec);
+      if (list.is_object()) {
+        list = nlohmann::json::array({list});
+      }
+
+      std::set<std::string> seen = taken_names;
+      for (const auto &item : list) {
+        if (!item.is_object()) {
+          continue;
+        }
+        std::string name = item.value("Name", "");
+        std::string app_id = item.value("AppID", "");
+        auto lname = lower(name);
+        auto lid = lower(app_id);
+        if (name.empty() || app_id.empty() || seen.contains(lname)) {
+          continue;
+        }
+        // Leave out Windows' own apps and tools, uninstallers, help and web links
+        if (lid.starts_with("microsoft.windows") || lid.starts_with("windows.") || lid.starts_with("microsoft.microsoftedge") ||
+            lid.starts_with("{1ac14e77-02e7-4e5d-b744-2eb1ae5198b7}") || lid.starts_with("{f38bf404-1d43-42f2-9305-67de0b28fc23}") ||
+            lid.starts_with("{d65231b0-b2f1-4857-a4ce-a8e7c6ea7d27}") || lid.starts_with("http") ||
+            lname.find("uninstall") != std::string::npos || lname.find("readme") != std::string::npos ||
+            lname.find("help") != std::string::npos || lname.find("documentation") != std::string::npos ||
+            lname.find("manual") != std::string::npos || lname.find("release notes") != std::string::npos ||
+            lname.find("website") != std::string::npos) {
+          continue;
+        }
+        seen.insert(lname);
+        // Store and Xbox apps have IDs like Publisher.App_hash!Entry
+        auto source = app_id.find('!') != std::string::npos ? "store" : "program";
+        out.push_back({source, app_id, name, {}, "explorer.exe \"shell:AppsFolder\\" + app_id + "\"", {}});
+      }
+      return true;
+    }
+
     /// Start menu folders for all users and for each user profile on this PC.
     std::vector<fs::path> start_menu_folders() {
       std::vector<fs::path> folders;
@@ -335,6 +554,8 @@ namespace game_library {
       find_steam_games(games);
       find_epic_games(games);
       find_gog_games(games);
+      find_ubisoft_games(games);
+      find_uninstall_games(games);
     } catch (const std::exception &e) {
       BOOST_LOG(warning) << "Looking for installed games failed: "sv << e.what();
     }
@@ -345,7 +566,10 @@ namespace game_library {
       game_names.insert(lower(game.name));
     }
     try {
-      find_programs(games, game_names);
+      // The Start menu as the user sees it; the shortcut scan is the fallback when nobody is signed in
+      if (!find_start_apps(games, game_names)) {
+        find_programs(games, game_names);
+      }
     } catch (const std::exception &e) {
       BOOST_LOG(warning) << "Looking for installed programs failed: "sv << e.what();
     }

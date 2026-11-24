@@ -635,7 +635,7 @@
       /** Found games and programs, filtered by the search box and grouped by where they came from. */
       pickerGroups() {
         const q = this.pickerSearch.trim().toLowerCase();
-        const order = ['steam', 'epic', 'gog', 'program'];
+        const order = ['steam', 'epic', 'gog', 'ea', 'ubisoft', 'amazon', 'store', 'program'];
         return order
           .map((source) => ({
             source,

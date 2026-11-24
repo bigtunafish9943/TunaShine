@@ -81,6 +81,15 @@ fi
 pass "tunastream.exe found in the portable zip"
 app_dir=$(dirname "$exe")
 
+# Without these the virtual display driver can't be installed, and every stream falls back to the PC's screen
+for driver_file in SudoVDA.dll SudoVDA.inf sudovda.cat nefconc.exe install.bat; do
+  if [ -n "$(find "$app_dir/drivers/sudovda" -maxdepth 1 -iname "$driver_file" 2>/dev/null)" ]; then
+    pass "virtual display driver package has $driver_file"
+  else
+    fail "virtual display driver package has $driver_file"
+  fi
+done
+
 (cd "$app_dir" && ./tunastream.exe > "$work/run.log" 2>&1 &)
 
 base="https://localhost:47990"
