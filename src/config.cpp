@@ -1125,7 +1125,7 @@ namespace config {
     }
     string_f(vars, "sw_tune", video.sw.sw_tune);
 
-    int_between_f(vars, "nvenc_preset", video.nv.quality_preset, {1, 7});
+    int_between_f(vars, "nvenc_preset", video.nv.quality_preset, {0, 7});
     int_between_f(vars, "nvenc_vbv_increase", video.nv.vbv_percentage_increase, {0, 400});
     bool_f(vars, "nvenc_spatial_aq", video.nv.adaptive_quantization);
     generic_f(vars, "nvenc_twopass", video.nv.two_pass, nv::twopass_from_view);
@@ -1136,7 +1136,7 @@ namespace config {
     bool_f(vars, "nvenc_latency_over_power", video.nv_tunastream_high_power_mode);
 
 #if !defined(__ANDROID__) && !defined(__APPLE__)
-    video.nv_legacy.preset = video.nv.quality_preset + 11;
+    video.nv_legacy.preset = std::max(video.nv.quality_preset, 1) + 11;
     video.nv_legacy.multipass = video.nv.two_pass == nvenc::nvenc_two_pass::quarter_resolution ? NV_ENC_TWO_PASS_QUARTER_RESOLUTION :
                                 video.nv.two_pass == nvenc::nvenc_two_pass::full_resolution    ? NV_ENC_TWO_PASS_FULL_RESOLUTION :
                                                                                                  NV_ENC_MULTI_PASS_DISABLED;

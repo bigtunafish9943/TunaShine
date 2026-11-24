@@ -213,7 +213,18 @@ namespace nvenc {
 
     encoder_params.rfi = get_encoder_cap(NV_ENC_CAPS_SUPPORT_REF_PIC_INVALIDATION);
 
-    init_params.presetGUID = quality_preset_guid_from_number(config.quality_preset);
+    // Automatic quality: cards that also encode AV1 (RTX 40 and 50 series) have the headroom
+    // for a slower, cleaner preset at the same latency budget; older cards keep the fastest
+    int quality_preset = config.quality_preset;
+    if (quality_preset <= 0) {
+      const bool newer_card = std::find_if(encode_guids.begin(), encode_guids.end(), [](const GUID &guid) {
+                                return equal_guids(guid, NV_ENC_CODEC_AV1_GUID);
+                              }) != encode_guids.end();
+      const bool above_1440p = (std::uint64_t) encoder_params.width * encoder_params.height > 2560ull * 1440ull;
+      quality_preset = newer_card ? (above_1440p ? 4 : 5) : 1;
+      BOOST_LOG(info) << "NvEnc: automatic quality preset P" << quality_preset;
+    }
+    init_params.presetGUID = quality_preset_guid_from_number(quality_preset);
     init_params.tuningInfo = NV_ENC_TUNING_INFO_ULTRA_LOW_LATENCY;
     init_params.enablePTD = 1;
     init_params.enableEncodeAsync = async_event_handle ? 1 : 0;
