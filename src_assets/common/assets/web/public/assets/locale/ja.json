@@ -408,6 +408,8 @@
     "streaming_nothing": "なし",
     "unnamed_device": "名前のないデバイス",
     "updates": "アップデート",
+    "vdisplay_failed": "前回の配信では仮想ディスプレイを作成できなかったため、この PC の画面を配信しました。",
+    "vdisplay_failed_fix": "TunaStream を再起動してディスプレイドライバーに再接続してください。",
     "vdisplay_ok": "準備完了",
     "vdisplay_problem": "ドライバーの問題",
     "vdisplay_settings": "ディスプレイ設定",

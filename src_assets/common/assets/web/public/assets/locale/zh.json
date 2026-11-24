@@ -498,6 +498,8 @@
     "streaming_nothing": "无",
     "unnamed_device": "未命名设备",
     "updates": "更新",
+    "vdisplay_failed": "上次串流无法创建虚拟显示器，因此改为显示了这台电脑自己的屏幕。",
+    "vdisplay_failed_fix": "重启 TunaStream 以重新连接显示驱动程序。",
     "vdisplay_ok": "就绪",
     "vdisplay_problem": "驱动程序问题",
     "vdisplay_settings": "显示设置",

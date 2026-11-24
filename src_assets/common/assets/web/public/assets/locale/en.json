@@ -509,6 +509,8 @@
     "startup_errors": "<b>Attention!</b> TunaStream detected these errors during startup. We <b>STRONGLY RECOMMEND</b> fixing them before streaming.",
     "unnamed_device": "Unnamed device",
     "updates": "Updates",
+    "vdisplay_failed": "The last stream could not create its virtual display, so it showed this PC's own screen instead.",
+    "vdisplay_failed_fix": "Restart TunaStream to reconnect to the display driver.",
     "vdisplay_ok": "Ready",
     "vdisplay_problem": "Driver problem",
     "vdisplay_settings": "Display settings",

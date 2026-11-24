@@ -465,6 +465,8 @@
     "streaming_nothing": "Nada",
     "unnamed_device": "Dispositivo sem nome",
     "updates": "Atualizações",
+    "vdisplay_failed": "A última transmissão não conseguiu criar a tela virtual e mostrou a tela deste PC no lugar.",
+    "vdisplay_failed_fix": "Reinicie o TunaStream para reconectar ao driver de tela.",
     "vdisplay_ok": "Pronta",
     "vdisplay_problem": "Problema no driver",
     "vdisplay_settings": "Configurações de tela",

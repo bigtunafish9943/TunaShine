@@ -408,6 +408,8 @@
     "streaming_nothing": "Nichts",
     "unnamed_device": "Unbenanntes Gerät",
     "updates": "Updates",
+    "vdisplay_failed": "Der letzte Stream konnte keinen virtuellen Bildschirm erstellen und hat stattdessen den eigenen Bildschirm dieses PCs gezeigt.",
+    "vdisplay_failed_fix": "Starte TunaStream neu, um die Verbindung zum Anzeigetreiber wiederherzustellen.",
     "vdisplay_ok": "Bereit",
     "vdisplay_problem": "Treiberproblem",
     "vdisplay_settings": "Anzeigeeinstellungen",

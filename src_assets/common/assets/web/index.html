@@ -48,6 +48,11 @@
       </div>
     </dl>
 
+    <div class="alert alert-warning" v-if="vdisplayFailed">
+      {{ $t('index.vdisplay_failed') }}
+      <a href="./troubleshooting#restart">{{ $t('index.vdisplay_failed_fix') }}</a>
+    </div>
+
     <!-- Who is playing, and what their controllers look like to games -->
     <div class="home-players" v-if="players.length">
       <h2 class="h5">{{ $t('index.players_title') }}</h2>
@@ -152,6 +157,7 @@
         customPort: null,
         ending: false,
         players: [],
+        vdisplayFailed: false,
         statusTimer: null,
       }
     },
@@ -229,6 +235,7 @@
         try {
           const status = await fetch("./api/status").then((r) => r.ok ? r.json() : null);
           const controllers = (status && status.controllers) || [];
+          this.vdisplayFailed = !!(status && status.vdisplayFailed);
           // One entry per connected device, with the controllers it brought
           const names = [...new Set([...connected, ...controllers.map((c) => c.device)])];
           this.players = names.map((device) => ({

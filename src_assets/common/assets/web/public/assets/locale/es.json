@@ -431,6 +431,8 @@
     "streaming_nothing": "Nada",
     "unnamed_device": "Dispositivo sin nombre",
     "updates": "Actualizaciones",
+    "vdisplay_failed": "La última emisión no pudo crear su pantalla virtual, así que mostró la pantalla de este PC.",
+    "vdisplay_failed_fix": "Reinicia TunaStream para volver a conectar con el controlador de pantalla.",
     "vdisplay_ok": "Lista",
     "vdisplay_problem": "Problema del controlador",
     "vdisplay_settings": "Ajustes de pantalla",
