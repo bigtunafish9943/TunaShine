@@ -622,6 +622,7 @@
     "theme_light": "Light",
     "toggle_theme": "Theme",
     "help": "Help",
+    "version": "Version {version}",
     "troubleshoot": "Troubleshooting",
     "update_banner": "TunaStream {version} is available.",
     "update_banner_action": "Update now",
