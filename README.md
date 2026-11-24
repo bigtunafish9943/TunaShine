@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/images/logo.png" width="720" alt="TunaStream: self-hosted game streaming">
+  <img src="docs/images/tunastream-logo.png" width="720" alt="TunaStream: self-hosted game streaming">
 </p>
 
 <p align="center">
@@ -8,7 +8,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/images/home.png" width="820" alt="The TunaStream home page, showing what is streaming, paired devices and virtual display status">
+  <img src="docs/images/tunastream-home.png" width="820" alt="The TunaStream home page, showing what is streaming, paired devices and virtual display status">
 </p>
 
 TunaStream runs on your gaming PC and streams it to another device over your network. It is built to be easy to
@@ -36,7 +36,7 @@ set up and pleasant to use.
 - Clipboard sync, input-only mode, and commands that run when a device connects or disconnects.
 
 <p align="center">
-  <img src="docs/images/settings.png" width="820" alt="The settings page with its section menu on the left">
+  <img src="docs/images/tunastream-settings.png" width="820" alt="The settings page with its section menu on the left">
 </p>
 
 ## Install
