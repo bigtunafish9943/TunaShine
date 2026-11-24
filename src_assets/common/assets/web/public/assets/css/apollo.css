@@ -362,3 +362,26 @@ body .list-group-item-light {
 .home-steps li {
     margin-bottom: 0.45rem;
 }
+
+/* ---------- App editor: collapsed sections ---------- */
+.app-more {
+    border: 1px solid var(--ts-surface-border);
+    border-radius: 0.6rem;
+    padding: 0 1rem;
+}
+
+.app-more > summary {
+    cursor: pointer;
+    padding: 0.75rem 0;
+    font-weight: 600;
+    color: var(--bs-emphasis-color);
+}
+
+.app-more[open] > summary {
+    margin-bottom: 0.75rem;
+    border-bottom: 1px solid var(--ts-surface-border);
+}
+
+.app-more[open] {
+    padding-bottom: 0.5rem;
+}

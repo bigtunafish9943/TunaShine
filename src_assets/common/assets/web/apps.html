@@ -246,6 +246,9 @@
                   v-model="editForm.elevated"
                   default="false"
         ></Checkbox>
+        <!-- Everything most apps never need -->
+        <details class="app-more mb-3">
+          <summary>{{ $t('apps.more_options') }}</summary>
         <!-- detached -->
         <div class="mb-3">
           <label class="form-label">{{ $t('apps.detached_cmds') }}</label>
@@ -409,6 +412,11 @@
           <input type="range" step="1" min="20" max="200" class="form-range" id="resolutionScaleFactor" v-model="editForm['scale-factor']"/>
           <div class="form-text">{{ $t('apps.resolution_scale_factor_desc') }}</div>
         </div>
+        </details>
+
+        <!-- Reference for people writing commands -->
+        <details class="app-more mb-3">
+          <summary>{{ $t('apps.env_vars_about') }}</summary>
         <div class="env-hint alert alert-info overflow-auto">
           <div class="form-text">
             <h4>{{ $t('apps.env_vars_about') }}</h4>
@@ -507,6 +515,8 @@
         <div class="alert alert-info">
           <i class="fa-solid fa-xl fa-circle-info"></i> {{ $t('apps.env_sunshine_compatibility') }}
         </div>
+
+        </details>
 
         <!-- Save buttons -->
         <div class="d-flex">
