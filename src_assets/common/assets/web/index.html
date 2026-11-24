@@ -8,37 +8,66 @@
 <body id="app" v-cloak>
   <Navbar></Navbar>
   <div id="content" class="container">
-    <h1 class="my-4">{{ $t('index.welcome') }}</h1>
-    <p>{{ $t('index.description') }}</p>
+    <h1 class="my-4">{{ needsAttention ? $t('index.status_attention') : $t('index.status_ready') }}</h1>
+    <p class="home-lead" v-if="version">
+      <template v-if="hostName">{{ $t('index.running_on', { host: hostName }) }}</template>
+      {{ $t('index.version_is', { version: version.version }) }}
+    </p>
     <div class="alert alert-danger" v-if="fancyLogs.find(x => x.level === 'Fatal')">
-      <div style="line-height: 32px;">
-        <i class="fas fa-circle-exclamation" style="font-size: 32px;margin-right: 0.25em;"></i>
-        <p v-html="$t('index.startup_errors')"></p>
-        <br>
-      </div>
+      <p v-html="$t('index.startup_errors')"></p>
       <ul>
         <li v-for="v in fancyLogs.filter(x => x.level === 'Fatal')">{{v.value}}</li>
       </ul>
-      <a class="btn btn-danger" href="./troubleshooting#logs">View Logs</a>
+      <a class="btn btn-danger" href="./troubleshooting#logs">{{ $t('index.view_logs') }}</a>
     </div>
+
+    <!-- Status -->
+    <dl class="home-status my-4">
+      <div class="home-status-item">
+        <dt>{{ $t('index.status_streaming') }}</dt>
+        <dd>{{ currentAppName || $t('index.streaming_nothing') }}</dd>
+        <a href="./apps">{{ $t('index.manage_apps') }}</a>
+      </div>
+      <div class="home-status-item">
+        <dt>{{ $t('index.status_devices') }}</dt>
+        <dd v-if="clientCount === null">&hellip;</dd>
+        <dd v-else-if="clientCount === 0">{{ $t('index.devices_none') }}</dd>
+        <dd v-else>{{ clientCount }}</dd>
+        <a href="./pin">{{ clientCount ? $t('index.manage_devices') : $t('index.pair_device') }}</a>
+      </div>
+      <div class="home-status-item" v-if="platform === 'windows'" :class="{ 'home-status-bad': vdisplayStatus !== 0 }">
+        <dt>{{ $t('index.status_vdisplay') }}</dt>
+        <dd>{{ vdisplayStatus === 0 ? $t('index.vdisplay_ok') : $t('index.vdisplay_problem') }}</dd>
+        <a href="./config">{{ $t('index.vdisplay_settings') }}</a>
+      </div>
+    </dl>
+
+    <!-- First-time setup, shown until a device is paired -->
+    <div class="card p-2 my-4" v-if="clientCount === 0">
+      <div class="card-body">
+        <h2>{{ $t('index.setup_title') }}</h2>
+        <ol class="home-steps">
+          <li>
+            {{ $t('index.setup_step_client') }}
+            <a href="https://moonlight-stream.org" target="_blank">Moonlight</a>,
+            <a href="https://github.com/ClassicOldSong/moonlight-android" target="_blank">Artemis</a>
+          </li>
+          <li>{{ $t('index.setup_step_pair') }}</li>
+          <li>{{ $t('index.setup_step_play') }}</li>
+        </ol>
+        <a class="btn btn-primary" href="./pin">{{ $t('index.pair_device') }}</a>
+      </div>
+    </div>
+
     <!-- Version -->
-    <div class="card p-2 my-4">
-      <div class="card-body" v-if="version">
-        <h2>Version {{version.version}}</h2>
-        <br>
-        <div v-if="loading">
-          {{ $t('index.loading_latest') }}
-        </div>
+    <div class="card p-2 my-4" v-if="version && (buildVersionIsDirty || installedVersionNotStable || stableBuildAvailable || (notifyPreReleases && preReleaseBuildAvailable))">
+      <div class="card-body">
+        <h2>{{ $t('index.updates') }}</h2>
         <div class="alert alert-success" v-if="buildVersionIsDirty">
           {{ $t('index.version_dirty') }} 🌇
         </div>
         <div class="alert alert-info" v-if="installedVersionNotStable">
           {{ $t('index.installed_version_not_stable') }}
-        </div>
-        <div v-else-if="(!preReleaseBuildAvailable || !notifyPreReleases) && !stableBuildAvailable && !buildVersionIsDirty">
-          <div class="alert alert-success">
-            {{ $t('index.version_latest') }}
-          </div>
         </div>
         <div v-if="notifyPreReleases && preReleaseBuildAvailable">
           <div class="alert alert-warning">
@@ -68,7 +97,6 @@
     </div>
     <!-- Resources -->
     <div class="my-4">
-      <Client-Card></Client-Card>
       <Resource-Card></Resource-Card>
     </div>
   </div>
@@ -78,7 +106,6 @@
   import { createApp } from 'vue'
   import { initApp } from './init'
   import Navbar from './Navbar.vue'
-  import ClientCard from './ClientCard.vue'
   import ResourceCard from './ResourceCard.vue'
   import ApolloVersion from './apollo_version'
 
@@ -86,7 +113,6 @@
   let app = createApp({
     components: {
       Navbar,
-      ClientCard,
       ResourceCard
     },
     data() {
@@ -97,6 +123,11 @@
         preReleaseVersion: null,
         loading: true,
         logs: null,
+        platform: "",
+        vdisplayStatus: 0,
+        hostName: "",
+        currentAppName: "",
+        clientCount: null,
       }
     },
     async created() {
@@ -104,6 +135,9 @@
         let config = await fetch("./api/config").then((r) => r.json());
         this.notifyPreReleases = config.notify_pre_releases;
         this.version = new ApolloVersion(null, config.version);
+        this.platform = config.platform;
+        this.vdisplayStatus = config.vdisplayStatus ?? 0;
+        this.loadStatus();
         console.log("Version: ", this.version.version)
         const latest = await fetch("https://api.github.com/repos/bigtunafish9943/TunaShine/releases/latest").then((r) => r.ok ? r.json() : null);
         this.githubVersion = latest ? new ApolloVersion(latest, null) : null;
@@ -123,7 +157,30 @@
       }
       this.loading = false;
     },
+    methods: {
+      /** Load what the status row shows. Each part is optional, so failures only leave a blank. */
+      async loadStatus() {
+        try {
+          const apps = await fetch("./api/apps").then((r) => r.json());
+          this.hostName = apps.host_name || "";
+          const current = (apps.apps || []).find((a) => a.uuid && a.uuid === apps.current_app);
+          this.currentAppName = current ? current.name : "";
+        } catch (e) {
+          console.error(e);
+        }
+        try {
+          const clients = await fetch("./api/clients/list").then((r) => r.json());
+          this.clientCount = (clients.named_certs || []).length;
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    },
     computed: {
+      needsAttention() {
+        return !!this.fancyLogs.find((x) => x.level === "Fatal") ||
+          (this.platform === "windows" && this.vdisplayStatus !== 0);
+      },
       installedVersionNotStable() {
         if (!this.githubVersion || !this.version) {
           return false;
