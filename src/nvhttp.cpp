@@ -23,6 +23,7 @@
 #include <Simple-Web-Server/server_http.hpp>
 
 // local includes
+#include "file_outbox.h"
 #include "pairing_backup.h"
 #include "config.h"
 #include "display_device.h"
@@ -1334,7 +1335,7 @@ namespace nvhttp {
           tree.put(
             "root.<xmlattr>.status_message",
             err == 503 ? "Failed to initialize video capture/encoding. Is a display connected and turned on?" :
-            err == 424 ? "TunaStream couldn't create the stream's own screen. On the PC, open TunaStream, go to Troubleshooting and press Repair virtual screen." :
+            err == 424 ? "TunaStream couldn't create the stream's own screen. In TunaReceive, hold select on your PC and choose Repair the PC's virtual screen, or on the PC open TunaStream's Troubleshooting page and press Repair virtual screen." :
                          "Failed to start the specified application");
           tree.put("root.gamesession", 0);
 
@@ -1617,6 +1618,97 @@ namespace nvhttp {
     response->close_connection_after_response = true;
   }
 
+  /**
+   * "Send to device": the files waiting for the device asking, as JSON
+   * {"files":[{"id","name","size"}]}. A device only ever sees its own outbox.
+   */
+  void tunaFiles(resp_https_t response, req_https_t request) {
+    print_req<TunaStreamHTTPS>(request);
+    auto named_cert_p = get_verified_cert(request);
+
+    nlohmann::json files = nlohmann::json::array();
+    for (auto &entry : file_outbox::list(named_cert_p->uuid)) {
+      files.push_back({{"id", entry.id}, {"name", entry.name}, {"size", entry.size}});
+    }
+    SimpleWeb::CaseInsensitiveMultimap headers;
+    headers.emplace("Content-Type", "application/json");
+    headers.emplace("Cache-Control", "no-store");
+    response->write(SimpleWeb::StatusCode::success_ok, nlohmann::json {{"files", files}}.dump(), headers);
+    response->close_connection_after_response = true;
+  }
+
+  /// Sends one waiting file to the device it is for.
+  void tunaFile(resp_https_t response, req_https_t request) {
+    print_req<TunaStreamHTTPS>(request);
+    auto named_cert_p = get_verified_cert(request);
+    auto args = request->parse_query_string();
+    auto path = file_outbox::path_of(named_cert_p->uuid, get_arg(args, "id", ""));
+    if (path.empty()) {
+      response->write(SimpleWeb::StatusCode::client_error_not_found);
+      response->close_connection_after_response = true;
+      return;
+    }
+    std::ifstream in(path, std::ios::binary);
+    SimpleWeb::CaseInsensitiveMultimap headers;
+    headers.emplace("Content-Type", "application/octet-stream");
+    headers.emplace("Cache-Control", "no-store");
+    response->write(SimpleWeb::StatusCode::success_ok, in, headers);
+    response->close_connection_after_response = true;
+  }
+
+  /// The device has the file: remove it from the outbox.
+  void tunaFileDone(resp_https_t response, req_https_t request) {
+    print_req<TunaStreamHTTPS>(request);
+    auto named_cert_p = get_verified_cert(request);
+    auto args = request->parse_query_string();
+    auto id = get_arg(args, "id", "");
+    if (file_outbox::remove(named_cert_p->uuid, id)) {
+      BOOST_LOG(info) << "Device ["sv << named_cert_p->name << "] received "sv << id;
+      response->write(SimpleWeb::StatusCode::success_ok);
+    } else {
+      response->write(SimpleWeb::StatusCode::client_error_not_found);
+    }
+    response->close_connection_after_response = true;
+  }
+
+  /**
+   * The virtual screen from the couch: GET /tuna/vdisplay reports whether the driver works and
+   * whether a repair is running; /tuna/vdisplay/repair starts one (reinstalls the driver), unless
+   * someone is streaming. JSON {"ok", "repairing", "started", "error"}.
+   */
+  void tunaVdisplay(resp_https_t response, req_https_t request) {
+    print_req<TunaStreamHTTPS>(request);
+    auto named_cert_p = get_verified_cert(request);
+    nlohmann::json out;
+#ifdef _WIN32
+    out["ok"] = proc::vDisplayDriverStatus == VDISPLAY::DRIVER_STATUS::OK;
+    out["repairing"] = proc::vdisplay_repair_running();
+    if (request->path == "/tuna/vdisplay/repair") {
+      if (!(named_cert_p->perm & PERM::_allow_view)) {
+        out["started"] = false;
+        out["error"] = "This device isn't allowed to do that";
+      } else if (rtsp_stream::session_count() > 0) {
+        out["started"] = false;
+        out["error"] = "Someone is streaming. Repairing removes the stream's screen, so end that stream first.";
+      } else {
+        BOOST_LOG(info) << "Device ["sv << named_cert_p->name << "] asked to repair the virtual display"sv;
+        out["started"] = proc::start_vdisplay_repair();
+        out["repairing"] = true;
+      }
+    }
+#else
+    out["ok"] = false;
+    out["repairing"] = false;
+    out["started"] = false;
+    out["error"] = "Only available on Windows";
+#endif
+    SimpleWeb::CaseInsensitiveMultimap headers;
+    headers.emplace("Content-Type", "application/json");
+    headers.emplace("Cache-Control", "no-store");
+    response->write(SimpleWeb::StatusCode::success_ok, out.dump(), headers);
+    response->close_connection_after_response = true;
+  }
+
   void getClipboard(resp_https_t response, req_https_t request) {
     print_req<TunaStreamHTTPS>(request);
 
@@ -1821,6 +1913,11 @@ namespace nvhttp {
     };
     https_server.resource["^/cancel$"]["GET"] = cancel;
     https_server.resource["^/tuna/speedtest$"]["GET"] = speedtest;
+    https_server.resource["^/tuna/files$"]["GET"] = tunaFiles;
+    https_server.resource["^/tuna/vdisplay$"]["GET"] = tunaVdisplay;
+    https_server.resource["^/tuna/vdisplay/repair$"]["GET"] = tunaVdisplay;
+    https_server.resource["^/tuna/file$"]["GET"] = tunaFile;
+    https_server.resource["^/tuna/file/done$"]["GET"] = tunaFileDone;
     https_server.resource["^/actions/clipboard$"]["GET"] = getClipboard;
     https_server.resource["^/actions/clipboard$"]["POST"] = setClipboard;
 
@@ -1956,6 +2053,8 @@ namespace nvhttp {
     client_t &client = client_root;
     for (auto it = client.named_devices.begin(); it != client.named_devices.end();) {
       if ((*it)->uuid == uuid) {
+        // Files that were waiting for it would never be collected now
+        file_outbox::clear((*it)->uuid);
         it = client.named_devices.erase(it);
         removed = true;
       } else {

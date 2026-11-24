@@ -182,6 +182,8 @@
         </div>
       </div>
     </div>
+    <!-- Send a file to a paired device -->
+    <Send-File-Card></Send-File-Card>
     <!-- Resources -->
     <div class="my-4">
       <Resource-Card></Resource-Card>
@@ -194,13 +196,15 @@
   import { initApp } from './init'
   import Navbar from './Navbar.vue'
   import ResourceCard from './ResourceCard.vue'
+  import SendFileCard from './SendFileCard.vue'
   import TunaStreamVersion from './tunastream_version'
 
   console.log("Hello, TunaStream!")
   let app = createApp({
     components: {
       Navbar,
-      ResourceCard
+      ResourceCard,
+      SendFileCard
     },
     data() {
       return {
