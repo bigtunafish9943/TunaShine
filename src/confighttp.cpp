@@ -42,6 +42,7 @@
 #include "stream.h"
 #include "game_library.h"
 #include "other_hosts.h"
+#include "pairing_backup.h"
 #include "updater.h"
 #include "utility.h"
 #include "uuid.h"
@@ -676,6 +677,7 @@ namespace confighttp {
 
       // Write the updated file tree back to disk.
       file_handler::write_file(config::stream.file_apps.c_str(), fileTree.dump(4));
+      pairing_backup::save();
       proc::refresh(config::stream.file_apps);
 
       // Prepare and send the output response.
@@ -776,6 +778,7 @@ namespace confighttp {
       }
 
       file_handler::write_file(config::stream.file_apps.c_str(), file_tree.dump(4));
+      pairing_backup::save();
       proc::refresh(config::stream.file_apps);
       BOOST_LOG(info) << "Added "sv << added << " apps from this PC"sv;
 
@@ -1119,6 +1122,7 @@ namespace confighttp {
 
       // Write the modified fileTree back to the apps configuration file.
       file_handler::write_file(config::stream.file_apps.c_str(), fileTree.dump(4));
+      pairing_backup::save();
 
       // Notify relevant parts of the system that the apps configuration has changed.
       proc::refresh(config::stream.file_apps);
@@ -1174,6 +1178,7 @@ namespace confighttp {
 
       // Write the updated JSON back to the file.
       file_handler::write_file(config::stream.file_apps.c_str(), fileTree.dump(4));
+      pairing_backup::save();
       proc::refresh(config::stream.file_apps);
 
       // Prepare and send the response.
@@ -1404,6 +1409,7 @@ namespace confighttp {
         config_stream << k << " = " << (v.is_string() ? v.get<std::string>() : v.dump()) << std::endl;
       }
       file_handler::write_file(config::tunastream.config_file.c_str(), config_stream.str());
+      pairing_backup::save();
       output_tree["status"] = true;
       send_response(response, output_tree);
     } catch (std::exception &e) {

@@ -50,7 +50,7 @@
 
     <div class="alert alert-warning" v-if="vdisplayFailed">
       {{ $t('index.vdisplay_failed') }}
-      <a href="./troubleshooting#restart">{{ $t('index.vdisplay_failed_fix') }}</a>
+      <a href="./troubleshooting#vdisplay">{{ $t('index.vdisplay_failed_fix') }}</a>
     </div>
 
     <!-- The PC's own monitor did not come back as the main display -->
@@ -396,7 +396,10 @@
         if (h.skippedPerSec > 1) {
           lines.push(t('index.health_skipped', { n: Math.round(h.skippedPerSec), target: h.targetFps }));
         }
-        if (h.fps < h.targetFps * 0.9 && h.gaps > 2) {
+        // Very few new frames with little work per frame means nothing on screen is changing,
+        // which is normal on the desktop or a paused game and not a problem
+        const stillScreen = h.fps < Math.min(10, h.targetFps * 0.25) && h.pcMsAvg < interval;
+        if (!stillScreen && h.fps < h.targetFps * 0.9 && h.gaps > 2) {
           lines.push(t('index.health_game_slow', { fps: Math.round(h.fps), target: h.targetFps }));
         }
         if (h.pcMsAvg > interval || h.pcMsMax > interval * 3) {
@@ -404,6 +407,9 @@
         }
         if (h.recoveries > 0) {
           lines.push(t('index.health_network', { n: h.recoveries }));
+        }
+        if (lines.length === 0 && stillScreen) {
+          return { level: 'ok', title: t('index.health_still'), lines: [t('index.health_still_desc')] };
         }
         if (lines.length === 0) {
           return { level: 'ok', title: t('index.health_ok'), lines: [t('index.health_ok_desc')] };
