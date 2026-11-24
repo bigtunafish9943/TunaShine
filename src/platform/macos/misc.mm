@@ -227,6 +227,10 @@ namespace platf {
     return nullptr;
   }
 
+  network_link_t network_link() {
+    return {};
+  }
+
   capture_counters_t capture_counters() {
     return {};
   }

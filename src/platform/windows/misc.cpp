@@ -127,6 +127,7 @@ namespace platf {
   decltype(WlanFreeMemory) *fn_WlanFreeMemory = nullptr;
   decltype(WlanEnumInterfaces) *fn_WlanEnumInterfaces = nullptr;
   decltype(WlanSetInterface) *fn_WlanSetInterface = nullptr;
+  decltype(WlanQueryInterface) *fn_WlanQueryInterface = nullptr;
 
   std::filesystem::path appdata() {
     WCHAR tunastream_path[MAX_PATH];
@@ -1131,7 +1132,7 @@ namespace platf {
     nvprefs_instance.unload();
   }
 
-  void streaming_will_start() {
+  static void load_wlanapi() {
     static std::once_flag load_wlanapi_once_flag;
     std::call_once(load_wlanapi_once_flag, []() {
       // wlanapi.dll is not installed by default on Windows Server, so we load it dynamically
@@ -1146,6 +1147,8 @@ namespace platf {
       fn_WlanFreeMemory = (decltype(fn_WlanFreeMemory)) GetProcAddress(wlanapi, "WlanFreeMemory");
       fn_WlanEnumInterfaces = (decltype(fn_WlanEnumInterfaces)) GetProcAddress(wlanapi, "WlanEnumInterfaces");
       fn_WlanSetInterface = (decltype(fn_WlanSetInterface)) GetProcAddress(wlanapi, "WlanSetInterface");
+      // Only used for the "this PC is on Wi-Fi" readout, so it is allowed to be missing
+      fn_WlanQueryInterface = (decltype(fn_WlanQueryInterface)) GetProcAddress(wlanapi, "WlanQueryInterface");
 
       if (!fn_WlanOpenHandle || !fn_WlanCloseHandle || !fn_WlanFreeMemory || !fn_WlanEnumInterfaces || !fn_WlanSetInterface) {
         BOOST_LOG(error) << "wlanapi.dll is missing exports?"sv;
@@ -1155,11 +1158,106 @@ namespace platf {
         fn_WlanFreeMemory = nullptr;
         fn_WlanEnumInterfaces = nullptr;
         fn_WlanSetInterface = nullptr;
+        fn_WlanQueryInterface = nullptr;
 
         FreeLibrary(wlanapi);
         return;
       }
     });
+  }
+
+  network_link_t network_link() {
+    network_link_t out {};
+
+    // The adapter that carries traffic: up, with a gateway, and preferred by Windows (lowest metric)
+    ULONG size = 16 * 1024;
+    std::vector<char> buffer(size);
+    const ULONG flags = GAA_FLAG_INCLUDE_GATEWAYS | GAA_FLAG_SKIP_ANYCAST | GAA_FLAG_SKIP_MULTICAST | GAA_FLAG_SKIP_DNS_SERVER;
+    ULONG error = GetAdaptersAddresses(AF_UNSPEC, flags, nullptr, (PIP_ADAPTER_ADDRESSES) buffer.data(), &size);
+    if (error == ERROR_BUFFER_OVERFLOW) {
+      buffer.resize(size);
+      error = GetAdaptersAddresses(AF_UNSPEC, flags, nullptr, (PIP_ADAPTER_ADDRESSES) buffer.data(), &size);
+    }
+    if (error != NO_ERROR) {
+      return out;
+    }
+
+    PIP_ADAPTER_ADDRESSES best = nullptr;
+    for (auto adapter = (PIP_ADAPTER_ADDRESSES) buffer.data(); adapter; adapter = adapter->Next) {
+      if (adapter->OperStatus != IfOperStatusUp || !adapter->FirstGatewayAddress) {
+        continue;
+      }
+      if (adapter->IfType != IF_TYPE_ETHERNET_CSMACD && adapter->IfType != IF_TYPE_IEEE80211) {
+        continue;
+      }
+      if (!best || adapter->Ipv4Metric < best->Ipv4Metric) {
+        best = adapter;
+      }
+    }
+    if (!best) {
+      return out;
+    }
+
+    out.known = true;
+    out.wifi = best->IfType == IF_TYPE_IEEE80211;
+    if (best->Description) {
+      out.name = to_utf8(std::wstring_view {best->Description});
+    }
+    if (best->TransmitLinkSpeed != (ULONG64) -1) {
+      out.mbps = (int) (best->TransmitLinkSpeed / 1000000);
+    }
+    if (!out.wifi) {
+      return out;
+    }
+
+    load_wlanapi();
+    if (!fn_WlanOpenHandle || !fn_WlanQueryInterface) {
+      return out;
+    }
+
+    HANDLE handle = nullptr;
+    DWORD negotiated_version;
+    if (fn_WlanOpenHandle(WLAN_API_MAKE_VERSION(2, 0), nullptr, &negotiated_version, &handle) != ERROR_SUCCESS) {
+      return out;
+    }
+
+    PWLAN_INTERFACE_INFO_LIST interfaces = nullptr;
+    if (fn_WlanEnumInterfaces(handle, nullptr, &interfaces) == ERROR_SUCCESS && interfaces) {
+      for (DWORD i = 0; i < interfaces->dwNumberOfItems; i++) {
+        if (interfaces->InterfaceInfo[i].isState != wlan_interface_state_connected) {
+          continue;
+        }
+        auto guid = &interfaces->InterfaceInfo[i].InterfaceGuid;
+
+        DWORD data_size = 0;
+        PVOID data = nullptr;
+        if (fn_WlanQueryInterface(handle, guid, wlan_intf_opcode_current_connection, nullptr, &data_size, &data, nullptr) == ERROR_SUCCESS && data) {
+          if (data_size >= sizeof(WLAN_CONNECTION_ATTRIBUTES)) {
+            auto attributes = (PWLAN_CONNECTION_ATTRIBUTES) data;
+            out.signal = (int) attributes->wlanAssociationAttributes.wlanSignalQuality;
+            out.mbps = (int) (attributes->wlanAssociationAttributes.ulTxRate / 1000);
+          }
+          fn_WlanFreeMemory(data);
+        }
+
+        data_size = 0;
+        data = nullptr;
+        if (fn_WlanQueryInterface(handle, guid, wlan_intf_opcode_channel_number, nullptr, &data_size, &data, nullptr) == ERROR_SUCCESS && data) {
+          if (data_size >= sizeof(ULONG)) {
+            out.channel = (int) *(ULONG *) data;
+          }
+          fn_WlanFreeMemory(data);
+        }
+        break;
+      }
+      fn_WlanFreeMemory(interfaces);
+    }
+    fn_WlanCloseHandle(handle, nullptr);
+    return out;
+  }
+
+  void streaming_will_start() {
+    load_wlanapi();
 
     // Enable MMCSS scheduling for DWM
     DwmEnableMMCSS(true);
@@ -1206,6 +1304,18 @@ namespace platf {
               auto error = fn_WlanSetInterface(wlan_handle, &wlan_interface_list->InterfaceInfo[i].InterfaceGuid, wlan_intf_opcode_media_streaming_mode, sizeof(value), &value, nullptr);
               if (error == ERROR_SUCCESS) {
                 BOOST_LOG(info) << "WLAN interface "sv << i << " is now in low latency mode"sv;
+              }
+
+              // Windows looks for other Wi-Fi networks about once a minute. Each look takes the
+              // radio off the stream's channel for a moment, which shows as a hitch at regular
+              // intervals. Hold the scans while a stream runs; closing the handle when streaming
+              // stops puts the setting back.
+              BOOL scan = FALSE;
+              error = fn_WlanSetInterface(wlan_handle, &wlan_interface_list->InterfaceInfo[i].InterfaceGuid, wlan_intf_opcode_background_scan_enabled, sizeof(scan), &scan, nullptr);
+              if (error == ERROR_SUCCESS) {
+                BOOST_LOG(info) << "WLAN interface "sv << i << " won't scan for other networks while streaming"sv;
+              } else {
+                BOOST_LOG(debug) << "Couldn't hold Wi-Fi scanning on WLAN interface "sv << i << ": "sv << error;
               }
             }
           }

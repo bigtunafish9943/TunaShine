@@ -1738,6 +1738,26 @@ namespace nvhttp {
     response->close_connection_after_response = true;
   }
 
+  /**
+   * How this PC reaches the network: GET /tuna/network. TunaReceive's connection test uses it to
+   * say when the PC is on Wi-Fi itself, which no setting on the TV can make up for.
+   */
+  void tunaNetwork(resp_https_t response, req_https_t request) {
+    print_req<TunaStreamHTTPS>(request);
+    const auto link = platf::network_link();
+    nlohmann::json out;
+    out["known"] = link.known;
+    out["wifi"] = link.wifi;
+    out["mbps"] = link.mbps;
+    out["signal"] = link.signal;
+    out["channel"] = link.channel;
+    SimpleWeb::CaseInsensitiveMultimap headers;
+    headers.emplace("Content-Type", "application/json");
+    headers.emplace("Cache-Control", "no-store");
+    response->write(SimpleWeb::StatusCode::success_ok, out.dump(), headers);
+    response->close_connection_after_response = true;
+  }
+
   void getClipboard(resp_https_t response, req_https_t request) {
     print_req<TunaStreamHTTPS>(request);
 
@@ -1944,6 +1964,7 @@ namespace nvhttp {
     https_server.resource["^/tuna/speedtest$"]["GET"] = speedtest;
     https_server.resource["^/tuna/files$"]["GET"] = tunaFiles;
     https_server.resource["^/tuna/bitrate$"]["GET"] = tunaBitrate;
+    https_server.resource["^/tuna/network$"]["GET"] = tunaNetwork;
     https_server.resource["^/tuna/vdisplay$"]["GET"] = tunaVdisplay;
     https_server.resource["^/tuna/vdisplay/repair$"]["GET"] = tunaVdisplay;
     https_server.resource["^/tuna/file$"]["GET"] = tunaFile;

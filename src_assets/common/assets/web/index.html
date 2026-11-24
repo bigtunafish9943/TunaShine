@@ -70,6 +70,17 @@
       <span class="home-other-host-error" v-if="hostError && hostErrorFor === host.service">{{ hostError }}</span>
     </div>
 
+    <!-- This PC sends video over Wi-Fi: the most common cause of stutter, and the cheapest to fix -->
+    <div class="home-other-host home-wifi" v-if="network && network.wifi && !wifiNoteHidden">
+      <p>
+        <i class="fas fa-wifi" aria-hidden="true"></i>
+        <b>{{ $t('index.pc_wifi_title') }}</b>
+        <span class="d-block">{{ $t('index.pc_wifi_desc', { name: network.name, signal: network.signal, mbps: network.mbps }) }}</span>
+        <span class="d-block" v-if="network.channel >= 1 && network.channel <= 14 && network.mbps < 600">{{ $t('index.pc_wifi_24') }}</span>
+      </p>
+      <button type="button" class="btn btn-sm btn-outline-secondary" @click="hideWifiNote">{{ $t('index.pc_wifi_hide') }}</button>
+    </div>
+
     <!-- A game left open on the stream's screen, with nobody streaming it -->
     <div class="home-paused" v-if="currentAppName && pausedOnStreamScreen">
       <div>
@@ -113,7 +124,9 @@
                 pc: player.health.pcMsAvg.toFixed(1),
                 pcMax: player.health.pcMsMax.toFixed(1),
                 send: player.health.sendMsAvg.toFixed(1),
-                rate: player.health.sendRateMbps
+                rate: player.health.sendRateMbps,
+                mbps: (player.health.bitrateKbps / 1000).toFixed(0),
+                fec: player.health.fecPercent || 0
               }) }}
             </p>
           </div>
@@ -230,10 +243,17 @@
         update: { stage: '', version: '', error: '' },
         players: [],
         vdisplayFailed: false,
+        network: null,
+        wifiNoteHidden: false,
         statusTimer: null,
       }
     },
     async created() {
+      try {
+        this.wifiNoteHidden = localStorage.getItem('tunastream.wifiNoteHidden') === '1';
+      } catch (e) {
+        // No storage: show the note
+      }
       try {
         let config = await fetch("./api/config").then((r) => r.json());
         // First run: walk through setup before anything else
@@ -328,6 +348,15 @@
       },
       /** Quit the app that is being streamed, which also disconnects whoever is playing. */
       /** Pause or start Sunshine or Apollo when they are installed next to TunaStream. */
+      /** The Wi-Fi note is advice, not an error: once read, it stays away on this browser. */
+      hideWifiNote() {
+        this.wifiNoteHidden = true;
+        try {
+          localStorage.setItem('tunastream.wifiNoteHidden', '1');
+        } catch (e) {
+          // Private windows can refuse storage; the note then comes back next visit
+        }
+      },
       async setOtherHost(host, run) {
         this.hostBusy = host.service;
         this.hostError = "";
@@ -409,6 +438,9 @@
         }
         if (h.recoveries > 0) {
           lines.push(t('index.health_network', { n: h.recoveries }));
+          if (this.network && this.network.wifi) {
+            lines.push(t('index.health_network_pc_wifi'));
+          }
         }
         if (lines.length === 0 && stillScreen) {
           return { level: 'ok', title: t('index.health_still'), lines: [t('index.health_still_desc')] };
@@ -439,6 +471,7 @@
           const status = await fetch("./api/status").then((r) => r.ok ? r.json() : null);
           const controllers = (status && status.controllers) || [];
           this.vdisplayFailed = !!(status && status.vdisplayFailed);
+          this.network = (status && status.network) || null;
           if (status && status.vdisplayStatus !== undefined) {
             this.vdisplayStatus = status.vdisplayStatus;
           }

@@ -173,6 +173,9 @@ namespace config {
 
     int fec_percentage;
 
+    // Start at fec_percentage, then use less while the connection is clean and more while it isn't
+    bool adaptive_fec;
+
     // Peak rate video packets are sent at, in Mbps; 0 picks one from the stream's bitrate
     int video_send_rate;
 
