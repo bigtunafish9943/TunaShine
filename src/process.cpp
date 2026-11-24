@@ -326,10 +326,15 @@ namespace proc {
           // primary for them to show up in the stream. The other displays stay active, and
           // Windows picks its usual primary again once the virtual display is removed.
           if (config::video.virtual_display_primary) {
-            if (VDISPLAY::setPrimaryDisplay(vdisplayName.c_str())) {
-              BOOST_LOG(info) << "Virtual Display set as the primary display";
-            } else {
-              BOOST_LOG(warning) << "Couldn't set the Virtual Display as the primary display";
+            // Remember what was primary so it can be handed back while nobody is streaming
+            auto previous_primary = VDISPLAY::getPrimaryDisplay();
+            if (previous_primary != vdisplayName) {
+              this->previous_primary_display = platf::to_utf8(previous_primary);
+              if (VDISPLAY::setPrimaryDisplay(vdisplayName.c_str())) {
+                BOOST_LOG(info) << "Virtual Display set as the primary display";
+              } else {
+                BOOST_LOG(warning) << "Couldn't set the Virtual Display as the primary display";
+              }
             }
           }
 
@@ -622,6 +627,25 @@ namespace proc {
     ++session_generation;
     BOOST_LOG(info) << "Session resuming for app [" << _app_name << "].";
 
+#ifdef _WIN32
+    // The primary display is handed back to the PC while nobody is streaming (see pause()).
+    // Make the virtual display primary again now that a client is back.
+    if (this->virtual_display && config::video.virtual_display_primary && !this->display_name.empty()) {
+      auto vdisplay_name = platf::from_utf8(this->display_name);
+      auto current_primary = VDISPLAY::getPrimaryDisplay();
+      if (current_primary != vdisplay_name) {
+        if (this->previous_primary_display.empty()) {
+          this->previous_primary_display = platf::to_utf8(current_primary);
+        }
+        if (VDISPLAY::setPrimaryDisplay(vdisplay_name.c_str())) {
+          BOOST_LOG(info) << "Virtual Display set as the primary display again";
+        } else {
+          BOOST_LOG(warning) << "Couldn't set the Virtual Display as the primary display again";
+        }
+      }
+    }
+#endif
+
     if (!_app.state_cmds.empty()) {
       auto exec_thread = std::thread([cmd_list = _app.state_cmds, app_working_dir = _app.working_dir, _env = _env]() mutable {
 
@@ -701,6 +725,22 @@ namespace proc {
     }
 
     BOOST_LOG(info) << "Session pausing for app [" << _app_name << "].";
+
+#ifdef _WIN32
+    // Nobody is watching the virtual display now. Give the primary display back to the PC so
+    // new windows and the taskbar are not stranded on a screen nobody can see. The app stays
+    // where it is, and resume() makes the virtual display primary again.
+    if (this->virtual_display && !this->previous_primary_display.empty()) {
+      auto previous_primary = platf::from_utf8(this->previous_primary_display);
+      if (VDISPLAY::getPrimaryDisplay() != previous_primary) {
+        if (VDISPLAY::setPrimaryDisplay(previous_primary.c_str())) {
+          BOOST_LOG(info) << "Primary display handed back to " << this->previous_primary_display;
+        } else {
+          BOOST_LOG(warning) << "Couldn't hand the primary display back to " << this->previous_primary_display;
+        }
+      }
+    }
+#endif
 
     if (!_app.state_cmds.empty()) {
       auto exec_thread = std::thread([cmd_list = _app.state_cmds, app_working_dir = _app.working_dir, _env = _env]() mutable {
@@ -844,6 +884,7 @@ namespace proc {
     display_name.clear();
     initial_display.clear();
     mode_changed_display.clear();
+    previous_primary_display.clear();
     _launch_session.reset();
     virtual_display = false;
     allow_client_commands = false;
