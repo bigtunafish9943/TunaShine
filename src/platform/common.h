@@ -879,6 +879,14 @@ namespace platf {
    */
   std::unique_ptr<high_precision_timer> create_high_precision_timer();
 
+  /// Running totals from screen capture, used to tell how well the game's frames fit the stream.
+  struct capture_counters_t {
+    std::uint64_t new_frames;  ///< Captures that contained a new frame from the game
+    std::uint64_t skipped_frames;  ///< Game frames that were replaced by a newer one before they could be captured
+  };
+
+  capture_counters_t capture_counters();
+
   std::string
   get_clipboard();
 
