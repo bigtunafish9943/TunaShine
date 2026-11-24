@@ -363,8 +363,12 @@ std::string get_local_ip_for_gateway() {
     // Unimplemented
   }
 
-  // Frame rate caps and capture counters are only implemented on Windows
+  // Frame rate caps, capture counters and window herding are only implemented on Windows
   void set_game_frame_limit(int) {
+  }
+
+  std::unique_ptr<window_herder_t> herd_new_windows(const std::string &, bool) {
+    return nullptr;
   }
 
   capture_counters_t capture_counters() {
