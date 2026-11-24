@@ -140,7 +140,7 @@ expect "config reports this build's version" "$(json version <<< "$config")" "$e
 if [[ "$config" == *"vdisplayStatus"* ]]; then pass "virtual display status is reported"; else fail "virtual display status is reported"; fi
 
 # Pages
-for page in "" pin apps config troubleshooting password setup; do
+for page in "" pin apps config troubleshooting password setup help; do
   body=$(get "/$page")
   if [[ "$body" == *"<title>TunaStream</title>"* && "$body" == *'id="app"'* ]]; then pass "page /$page loads"; else fail "page /$page loads (${#body} bytes)"; fi
 done

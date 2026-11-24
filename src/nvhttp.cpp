@@ -6,6 +6,8 @@
 #define BOOST_BIND_GLOBAL_PLACEHOLDERS
 
 // standard includes
+#include <algorithm>
+#include <cstdint>
 #include <filesystem>
 #include <format>
 #include <string>
@@ -1556,6 +1558,65 @@ namespace nvhttp {
     response->close_connection_after_response = true;
   }
 
+  /**
+   * Lets a paired TunaReceive measure how fast data reaches it from this PC, so it can pick a
+   * picture quality with room to spare. Sends filler bytes (1 MB to 32 MB, 16 MB by default).
+   * Only paired devices get past the TLS handshake at all, and it is refused during a stream so
+   * it can't take bandwidth from one.
+   */
+  void speedtest(resp_https_t response, req_https_t request) {
+    print_req<TunaStreamHTTPS>(request);
+
+    auto named_cert_p = get_verified_cert(request);
+    if (!(named_cert_p->perm & PERM::_allow_view)) {
+      response->write(SimpleWeb::StatusCode::client_error_unauthorized);
+      response->close_connection_after_response = true;
+      return;
+    }
+
+    if (rtsp_stream::session_count() != 0) {
+      response->write(SimpleWeb::StatusCode::server_error_service_unavailable, "A stream is running");
+      response->close_connection_after_response = true;
+      return;
+    }
+
+    constexpr std::size_t MB = 1024 * 1024;
+    std::size_t bytes = 16 * MB;
+    auto args = request->parse_query_string();
+    if (auto it = args.find("bytes"); it != std::end(args)) {
+      try {
+        bytes = std::clamp<std::size_t>(std::stoull(it->second), MB, 32 * MB);
+      } catch (...) {
+        // Not a number: keep the default
+      }
+    }
+
+    // Filler that can't be compressed away on the way
+    static const std::string chunk = [] {
+      std::string s(MB, '\0');
+      std::uint32_t x = 2463534242u;
+      for (auto &c : s) {
+        x ^= x << 13;
+        x ^= x >> 17;
+        x ^= x << 5;
+        c = static_cast<char>(x);
+      }
+      return s;
+    }();
+
+    std::string body;
+    body.reserve(bytes);
+    while (body.size() < bytes) {
+      body.append(chunk, 0, std::min(chunk.size(), bytes - body.size()));
+    }
+
+    SimpleWeb::CaseInsensitiveMultimap headers;
+    headers.emplace("Content-Type", "application/octet-stream");
+    headers.emplace("Cache-Control", "no-store");
+    response->write(SimpleWeb::StatusCode::success_ok, body, headers);
+    response->close_connection_after_response = true;
+  }
+
   void getClipboard(resp_https_t response, req_https_t request) {
     print_req<TunaStreamHTTPS>(request);
 
@@ -1759,6 +1820,7 @@ namespace nvhttp {
       resume(host_audio, resp, req);
     };
     https_server.resource["^/cancel$"]["GET"] = cancel;
+    https_server.resource["^/tuna/speedtest$"]["GET"] = speedtest;
     https_server.resource["^/actions/clipboard$"]["GET"] = getClipboard;
     https_server.resource["^/actions/clipboard$"]["POST"] = setClipboard;
 

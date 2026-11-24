@@ -12,6 +12,18 @@ This notice is kept because the license requires it.
 
 --------------------------------------------------------------------------------
 
+Bundled components, each under its own license:
+
+- SudoVDA virtual display driver, by SudoMaker (https://github.com/SudoMaker/SudoVDA),
+  licensed MIT and CC0. The signed driver package is taken unchanged from Apollo's
+  release installer.
+- nefcon device installation tool, by Nefarius (https://github.com/nefarius/nefcon),
+  used to install the driver above; see that project for its license.
+- ViGEmBus virtual gamepad driver, by Nefarius (https://github.com/nefarius/ViGEmBus);
+  see that project for its license.
+
+--------------------------------------------------------------------------------
+
 ©2018 Valve Corporation. Steam and the Steam logo are trademarks and/or
 registered trademarks of Valve Corporation in the U.S. and/or other countries. All
 rights reserved.

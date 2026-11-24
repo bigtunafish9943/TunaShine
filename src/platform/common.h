@@ -895,6 +895,23 @@ namespace platf {
    */
   void set_game_frame_limit(int fps);
 
+  /**
+   * @brief Keeps a just-launched app's new windows on the stream's display while it is watched.
+   * @details Destroying it stops the watching. Only implemented on Windows.
+   */
+  class window_herder_t {
+  public:
+    virtual ~window_herder_t() = default;
+  };
+
+  /**
+   * @brief Starts moving windows the app opens on another display onto the stream's display.
+   * @param display_name The stream's display, e.g. "\\.\DISPLAY9".
+   * @param include_steam Also move new Steam windows (Big Picture), even though Steam was already running.
+   * @return The watcher, or nullptr where this isn't supported.
+   */
+  std::unique_ptr<window_herder_t> herd_new_windows(const std::string &display_name, bool include_steam);
+
   std::string
   get_clipboard();
 

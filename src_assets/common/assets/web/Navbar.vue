@@ -3,7 +3,10 @@
     <div class="container">
       <a class="navbar-brand" href="./" title="TunaStream">
         <img src="/images/logo-tunastream-45.png" height="34" alt="">
-        <span class="brand-word">Tuna<b>Stream</b></span>
+        <span class="brand-stack">
+          <span class="brand-word">Tuna<b>Stream</b></span>
+          <span class="brand-version" v-if="installedVersion">{{ $t('navbar.version', { version: installedVersion }) }}</span>
+        </span>
       </a>
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
               aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
@@ -28,6 +31,9 @@
           </li>
           <li class="nav-item">
             <a class="nav-link" href="./troubleshooting"><i class="fas fa-fw fa-info"></i> {{ $t('navbar.troubleshoot') }}</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="./help"><i class="fas fa-fw fa-life-ring"></i> {{ $t('navbar.help') }}</a>
           </li>
           <li class="nav-item nav-item-theme">
             <ThemeToggle/>
@@ -59,6 +65,7 @@ export default {
   data() {
     return {
       updateVersion: '',
+      installedVersion: '',
       dismissed: false,
     };
   },
@@ -66,6 +73,7 @@ export default {
     try {
       const config = await fetch("./api/config", { credentials: 'include' }).then((r) => r.ok ? r.json() : null);
       if (!config || !config.version) return;
+      this.installedVersion = config.version;
       const latest = await fetch("https://api.github.com/repos/bigtunafish9943/TunaStream/releases/latest").then((r) => r.ok ? r.json() : null);
       if (!latest) return;
       const installed = new TunaStreamVersion(null, config.version);

@@ -72,6 +72,7 @@ export default defineConfig({
                 password: resolve(assetsSrcPath, 'password.html'),
                 pin: resolve(assetsSrcPath, 'pin.html'),
                 setup: resolve(assetsSrcPath, 'setup.html'),
+                help: resolve(assetsSrcPath, 'help.html'),
                 troubleshooting: resolve(assetsSrcPath, 'troubleshooting.html'),
                 welcome: resolve(assetsSrcPath, 'welcome.html'),
                 login: resolve(assetsSrcPath, 'login.html')
