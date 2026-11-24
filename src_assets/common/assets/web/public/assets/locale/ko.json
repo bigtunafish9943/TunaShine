@@ -405,6 +405,8 @@
     "streaming_nothing": "없음",
     "unnamed_device": "이름 없는 기기",
     "updates": "업데이트",
+    "vdisplay_failed": "지난 스트리밍에서 가상 디스플레이를 만들지 못해 이 PC의 화면을 대신 보여 주었습니다.",
+    "vdisplay_failed_fix": "TunaStream을 다시 시작해 디스플레이 드라이버에 다시 연결하세요.",
     "vdisplay_ok": "준비됨",
     "vdisplay_problem": "드라이버 문제",
     "vdisplay_settings": "디스플레이 설정",

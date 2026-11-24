@@ -13,6 +13,7 @@
 #endif
 
 // standard includes
+#include <atomic>
 #include <optional>
 #include <unordered_map>
 
@@ -44,6 +45,8 @@ namespace proc {
 
 #ifdef _WIN32
   extern VDISPLAY::DRIVER_STATUS vDisplayDriverStatus;
+  /// True when the last stream could not create its virtual display and showed the PC's own screen
+  extern std::atomic_bool vdisplay_failed;
 #endif
 
   typedef config::prep_cmd_t cmd_t;

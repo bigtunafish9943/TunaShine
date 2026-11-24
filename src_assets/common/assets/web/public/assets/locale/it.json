@@ -405,6 +405,8 @@
     "streaming_nothing": "Niente",
     "unnamed_device": "Dispositivo senza nome",
     "updates": "Aggiornamenti",
+    "vdisplay_failed": "L'ultimo streaming non è riuscito a creare lo schermo virtuale e ha mostrato lo schermo di questo PC.",
+    "vdisplay_failed_fix": "Riavvia TunaStream per ricollegarti al driver dello schermo.",
     "vdisplay_ok": "Pronto",
     "vdisplay_problem": "Problema del driver",
     "vdisplay_settings": "Impostazioni schermo",

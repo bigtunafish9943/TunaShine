@@ -25,8 +25,9 @@ Everything here is built and passes the automated checks, but has not yet been c
 
 ## Next
 
-- **Clear fallback when the virtual display fails**: visible error in the web UI, useful logs, and falling back
-  to a physical display instead of a black stream.
+- **Clear fallback when the virtual display fails.** Started: TunaStream retries once, falls back to the PC's own
+  screen, and the home page says so. Still to do: reconnecting to a driver that hangs after sleep without a
+  restart.
 - **HDR on the wrong display.** Reports of HDR being applied to the physical display or not detected.
 - **More documentation.** A troubleshooting guide for rumble, the connection and stop/start exists; the virtual
   display and permissions still need their own pages.

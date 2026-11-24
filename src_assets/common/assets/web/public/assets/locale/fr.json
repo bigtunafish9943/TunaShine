@@ -408,6 +408,8 @@
     "streaming_nothing": "Rien",
     "unnamed_device": "Appareil sans nom",
     "updates": "Mises à jour",
+    "vdisplay_failed": "La dernière diffusion n'a pas pu créer son écran virtuel et a affiché l'écran de ce PC à la place.",
+    "vdisplay_failed_fix": "Redémarrez TunaStream pour reconnecter le pilote d'affichage.",
     "vdisplay_ok": "Prêt",
     "vdisplay_problem": "Problème de pilote",
     "vdisplay_settings": "Réglages d'affichage",

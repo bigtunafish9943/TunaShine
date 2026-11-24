@@ -733,6 +733,9 @@ namespace confighttp {
       });
     }
     output_tree["controllers"] = controllers;
+#ifdef _WIN32
+    output_tree["vdisplayFailed"] = proc::vdisplay_failed.load();
+#endif
     send_response(response, output_tree);
   }
 
