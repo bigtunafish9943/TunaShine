@@ -21,6 +21,7 @@
 #include <Simple-Web-Server/server_http.hpp>
 
 // local includes
+#include "pairing_backup.h"
 #include "config.h"
 #include "display_device.h"
 #include "file_handler.h"
@@ -284,6 +285,9 @@ namespace nvhttp {
       BOOST_LOG(error) << "Couldn't write "sv << config::nvhttp.file_state << ": "sv << e.what();
       return;
     }
+
+    // Keep paired devices safe from reinstalls
+    pairing_backup::save();
   }
 
   void load_state() {
