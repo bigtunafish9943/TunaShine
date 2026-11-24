@@ -147,6 +147,18 @@ expect "saved setting is read back: virtual display primary" "$(json virtual_dis
 
 expect "end session answers with nothing running" "$(post /api/apps/close '{}' | json status)" "True"
 
+# The updater: this build is newer than any published release, so a real check against GitHub must
+# find the latest release, read it and decide there is nothing to install.
+expect "updater is idle at start" "$(get /api/update | json stage)" "idle"
+expect "updater starts a check" "$(post /api/update '{}' | json started)" "True"
+stage=checking
+for _ in $(seq 1 30); do
+  stage=$(get /api/update | json stage)
+  [ "$stage" = checking ] || break
+  sleep 2
+done
+expect "updater finds no newer release than this build" "$stage $(get /api/update | json error)" "up_to_date"
+
 # The program must still be alive after all that
 if tasklist //FI "IMAGENAME eq tunastream.exe" 2>/dev/null | grep -qi "tunastream.exe"; then pass "program is still running"; else fail "program is still running"; fi
 
