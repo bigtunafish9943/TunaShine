@@ -44,13 +44,27 @@
       <div class="home-status-item" v-if="platform === 'windows'" :class="{ 'home-status-bad': vdisplayStatus !== 0 }">
         <dt>{{ $t('index.status_vdisplay') }}</dt>
         <dd>{{ vdisplayStatus === 0 ? $t('index.vdisplay_ok') : $t('index.vdisplay_problem') }}</dd>
-        <a href="./config">{{ $t('index.vdisplay_settings') }}</a>
+        <a :href="vdisplayStatus === 0 ? './config' : './troubleshooting#vdisplay'">{{ vdisplayStatus === 0 ? $t('index.vdisplay_settings') : $t('index.vdisplay_repair') }}</a>
       </div>
     </dl>
 
     <div class="alert alert-warning" v-if="vdisplayFailed">
       {{ $t('index.vdisplay_failed') }}
       <a href="./troubleshooting#restart">{{ $t('index.vdisplay_failed_fix') }}</a>
+    </div>
+
+    <!-- A game left open on the stream's screen, with nobody streaming it -->
+    <div class="home-paused" v-if="currentAppName && pausedOnStreamScreen">
+      <div>
+        <p class="home-paused-title">{{ $t('index.paused_title', { app: currentAppName }) }}</p>
+        <p class="home-paused-desc">{{ $t('index.paused_desc') }}</p>
+        <p class="home-paused-error" v-if="continueError">{{ continueError }}</p>
+      </div>
+      <div class="home-paused-actions">
+        <button type="button" class="btn btn-primary" :disabled="continuing" @click="continueHere">
+          <i class="fas fa-desktop"></i> {{ $t('index.paused_play_here') }}
+        </button>
+      </div>
     </div>
 
     <!-- Who is playing, and what their controllers look like to games -->
@@ -182,6 +196,9 @@
         vdisplayStatus: 0,
         hostName: "",
         currentAppName: "",
+        pausedOnStreamScreen: false,
+        continuing: false,
+        continueError: "",
         clientCount: null,
         customPort: null,
         ending: false,
@@ -284,6 +301,26 @@
         this.update = { ...this.update, stage: 'failed', error: this.$t('index.update_no_restart') };
       },
       /** Quit the app that is being streamed, which also disconnects whoever is playing. */
+      /** Move the paused game from the stream's screen onto this PC's monitor. */
+      async continueHere() {
+        this.continuing = true;
+        this.continueError = "";
+        try {
+          const r = await fetch("./api/apps/continue-here", {
+            credentials: 'include',
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: '{}',
+          }).then((r) => r.json());
+          if (!r.status) {
+            this.continueError = r.error || this.$t('index.paused_failed');
+          }
+        } catch (e) {
+          this.continueError = this.$t('index.paused_failed');
+        }
+        await this.loadStatus();
+        this.continuing = false;
+      },
       async endSession() {
         if (!confirm(this.$t('index.end_session_confirm', { app: this.currentAppName }))) {
           return;
@@ -348,6 +385,10 @@
           const status = await fetch("./api/status").then((r) => r.ok ? r.json() : null);
           const controllers = (status && status.controllers) || [];
           this.vdisplayFailed = !!(status && status.vdisplayFailed);
+          if (status && status.vdisplayStatus !== undefined) {
+            this.vdisplayStatus = status.vdisplayStatus;
+          }
+          this.pausedOnStreamScreen = !!(status && status.onVirtualDisplay && status.sessions === 0);
           // One entry per connected device, with the controllers it brought
           const names = [...new Set([...connected, ...controllers.map((c) => c.device)])];
           const streams = (status && status.streams) || [];

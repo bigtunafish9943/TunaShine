@@ -21,11 +21,18 @@ namespace nvprefs {
       };
 
       std::optional<opengl_swapchain_t> opengl_swapchain;
+
+      // Max Frame Rate in the global profile, set to the stream's frame rate while streaming
+      std::optional<opengl_swapchain_t> frame_limit;
     };
 
     void set_opengl_swapchain(uint32_t our_value, std::optional<uint32_t> undo_value);
 
     std::optional<data_t::opengl_swapchain_t> get_opengl_swapchain() const;
+
+    void set_frame_limit(uint32_t our_value, std::optional<uint32_t> undo_value);
+
+    std::optional<data_t::opengl_swapchain_t> get_frame_limit() const;
 
     std::string write() const;
 

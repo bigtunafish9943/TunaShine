@@ -451,6 +451,7 @@
           }
           lines.push(this.answers.screen === 'own' ? t('setup.sum_screen_own') : t('setup.sum_screen_mirror'));
           lines.push(this.answers.stop === 'keep' ? t('setup.sum_stop_keep') : t('setup.sum_stop_close'));
+          lines.push(t('setup.sum_frame_limit'));
           lines.push(this.answers.away === 'away' ? t('setup.sum_away') : t('setup.sum_home'));
           return lines;
         },
@@ -516,6 +517,7 @@
           set('isolated_virtual_display_option', a.screen === 'own');
 
           set('end_session_on_disconnect', a.stop === 'close');
+          set('game_frame_limit', true);
           set('upnp', a.away === 'away');
           set('setup_complete', true);
           return s;

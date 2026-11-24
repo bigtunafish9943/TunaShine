@@ -1,3 +1,4 @@
+#include <atomic>
 #include <windows.h>
 #include <iostream>
 #include <vector>
@@ -549,7 +550,12 @@ bool setDisplayHDRByName(const wchar_t* displayName, bool enableAdvancedColor) {
 	return setDisplayHDR(adapterId, targetId, enableAdvancedColor);
 }
 
+// Bumped whenever the device is closed or a new watchdog starts, so an older watchdog
+// thread stops instead of acting on a handle that has since been reopened
+static std::atomic_uint ping_generation {0};
+
 void closeVDisplayDevice() {
+	++ping_generation;
 	if (SUDOVDA_DRIVER_HANDLE == INVALID_HANDLE_VALUE) {
 		return;
 	}
@@ -600,14 +606,17 @@ bool startPingThread(std::function<void()> failCb) {
 
 	if (watchdogOut.Timeout) {
 		auto sleepInterval = watchdogOut.Timeout * 1000 / 3;
-		std::thread ping_thread([sleepInterval, failCb = std::move(failCb)]{
+		const auto generation = ++ping_generation;
+		std::thread ping_thread([sleepInterval, generation, failCb = std::move(failCb)]{
 			uint8_t fail_count = 0;
 			for (;;) {
-				if (!sleepInterval) return;
+				if (!sleepInterval || generation != ping_generation) return;
 				if (!PingDriver(SUDOVDA_DRIVER_HANDLE)) {
 					fail_count += 1;
 					if (fail_count > 3) {
-						failCb();
+						if (generation == ping_generation) {
+							failCb();
+						}
 						return;
 					}
 				};

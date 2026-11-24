@@ -5,6 +5,10 @@
 // this include
 #include "driver_settings.h"
 
+// standard includes
+#include <algorithm>
+#include <string>
+
 // local includes
 #include "nvprefs_common.h"
 
@@ -152,6 +156,52 @@ namespace nvprefs {
       }
     }
 
+    const auto &frame_limit_data = undo_data.get_frame_limit();
+    if (frame_limit_data) {
+      NvDRSProfileHandle profile_handle = nullptr;
+      auto status = NvAPI_DRS_GetBaseProfile(session_handle, &profile_handle);
+      if (status != NVAPI_OK) {
+        nvapi_error_message(status);
+        error_message("NvAPI_DRS_GetBaseProfile() failed");
+        return false;
+      }
+
+      NVDRS_SETTING setting = {};
+      setting.version = NVDRS_SETTING_VER;
+      status = NvAPI_DRS_GetSetting(session_handle, profile_handle, FRL_FPS_ID, &setting);
+
+      // Only put it back if it is still our value; if the user changed it since, theirs stays
+      if (status == NVAPI_OK && setting.settingLocation == NVDRS_CURRENT_PROFILE_LOCATION && setting.u32CurrentValue == frame_limit_data->our_value) {
+        if (frame_limit_data->undo_value) {
+          setting = {};
+          setting.version = NVDRS_SETTING_VER1;
+          setting.settingId = FRL_FPS_ID;
+          setting.settingType = NVDRS_DWORD_TYPE;
+          setting.settingLocation = NVDRS_CURRENT_PROFILE_LOCATION;
+          setting.u32CurrentValue = *frame_limit_data->undo_value;
+          status = NvAPI_DRS_SetSetting(session_handle, profile_handle, &setting);
+        } else {
+          status = NvAPI_DRS_DeleteProfileSetting(session_handle, profile_handle, FRL_FPS_ID);
+          if (status == NVAPI_SETTING_NOT_FOUND) {
+            status = NVAPI_OK;
+          }
+        }
+
+        if (status != NVAPI_OK) {
+          nvapi_error_message(status);
+          error_message("Couldn't restore Max Frame Rate in the global profile");
+          return false;
+        }
+        info_message("Restored Max Frame Rate in the global profile");
+      } else if (status == NVAPI_OK || status == NVAPI_SETTING_NOT_FOUND) {
+        info_message("Max Frame Rate has been changed from our value in the global profile, not restoring");
+      } else {
+        nvapi_error_message(status);
+        error_message("NvAPI_DRS_GetSetting() FRL_FPS failed");
+        return false;
+      }
+    }
+
     return true;
   }
 
@@ -210,6 +260,73 @@ namespace nvprefs {
       return false;
     }
 
+    return true;
+  }
+
+  bool driver_settings_t::set_global_frame_limit(uint32_t fps, const std::optional<undo_data_t> &current_undo, std::optional<undo_data_t> &undo_data) {
+    if (!session_handle) {
+      return false;
+    }
+
+    undo_data.reset();
+    fps = std::min<uint32_t>(fps, FRL_FPS_MAX);
+
+    NvDRSProfileHandle profile_handle = nullptr;
+    auto status = NvAPI_DRS_GetBaseProfile(session_handle, &profile_handle);
+    if (status != NVAPI_OK) {
+      nvapi_error_message(status);
+      error_message("NvAPI_DRS_GetBaseProfile() failed");
+      return false;
+    }
+
+    NVDRS_SETTING setting = {};
+    setting.version = NVDRS_SETTING_VER;
+    status = NvAPI_DRS_GetSetting(session_handle, profile_handle, FRL_FPS_ID, &setting);
+    if (status != NVAPI_OK && status != NVAPI_SETTING_NOT_FOUND) {
+      nvapi_error_message(status);
+      error_message("NvAPI_DRS_GetSetting() FRL_FPS failed");
+      return false;
+    }
+
+    const bool set_here = status == NVAPI_OK && setting.settingLocation == NVDRS_CURRENT_PROFILE_LOCATION;
+    const auto previous = current_undo ? current_undo->get_frame_limit() : std::nullopt;
+    const bool ours = set_here && previous && setting.u32CurrentValue == previous->our_value;
+
+    if (set_here && !ours && setting.u32CurrentValue != FRL_FPS_DISABLED) {
+      // The user chose a Max Frame Rate for all games themselves; respect it
+      info_message("Max Frame Rate is already set in the global profile, leaving it alone");
+      return true;
+    }
+    if (set_here && setting.u32CurrentValue == fps) {
+      return true;
+    }
+
+    std::optional<uint32_t> undo_value;
+    if (ours) {
+      undo_value = previous->undo_value;
+    } else if (set_here) {
+      undo_value = setting.u32CurrentValue;
+    }
+
+    undo_data = undo_data_t();
+    undo_data->set_frame_limit(fps, undo_value);
+
+    setting = {};
+    setting.version = NVDRS_SETTING_VER1;
+    setting.settingId = FRL_FPS_ID;
+    setting.settingType = NVDRS_DWORD_TYPE;
+    setting.settingLocation = NVDRS_CURRENT_PROFILE_LOCATION;
+    setting.u32CurrentValue = fps;
+
+    status = NvAPI_DRS_SetSetting(session_handle, profile_handle, &setting);
+    if (status != NVAPI_OK) {
+      nvapi_error_message(status);
+      error_message("NvAPI_DRS_SetSetting() FRL_FPS failed");
+      undo_data.reset();
+      return false;
+    }
+
+    info_message("Set Max Frame Rate in the global profile to " + std::to_string(fps) + " to match the stream");
     return true;
   }
 
