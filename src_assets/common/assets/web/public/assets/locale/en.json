@@ -476,6 +476,8 @@
     "custom_port": "TunaShine is using port {port} instead of the default. If your client does not find this PC by itself, add it by hand using this PC's IP address followed by :{port}, for example 192.168.1.20:{port}.",
     "description": "TunaShine is a self-hosted game stream host for Moonlight.",
     "devices_none": "None yet",
+    "end_session": "End session",
+    "end_session_confirm": "Quit {app}? Anyone streaming it will be disconnected.",
     "download": "Download",
     "installed_version_not_stable": "You are running a pre-release version of TunaShine. You may experience bugs or other issues. Please report any issues you encounter. Thank you for helping to make TunaShine a better software!",
     "loading_latest": "Loading latest release...",
