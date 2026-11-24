@@ -1,6 +1,229 @@
+/* TunaShine theme. Colors come from the app icon: deep-sea navy and a sun-amber accent. */
+
 /* Hide pages while localization is loading */
 [v-cloak] {
     display: none;
+}
+
+:root {
+    --ts-navy: #0b2545;
+    --ts-deep: #13315c;
+    --ts-sun: #ffb627;
+    --ts-sun-pale: #ffe08a;
+    --ts-foam: #eef4f8;
+    --ts-display: "Bahnschrift", "DIN Alternate", "Avenir Next", "Segoe UI Variable Display", system-ui, sans-serif;
+    --bs-border-radius: 0.5rem;
+    --bs-border-radius-lg: 0.75rem;
+}
+
+/* ---------- Light theme ---------- */
+/* The "html" prefix outranks Bootstrap's own theme rules, which load after this file */
+html:root,
+html[data-bs-theme=light] {
+    --bs-body-bg: var(--ts-foam);
+    --bs-body-color: #10233b;
+    --bs-secondary-color: rgba(16, 35, 59, 0.7);
+    --bs-emphasis-color: var(--ts-navy);
+    --bs-heading-color: var(--ts-navy);
+    --bs-link-color: #0d5c9e;
+    --bs-link-color-rgb: 13, 92, 158;
+    --bs-link-hover-color: var(--ts-navy);
+    --bs-link-hover-color-rgb: 11, 37, 69;
+    --bs-border-color: #cfdce8;
+    --bs-tertiary-bg: #e2ecf3;
+    --ts-surface: #ffffff;
+    --ts-surface-border: #d6e2ec;
+}
+
+/* ---------- Dark theme ---------- */
+html[data-bs-theme=dark] {
+    --bs-body-bg: #081a31;
+    --bs-body-color: #dbe6f1;
+    --bs-secondary-color: rgba(219, 230, 241, 0.68);
+    --bs-emphasis-color: #ffffff;
+    --bs-heading-color: #f3f7fb;
+    --bs-link-color: var(--ts-sun-pale);
+    --bs-link-color-rgb: 255, 224, 138;
+    --bs-link-hover-color: var(--ts-sun);
+    --bs-link-hover-color-rgb: 255, 182, 39;
+    --bs-border-color: #1f426d;
+    --bs-tertiary-bg: #0e2a4d;
+    --ts-surface: #0e2747;
+    --ts-surface-border: #1c3d66;
+}
+
+body {
+    min-height: 100vh;
+}
+
+h1, h2, h3, .navbar-brand {
+    font-family: var(--ts-display);
+    letter-spacing: 0.005em;
+}
+
+h1 {
+    font-weight: 600;
+    font-size: 2.1rem;
+}
+
+h2 {
+    font-weight: 600;
+    font-size: 1.45rem;
+}
+
+#content {
+    padding-bottom: 3rem;
+}
+
+/* ---------- Navigation ---------- */
+.navbar.navbar-background {
+    background-color: var(--ts-navy);
+    border-bottom: 3px solid var(--ts-sun);
+    padding-top: 0.35rem;
+    padding-bottom: 0.35rem;
+}
+
+.navbar.header .navbar-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    color: #ffffff;
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin-right: 1.5rem;
+}
+
+.navbar.header .navbar-brand img {
+    height: 38px;
+    width: 38px;
+}
+
+.navbar.header .nav-link {
+    color: rgba(255, 255, 255, 0.78) !important;
+    font-weight: 400 !important;
+    border-radius: 0.4rem;
+    padding: 0.45rem 0.7rem;
+}
+
+.navbar.header .nav-link:hover,
+.navbar.header .nav-link:focus-visible {
+    color: #ffffff !important;
+    background-color: rgba(255, 255, 255, 0.09);
+}
+
+.navbar.header .nav-link.active {
+    color: var(--ts-navy) !important;
+    background-color: var(--ts-sun);
+    font-weight: 600 !important;
+}
+
+.navbar.header .navbar-toggler {
+    border-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+.navbar.header .navbar-toggler-icon {
+    --bs-navbar-toggler-icon-bg: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%28255, 255, 255, 0.85%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e") !important;
+}
+
+/* ---------- Surfaces ---------- */
+body .card {
+    --bs-card-bg: var(--ts-surface);
+    --bs-card-border-color: var(--ts-surface-border);
+    --bs-card-border-radius: 0.75rem;
+    --bs-card-cap-bg: transparent;
+}
+
+body .dropdown-menu,
+body .modal-content {
+    --bs-dropdown-bg: var(--ts-surface);
+    --bs-modal-bg: var(--ts-surface);
+    --bs-dropdown-border-color: var(--ts-surface-border);
+}
+
+body .form-control,
+body .form-select {
+    background-color: var(--bs-body-bg);
+    border-color: var(--bs-border-color);
+}
+
+body .form-control:focus,
+body .form-select:focus,
+body .form-check-input:focus {
+    border-color: var(--ts-sun);
+    box-shadow: 0 0 0 0.2rem rgba(255, 182, 39, 0.3);
+}
+
+body .form-check-input:checked {
+    background-color: var(--ts-sun);
+    border-color: var(--ts-sun);
+}
+
+body .form-text {
+    color: var(--bs-secondary-color);
+}
+
+/* ---------- Buttons: amber is the one accent ---------- */
+body .btn {
+    --bs-btn-font-weight: 500;
+}
+
+body .btn-primary {
+    --bs-btn-color: var(--ts-navy);
+    --bs-btn-bg: var(--ts-sun);
+    --bs-btn-border-color: var(--ts-sun);
+    --bs-btn-hover-color: var(--ts-navy);
+    --bs-btn-hover-bg: #ffc64f;
+    --bs-btn-hover-border-color: #ffc64f;
+    --bs-btn-active-color: var(--ts-navy);
+    --bs-btn-active-bg: #f2a60f;
+    --bs-btn-active-border-color: #f2a60f;
+    --bs-btn-disabled-color: var(--ts-navy);
+    --bs-btn-disabled-bg: var(--ts-sun);
+    --bs-btn-disabled-border-color: var(--ts-sun);
+    --bs-btn-focus-shadow-rgb: 255, 182, 39;
+}
+
+:focus-visible {
+    outline: 2px solid var(--ts-sun);
+    outline-offset: 2px;
+}
+
+/* ---------- Tabs and pills ---------- */
+body .nav-tabs {
+    --bs-nav-tabs-border-color: var(--bs-border-color);
+    --bs-nav-tabs-link-active-bg: var(--ts-surface);
+    --bs-nav-tabs-link-active-color: var(--bs-emphasis-color);
+    --bs-nav-tabs-link-active-border-color: var(--bs-border-color) var(--bs-border-color) var(--ts-surface);
+    --bs-nav-link-color: var(--bs-secondary-color);
+    --bs-nav-link-hover-color: var(--bs-emphasis-color);
+}
+
+body .nav-tabs .nav-link.active {
+    box-shadow: inset 0 3px 0 var(--ts-sun);
+    font-weight: 600;
+}
+
+body .nav-pills {
+    --bs-nav-pills-link-active-bg: var(--ts-sun);
+    --bs-nav-pills-link-active-color: var(--ts-navy);
+    --bs-nav-link-color: var(--bs-secondary-color);
+    --bs-nav-link-hover-color: var(--bs-emphasis-color);
+}
+
+/* ---------- Tables and alerts ---------- */
+body .table {
+    --bs-table-bg: transparent;
+    --bs-table-border-color: var(--bs-border-color);
+}
+
+body .alert {
+    --bs-alert-border-radius: 0.6rem;
+}
+
+pre {
+    background-color: var(--bs-tertiary-bg);
+    border-radius: 0.5rem;
+    padding: 0.75rem 1rem;
 }
 
 [data-bs-theme=dark] .element {
@@ -8,9 +231,12 @@
     background-color: var(--bs-primary-bg-subtle);
 }
 
-@media (prefers-color-scheme: dark) {
-    .element {
-        color: var(--bs-primary-text-emphasis);
-        background-color: var(--bs-primary-bg-subtle);
-    }
+/* ---------- Lists (paired devices) ---------- */
+body .list-group,
+body .list-group-item-light {
+    --bs-list-group-bg: transparent;
+    --bs-list-group-color: var(--bs-body-color);
+    --bs-list-group-border-color: var(--bs-border-color);
+    background-color: transparent;
+    color: var(--bs-body-color);
 }
