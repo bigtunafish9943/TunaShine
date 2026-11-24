@@ -43,6 +43,57 @@ const validateFallbackMode = (event) => {
 
 <template>
   <div id="audio-video" class="config-page">
+    <!-- The stream's screen, explained without jargon -->
+    <section class="screen-explainer" v-if="platform === 'windows'">
+      <h2 class="h5">{{ $t('config.screen_title') }}</h2>
+      <p>{{ $t('config.screen_intro') }}</p>
+      <ul>
+        <li>{{ $t('config.screen_point_size') }}</li>
+        <li>{{ $t('config.screen_point_monitor') }}</li>
+        <li>{{ $t('config.screen_point_stop') }}</li>
+      </ul>
+      <p class="screen-status" :class="vdisplay ? 'screen-status-bad' : 'screen-status-ok'">
+        <i class="fa-solid" :class="vdisplay ? 'fa-triangle-exclamation' : 'fa-circle-check'"></i>
+        {{ vdisplay ? $t('config.screen_status_bad') : $t('config.screen_status_ok') }}
+      </p>
+    </section>
+
+    <Checkbox class="mb-3"
+              id="headless_mode"
+              locale-prefix="config"
+              v-model="config.headless_mode"
+              default="true"
+              v-if="platform === 'windows'"
+    ></Checkbox>
+
+    <Checkbox class="mb-3"
+              id="virtual_display_primary"
+              locale-prefix="config"
+              v-model="config.virtual_display_primary"
+              default="true"
+              v-if="platform === 'windows'"
+    ></Checkbox>
+
+    <Checkbox class="mb-3"
+              id="isolated_virtual_display_option"
+              locale-prefix="config"
+              v-model="config.isolated_virtual_display_option"
+              default="false"
+              v-if="platform === 'windows'"
+    ></Checkbox>
+
+    <!-- Disable Audio -->
+    <Checkbox class="mb-3"
+              id="stream_audio"
+              locale-prefix="config"
+              v-model="config.stream_audio"
+              default="true"
+    ></Checkbox>
+
+    <details class="app-more mt-4">
+      <summary>{{ $t('config.advanced_title') }}</summary>
+      <p class="form-text">{{ $t('config.advanced_desc') }}</p>
+
     <!-- Audio Sink -->
     <div class="mb-3">
       <label for="audio_sink" class="form-label">{{ $t('config.audio_sink') }}</label>
@@ -100,14 +151,6 @@ const validateFallbackMode = (event) => {
       </template>
     </PlatformLayout>
 
-    <!-- Disable Audio -->
-    <Checkbox class="mb-3"
-              id="stream_audio"
-              locale-prefix="config"
-              v-model="config.stream_audio"
-              default="true"
-    ></Checkbox>
-
     <AdapterNameSelector
         :platform="platform"
         :config="config"
@@ -143,16 +186,6 @@ const validateFallbackMode = (event) => {
       <div class="form-text">{{ $t('config.fallback_mode_desc') }}</div>
     </div>
 
-    <!-- Headless Mode -->
-    <Checkbox class="mb-3"
-              id="headless_mode"
-              locale-prefix="config"
-              v-model="config.headless_mode"
-              default="true"
-              v-if="platform === 'windows'"
-    ></Checkbox>
-
-    <!-- Double Refreshrate -->
     <Checkbox class="mb-3"
               id="double_refreshrate"
               locale-prefix="config"
@@ -161,30 +194,8 @@ const validateFallbackMode = (event) => {
               v-if="platform === 'windows'"
     ></Checkbox>
 
-    <!-- Virtual display becomes the main display -->
-    <Checkbox class="mb-3"
-              id="virtual_display_primary"
-              locale-prefix="config"
-              v-model="config.virtual_display_primary"
-              default="true"
-              v-if="platform === 'windows'"
-    ></Checkbox>
-
-    <!-- Isolated Virtual Display -->
-    <Checkbox class="mb-3"
-              id="isolated_virtual_display_option"
-              locale-prefix="config"
-              v-model="config.isolated_virtual_display_option"
-              default="false"
-              v-if="platform === 'windows'"
-    ></Checkbox>
-
-    <!-- SudoVDA Driver Status -->
-    <div class="alert" :class="[vdisplay ? 'alert-warning' : 'alert-success']" v-if="platform === 'windows'">
-      <i class="fa-solid fa-xl fa-circle-info"></i> SudoVDA Driver status: {{currentDriverStatus}}
-    </div>
-    <div class="form-text" v-if="platform === 'windows' && vdisplay">Please ensure SudoVDA driver is installed to the latest version and enabled properly.</div>
-
+      <p class="form-text" v-if="platform === 'windows'">{{ $t('config.screen_driver_detail', { status: currentDriverStatus }) }}</p>
+    </details>
   </div>
 </template>
 
