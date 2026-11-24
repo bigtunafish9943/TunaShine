@@ -240,3 +240,74 @@ body .list-group-item-light {
     background-color: transparent;
     color: var(--bs-body-color);
 }
+
+/* ---------- Settings page: section menu on the left ---------- */
+.settings-layout {
+    display: grid;
+    grid-template-columns: 15rem minmax(0, 1fr);
+    gap: 1.5rem;
+    align-items: start;
+}
+
+.settings-menu {
+    position: sticky;
+    top: 1rem;
+    background-color: var(--ts-surface);
+    border: 1px solid var(--ts-surface-border);
+    border-radius: 0.75rem;
+    padding: 0.5rem;
+}
+
+.settings-menu .nav-link {
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.45rem;
+}
+
+.settings-menu .nav-link:hover {
+    background-color: var(--bs-tertiary-bg);
+}
+
+.settings-menu .nav-link.active {
+    font-weight: 600;
+}
+
+.settings-content .config-page {
+    background-color: var(--ts-surface);
+    border: 1px solid var(--ts-surface-border);
+    border-radius: 0.75rem;
+    padding: 1.25rem 1.5rem;
+}
+
+.settings-content .buttons {
+    position: sticky;
+    bottom: 0;
+    padding: 0.9rem 0;
+    background-color: var(--bs-body-bg);
+}
+
+/* Narrow screens: the menu becomes a scrolling row above the settings */
+@media (max-width: 767.98px) {
+    .settings-layout {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 1rem;
+    }
+
+    .settings-menu {
+        position: static;
+        overflow-x: auto;
+    }
+
+    .settings-menu .nav {
+        flex-direction: row !important;
+        flex-wrap: nowrap;
+    }
+
+    .settings-menu .nav-link {
+        white-space: nowrap;
+    }
+}
+
+/* Panels on other pages that reuse the settings panel class */
+.config-page {
+    padding: 1em;
+}

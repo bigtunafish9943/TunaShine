@@ -4,12 +4,6 @@
 <head>
   <%- header %>
     <style>
-      .config-page {
-        padding: 1em;
-        border: 1px solid #dee2e6;
-        border-top: none;
-      }
-
       .pre-wrap {
         white-space: pre-wrap;
       }
@@ -24,14 +18,19 @@
   <Navbar></Navbar>
   <div class="container">
     <h1 class="my-4">{{ $t('config.configuration') }}</h1>
-    <div class="form" v-if="config">
-      <!-- Header -->
-      <ul class="nav nav-tabs">
-        <li class="nav-item" v-for="tab in tabs" :key="tab.id">
-          <a class="nav-link" :class="{'active': tab.id === currentTab}" href="#"
-            @click="currentTab = tab.id">{{tab.name}}</a>
-        </li>
-      </ul>
+    <div class="form settings-layout" v-if="config">
+      <!-- Settings menu -->
+      <nav class="settings-menu" aria-label="Settings sections">
+        <ul class="nav nav-pills flex-column">
+          <li class="nav-item" v-for="tab in tabs" :key="tab.id">
+            <a class="nav-link" :class="{'active': tab.id === currentTab}" href="#"
+              :aria-current="tab.id === currentTab ? 'page' : null"
+              @click.prevent="currentTab = tab.id">{{tab.name}}</a>
+          </li>
+        </ul>
+      </nav>
+
+      <div class="settings-content">
 
       <!-- General Tab -->
       <general
@@ -85,10 +84,9 @@
         :config="config"
         :platform="platform">
       </container-encoders>
-    </div>
 
-    <!-- Save and Apply buttons -->
-    <div class="alert alert-success my-4" v-if="saved && !restarted">
+      <!-- Save and Apply buttons -->
+      <div class="alert alert-success my-4" v-if="saved && !restarted">
       <b>{{ $t('_common.success') }}</b> {{ $t('config.apply_note') }}
     </div>
     <div class="alert alert-success my-4" v-if="restarted">
@@ -97,6 +95,8 @@
     <div class="mb-3 buttons">
       <button class="btn btn-primary" @click="save">{{ $t('_common.save') }}</button>
       <button class="btn btn-success mx-2" @click="apply" v-if="saved && !restarted">{{ $t('_common.apply') }}</button>
+    </div>
+      </div>
     </div>
   </div>
 </body>
