@@ -754,6 +754,26 @@ namespace confighttp {
       });
     }
     output_tree["controllers"] = controllers;
+
+    nlohmann::json streams = nlohmann::json::array();
+    for (const auto &h : stream::session::health()) {
+      streams.push_back({
+        {"device", h.device},
+        {"targetFps", h.target_fps},
+        {"fps", h.fps},
+        {"skippedPerSec", h.skipped_per_sec},
+        {"gaps", h.gaps},
+        {"pcMsAvg", h.pc_ms_avg},
+        {"pcMsMax", h.pc_ms_max},
+        {"sendMsAvg", h.send_ms_avg},
+        {"sendMsMax", h.send_ms_max},
+        {"recoveries", h.recoveries},
+        {"bitrateKbps", h.bitrate_kbps},
+        {"sendRateMbps", h.send_rate_mbps},
+        {"windowS", h.window_s},
+      });
+    }
+    output_tree["streams"] = streams;
 #ifdef _WIN32
     output_tree["vdisplayFailed"] = proc::vdisplay_failed.load();
 #endif
@@ -774,9 +794,23 @@ namespace confighttp {
 
     print_req(request);
 
+    // {"verifyOnly": true} downloads and checks the latest installer without installing it
+    bool verify_only = false;
+    try {
+      std::stringstream ss;
+      ss << request->content.rdbuf();
+      auto body = ss.str();
+      if (!body.empty()) {
+        auto input = nlohmann::json::parse(body);
+        verify_only = input.is_object() && input.value("verifyOnly", false);
+      }
+    } catch (const std::exception &) {
+      // An unreadable body just means a normal update
+    }
+
     nlohmann::json output_tree;
     output_tree["status"] = true;
-    output_tree["started"] = updater::start();
+    output_tree["started"] = updater::start(verify_only);
     send_response(response, output_tree);
   }
 

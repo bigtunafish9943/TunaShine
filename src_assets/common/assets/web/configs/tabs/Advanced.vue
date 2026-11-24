@@ -20,6 +20,13 @@ const config = ref(props.config)
       <div class="form-text">{{ $t('config.fec_percentage_desc') }}</div>
     </div>
 
+    <!-- Video send speed -->
+    <div class="mb-3">
+      <label for="video_send_rate" class="form-label">{{ $t('config.video_send_rate') }}</label>
+      <input type="number" min="0" max="10000" class="form-control" id="video_send_rate" placeholder="0" v-model="config.video_send_rate" />
+      <div class="form-text">{{ $t('config.video_send_rate_desc') }}</div>
+    </div>
+
     <!-- Quantization Parameter -->
     <div class="mb-3">
       <label for="qp" class="form-label">{{ $t('config.qp') }}</label>

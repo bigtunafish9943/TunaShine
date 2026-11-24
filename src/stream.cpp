@@ -4,8 +4,11 @@
  */
 
 // standard includes
+#include <deque>
+#include <iomanip>
 #include <fstream>
 #include <future>
+#include <mutex>
 #include <queue>
 
 // lib includes
@@ -427,6 +430,25 @@ namespace stream {
     // Set when the session is stopped because the client went silent, as opposed to
     // the client disconnecting on purpose.
     std::atomic_bool connection_lost {false};
+
+    // Recent per-frame timings, for the stream health readout and log
+    struct {
+      struct sample_t {
+        std::chrono::steady_clock::time_point at;
+        std::uint32_t pc_us;  // capture to start of sending
+        std::uint32_t send_us;  // time to put the frame on the network, including pacing
+        bool new_frame;  // false for a repeated frame sent to keep the stream alive
+        std::uint64_t captured_new;  // capture counters when the frame was sent
+        std::uint64_t captured_skipped;
+      };
+
+      std::mutex lock;
+      std::deque<sample_t> samples;
+      std::deque<std::chrono::steady_clock::time_point> recoveries;
+      std::chrono::steady_clock::time_point first_frame;
+      std::chrono::steady_clock::time_point last_log;
+      std::atomic_int send_rate_mbps {0};
+    } health;
   };
 
   /**
@@ -975,6 +997,10 @@ namespace stream {
     server->map(packetTypes[IDX_REQUEST_IDR_FRAME], [&](session_t *session, const std::string_view &payload) {
       BOOST_LOG(debug) << "type [IDX_REQUEST_IDR_FRAME]"sv;
 
+      {
+        std::lock_guard lg {session->health.lock};
+        session->health.recoveries.push_back(std::chrono::steady_clock::now());
+      }
       session->video.idr_events->raise(true);
     });
 
@@ -988,6 +1014,10 @@ namespace stream {
         << "firstFrame [" << firstFrame << ']' << std::endl
         << "lastFrame [" << lastFrame << ']';
 
+      {
+        std::lock_guard lg {session->health.lock};
+        session->health.recoveries.push_back(std::chrono::steady_clock::now());
+      }
       session->video.invalidate_ref_frames_events->raise(std::make_pair(firstFrame, lastFrame));
     });
 
@@ -1344,6 +1374,105 @@ namespace stream {
     }
   }
 
+  /**
+   * @brief Summarise a session's recent frame timings.
+   * @details Call with the session's health lock held.
+   */
+  static stream::session::health_t summarise_health(session_t &session) {
+    auto &h = session.health;
+    stream::session::health_t out {};
+    out.device = session.device_name;
+    out.target_fps = session.config.monitor.framerate;
+    out.bitrate_kbps = session.config.monitor.bitrate;
+    out.send_rate_mbps = h.send_rate_mbps.load();
+
+    if (h.samples.size() < 2) {
+      return out;
+    }
+
+    const auto &first = h.samples.front();
+    const auto &last = h.samples.back();
+    const double window = std::chrono::duration<double>(last.at - first.at).count();
+    out.window_s = window;
+    if (window <= 0) {
+      return out;
+    }
+
+    const auto frame_interval = std::chrono::microseconds(1000000 / std::max(1, out.target_fps));
+    int new_frames = 0;
+    double pc_sum = 0, send_sum = 0;
+    std::optional<std::chrono::steady_clock::time_point> previous_new;
+    for (const auto &s : h.samples) {
+      send_sum += s.send_us;
+      out.send_ms_max = std::max(out.send_ms_max, s.send_us / 1000.0);
+      if (!s.new_frame) {
+        continue;
+      }
+      ++new_frames;
+      pc_sum += s.pc_us;
+      out.pc_ms_max = std::max(out.pc_ms_max, s.pc_us / 1000.0);
+      if (previous_new && s.at - *previous_new > frame_interval * 2) {
+        ++out.gaps;
+      }
+      previous_new = s.at;
+    }
+
+    out.fps = std::max(0, new_frames - 1) / window;
+    out.pc_ms_avg = new_frames ? pc_sum / new_frames / 1000.0 : 0;
+    out.send_ms_avg = send_sum / h.samples.size() / 1000.0;
+    out.skipped_per_sec = (double) (last.captured_skipped - first.captured_skipped) / window;
+
+    // The client asks for a keyframe when a stream starts; only count requests after that
+    for (const auto &t : h.recoveries) {
+      if (t >= first.at && t - h.first_frame > 5s) {
+        ++out.recoveries;
+      }
+    }
+    return out;
+  }
+
+  /**
+   * @brief Record one sent frame for the health readout, and log a summary each minute.
+   */
+  static void record_frame_health(session_t &session, bool new_frame, std::uint32_t pc_us, std::chrono::steady_clock::duration send_time) {
+    constexpr auto window = 10s;
+    const auto now = std::chrono::steady_clock::now();
+    const auto counters = platf::capture_counters();
+
+    std::lock_guard lg {session.health.lock};
+    auto &h = session.health;
+    if (h.samples.empty() && h.first_frame == std::chrono::steady_clock::time_point {}) {
+      h.first_frame = now;
+      h.last_log = now;
+    }
+
+    h.samples.push_back({
+      now,
+      pc_us,
+      (std::uint32_t) std::chrono::duration_cast<std::chrono::microseconds>(send_time).count(),
+      new_frame,
+      counters.new_frames,
+      counters.skipped_frames,
+    });
+    while (!h.samples.empty() && now - h.samples.front().at > window) {
+      h.samples.pop_front();
+    }
+    while (!h.recoveries.empty() && now - h.recoveries.front() > window) {
+      h.recoveries.pop_front();
+    }
+
+    if (now - h.last_log >= 60s) {
+      h.last_log = now;
+      auto s = summarise_health(session);
+      BOOST_LOG(info) << "Stream health for "sv << s.device << ": "sv
+                      << std::fixed << std::setprecision(1) << s.fps << " of "sv << s.target_fps << " fps, "sv
+                      << s.skipped_per_sec << " game frames skipped/s, "sv
+                      << s.gaps << " gaps, PC time avg "sv << s.pc_ms_avg << " ms worst "sv << s.pc_ms_max << " ms, "sv
+                      << "send avg "sv << s.send_ms_avg << " ms worst "sv << s.send_ms_max << " ms, "sv
+                      << s.recoveries << " lost-video requests (last "sv << s.window_s << " s)"sv;
+    }
+  }
+
   void videoBroadcastThread(udp::socket &sock) {
     auto shutdown_event = mail::man->event<bool>(mail::broadcast_shutdown);
     auto packets = mail::man->queue<video::packet_t>(mail::video_packets);
@@ -1405,6 +1534,10 @@ namespace stream {
         frame_header.lastPayloadLen = session->config.packetsize - sizeof(NV_VIDEO_PACKET);
       }
 
+      // For the health readout: frames without a capture time are repeats sent to keep the stream alive
+      const bool health_new_frame = packet->frame_timestamp.has_value();
+      std::uint32_t health_pc_us = 0;
+
       if (packet->frame_timestamp) {
         auto duration_to_latency = [](const std::chrono::steady_clock::duration &duration) {
           const auto duration_us = std::chrono::duration_cast<std::chrono::microseconds>(duration).count();
@@ -1413,6 +1546,7 @@ namespace stream {
 
         uint16_t latency = duration_to_latency(std::chrono::steady_clock::now() - *packet->frame_timestamp);
         frame_header.frame_processing_latency = latency;
+        health_pc_us = (std::uint32_t) latency * 100;
         frame_processing_latency_logger.collect_and_log(latency / 10.);
       } else {
         frame_header.frame_processing_latency = 0;
@@ -1480,8 +1614,22 @@ namespace stream {
       }
 
       try {
-        // Use around 80% of 1Gbps          1Gbps            percent    ms     packet      byte
-        size_t ratecontrol_packets_in_1ms = std::giga::num * 80 / 100 / 1000 / blocksize / 8;
+        const auto health_send_start = std::chrono::steady_clock::now();
+
+        // Peak rate to send at. A frame is sent as a short burst; sending it at full gigabit speed
+        // overruns Wi-Fi, where packets then queue in the router and frames arrive unevenly even
+        // though none are lost. Automatic pacing sends at five times the stream's bitrate: an average
+        // frame still leaves in a fifth of a frame interval, without bursting far above what Wi-Fi
+        // can carry. Wired 2.5 or 10 GbE setups can raise it with video_send_rate.
+        int send_rate_mbps = config::stream.video_send_rate;
+        if (send_rate_mbps <= 0) {
+          send_rate_mbps = std::clamp(session->config.monitor.bitrate / 1000 * 5, 200, 800);
+        }
+        if (session->health.send_rate_mbps != send_rate_mbps) {
+          BOOST_LOG(info) << "Sending video to "sv << session->device_name << " at up to "sv << send_rate_mbps << " Mbps"sv;
+          session->health.send_rate_mbps = send_rate_mbps;
+        }
+        size_t ratecontrol_packets_in_1ms = std::max<size_t>(1, (size_t) send_rate_mbps * 1000 / blocksize / 8);
 
         // Send less than 64K in a single batch.
         // On Windows, batches above 64K seem to bypass SO_SNDBUF regardless of its size,
@@ -1492,6 +1640,8 @@ namespace stream {
         // unusually small packet size.
         // Generic Segmentation Offload on Linux can't do more than 64.
         send_batch_size = std::min<size_t>(64, send_batch_size);
+        // Keep each burst to about a millisecond's worth at the paced rate, so pacing stays smooth
+        send_batch_size = std::min(send_batch_size, std::max<size_t>(8, ratecontrol_packets_in_1ms));
 
         // Don't ignore the last ratecontrol group of the previous frame
         auto ratecontrol_frame_start = std::max(ratecontrol_next_frame_start, std::chrono::steady_clock::now());
@@ -1659,6 +1809,8 @@ namespace stream {
         });
 
         session->video.lowseq = lowseq;
+
+        record_frame_health(*session, health_new_frame, health_pc_us, std::chrono::steady_clock::now() - health_send_start);
       } catch (const std::exception &e) {
         BOOST_LOG(error) << "Broadcast video failed "sv << e.what();
         std::this_thread::sleep_for(100ms);
@@ -1994,6 +2146,25 @@ namespace stream {
       }
 
       return clients;
+    }
+
+    std::vector<health_t> health() {
+      std::vector<health_t> out;
+      if (running_sessions == 0) {
+        return out;
+      }
+
+      auto ref = broadcast.ref();
+      if (!ref) {
+        return out;
+      }
+
+      auto lg = ref->control_server._sessions.lock();
+      for (auto *session : *ref->control_server._sessions) {
+        std::lock_guard health_lock {session->health.lock};
+        out.push_back(summarise_health(*session));
+      }
+      return out;
     }
 
     int test_rumble() {

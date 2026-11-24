@@ -43,6 +43,7 @@ namespace updater {
     std::mutex state_lock;
     state_t current {"idle", {}, {}};
     bool running = false;
+    bool verify_only_run = false;
 
     void set_stage(const std::string &stage, const std::string &version = {}, const std::string &error = {}) {
       std::lock_guard lg {state_lock};
@@ -58,7 +59,7 @@ namespace updater {
      * @brief Fetch a URL over HTTPS into a stream, following redirects.
      * @return Empty on success, otherwise a description of the failure.
      */
-    std::string fetch(const std::string &url, std::ostream &out) {
+    std::string fetch(const std::string &url, std::ostream &out, bool api = false) {
       CURL *curl = curl_easy_init();
       if (!curl) {
         return "could not start the download";
@@ -67,7 +68,8 @@ namespace updater {
         curl_easy_cleanup(curl);
       });
 
-      curl_slist *headers = curl_slist_append(nullptr, "Accept: application/vnd.github+json");
+      // GitHub's API wants this; file downloads get no special header
+      curl_slist *headers = api ? curl_slist_append(nullptr, "Accept: application/vnd.github+json") : nullptr;
       auto free_headers = util::fail_guard([headers]() {
         curl_slist_free_all(headers);
       });
@@ -141,7 +143,16 @@ namespace updater {
       unsigned char digest[EVP_MAX_MD_SIZE];
       unsigned int length = 0;
       EVP_DigestFinal_ex(ctx, digest, &length);
-      return util::hex_vec(std::string_view {(const char *) digest, length});
+
+      // Lowercase hex, first byte first, as GitHub publishes it
+      static constexpr char digits[] = "0123456789abcdef";
+      std::string hex;
+      hex.reserve(length * 2);
+      for (unsigned int i = 0; i < length; ++i) {
+        hex.push_back(digits[digest[i] >> 4]);
+        hex.push_back(digits[digest[i] & 0x0F]);
+      }
+      return hex;
     }
 
     void run_update() {
@@ -152,7 +163,7 @@ namespace updater {
 
       set_stage("checking");
       std::stringstream release_json;
-      if (auto err = fetch(RELEASES_API, release_json); !err.empty()) {
+      if (auto err = fetch(RELEASES_API, release_json, true); !err.empty()) {
         BOOST_LOG(warning) << "Update check failed: "sv << err;
         set_stage("failed", {}, "Could not reach GitHub to look for updates (" + err + ").");
         return;
@@ -171,7 +182,8 @@ namespace updater {
         set_stage("failed", {}, "No release was found.");
         return;
       }
-      if (!is_newer(version, PROJECT_VERSION)) {
+      const bool verify_only = verify_only_run;
+      if (!verify_only && !is_newer(version, PROJECT_VERSION)) {
         set_stage("up_to_date", version);
         return;
       }
@@ -233,6 +245,14 @@ namespace updater {
         BOOST_LOG(warning) << "Release has no published checksum; installing without one"sv;
       }
 
+      if (verify_only) {
+        // A check that the latest release downloads and matches its checksum; nothing is installed
+        BOOST_LOG(info) << "Update check: "sv << name << " downloaded and matched its checksum"sv;
+        std::filesystem::remove(installer, ec);
+        set_stage(digest.starts_with("sha256:") ? "verified" : "failed", version, digest.starts_with("sha256:") ? "" : "The release has no published checksum.");
+        return;
+      }
+
       set_stage("installing", version);
       BOOST_LOG(info) << "Installing TunaStream "sv << version << " from "sv << installer.string();
 
@@ -257,13 +277,14 @@ namespace updater {
     }
   }  // namespace
 
-  bool start() {
+  bool start(bool verify_only) {
     {
       std::lock_guard lg {state_lock};
       if (running) {
         return false;
       }
       running = true;
+      verify_only_run = verify_only;
     }
     std::thread {run_update}.detach();
     return true;
