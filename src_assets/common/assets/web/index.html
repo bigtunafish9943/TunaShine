@@ -172,6 +172,11 @@
     async created() {
       try {
         let config = await fetch("./api/config").then((r) => r.json());
+        // First run: walk through setup before anything else
+        if (config.status && !config.setup_complete) {
+          document.location.href = "./setup";
+          return;
+        }
         this.notifyPreReleases = config.notify_pre_releases;
         this.version = new TunaStreamVersion(null, config.version);
         this.platform = config.platform;

@@ -290,6 +290,7 @@ namespace config {
     std::vector<prep_cmd_t> state_cmds;
     std::vector<server_cmd_t> server_cmds;
     bool end_session_on_disconnect;  ///< End the session and restore displays when the last client disconnects
+    bool setup_complete;  ///< The setup walkthrough was finished or skipped
   };
 
   extern video_t video;

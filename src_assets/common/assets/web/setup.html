@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="auto">
+
+<head>
+  <%- header %>
+  <style>
+    .setup {
+      max-width: 46rem;
+      padding-top: 2.5rem;
+      padding-bottom: 3rem;
+    }
+
+    .setup-panel h1 {
+      font-family: var(--ts-display);
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 0.75rem;
+    }
+
+    .setup-lead {
+      font-size: 1.1rem;
+      color: var(--bs-secondary-color);
+      max-width: 38rem;
+    }
+
+    .setup-progress {
+      display: flex;
+      gap: 0.4rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .setup-progress span {
+      flex: 1;
+      height: 0.3rem;
+      border-radius: 1rem;
+      background-color: var(--ts-surface-border);
+    }
+
+    .setup-progress span.done {
+      background-color: var(--ts-blue);
+    }
+
+    .setup-progress span.current {
+      background-color: var(--ts-accent);
+    }
+
+    .setup-count {
+      font-size: 0.9rem;
+      color: var(--bs-secondary-color);
+      margin-bottom: 1.5rem;
+    }
+
+    .setup-choices {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(12.5rem, 1fr));
+      gap: 0.75rem;
+      margin: 1.5rem 0;
+    }
+
+    .setup-choices-two {
+      grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+    }
+
+    .setup-choice {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.35rem;
+      text-align: left;
+      padding: 1rem 1.1rem;
+      background-color: var(--ts-surface);
+      color: inherit;
+      border: 2px solid var(--ts-surface-border);
+      border-radius: 0.75rem;
+      cursor: pointer;
+    }
+
+    .setup-choice:hover {
+      border-color: var(--ts-accent-soft);
+    }
+
+    .setup-choice:focus-visible {
+      outline: 3px solid var(--ts-accent);
+      outline-offset: 2px;
+    }
+
+    .setup-choice.selected {
+      border-color: var(--ts-accent);
+      box-shadow: inset 0 0 0 1px var(--ts-accent);
+    }
+
+    .setup-choice i {
+      font-size: 1.6rem;
+      color: var(--ts-blue);
+      margin-bottom: 0.25rem;
+    }
+
+    [data-bs-theme="dark"] .setup-choice i {
+      color: var(--ts-accent);
+    }
+
+    .setup-choice-title {
+      font-weight: 600;
+      font-size: 1.05rem;
+    }
+
+    .setup-choice-desc {
+      font-size: 0.9rem;
+      color: var(--bs-secondary-color);
+    }
+
+    .setup-extra {
+      margin: -0.5rem 0 1.5rem;
+      padding: 0.9rem 1rem 0.9rem 3.4rem;
+      background-color: var(--ts-surface);
+      border: 1px solid var(--ts-surface-border);
+      border-radius: 0.75rem;
+    }
+
+    .setup-warning {
+      padding: 0.75rem 1rem;
+      border-radius: 0.5rem;
+      background-color: var(--bs-warning-bg-subtle);
+      color: var(--bs-warning-text-emphasis);
+    }
+
+    .setup-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      margin-top: 2rem;
+    }
+
+    .setup-summary {
+      list-style: none;
+      padding: 0;
+      margin: 1.25rem 0 2rem;
+    }
+
+    .setup-summary li {
+      padding: 0.4rem 0;
+    }
+
+    .setup-summary i {
+      color: var(--ts-blue);
+      margin-right: 0.5rem;
+    }
+
+    [data-bs-theme="dark"] .setup-summary i {
+      color: var(--ts-accent);
+    }
+
+    .setup-subtitle {
+      font-family: var(--ts-display);
+      font-size: 1.3rem;
+      font-weight: 700;
+    }
+
+    .setup-recs {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(13.5rem, 1fr));
+      gap: 0.75rem;
+      margin: 1rem 0;
+    }
+
+    .setup-rec {
+      padding: 1rem;
+      background-color: var(--ts-surface);
+      border: 1px solid var(--ts-surface-border);
+      border-radius: 0.75rem;
+    }
+
+    .setup-rec-name {
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+
+    .setup-rec dl {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 0.2rem 0.75rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .setup-rec dt {
+      font-weight: 400;
+      color: var(--bs-secondary-color);
+    }
+
+    .setup-rec dd {
+      margin: 0;
+      font-weight: 600;
+    }
+  </style>
+</head>
+
+<body id="app" v-cloak>
+  <Navbar></Navbar>
+  <div class="container setup">
+    <div class="setup-panel" v-if="loaded">
+
+      <!-- Progress through the questions -->
+      <div class="setup-progress" v-if="step > 0 && step <= questions.length" aria-hidden="true">
+        <span v-for="(q, i) in questions" :key="q" :class="{ done: i < step - 1, current: i === step - 1 }"></span>
+      </div>
+      <p class="setup-count" v-if="step > 0 && step <= questions.length">
+        {{ $t('setup.step_of', { step: step, total: questions.length }) }}
+      </p>
+
+      <!-- Start -->
+      <section v-if="step === 0">
+        <h1>{{ $t('setup.intro_title') }}</h1>
+        <p class="setup-lead">{{ $t('setup.intro_lead') }}</p>
+        <p class="setup-lead">{{ $t('setup.intro_change') }}</p>
+        <div class="setup-actions">
+          <button class="btn btn-link" @click="skip" :disabled="saving">{{ $t('setup.skip') }}</button>
+          <button class="btn btn-primary btn-lg" @click="step = 1">{{ $t('setup.start') }}</button>
+        </div>
+        <p class="setup-warning" v-if="error"><i class="fas fa-triangle-exclamation" aria-hidden="true"></i> {{ error }}</p>
+      </section>
+
+      <!-- What will you play on? -->
+      <section v-if="current === 'device'">
+        <h1>{{ $t('setup.device_title') }}</h1>
+        <p class="setup-lead">{{ $t('setup.device_lead') }}</p>
+        <div class="setup-choices">
+          <button v-for="d in deviceChoices" :key="d.id" type="button" class="setup-choice"
+                  :class="{ selected: answers.devices.includes(d.id) }"
+                  :aria-pressed="answers.devices.includes(d.id)" @click="toggleDevice(d.id)">
+            <i :class="d.icon" aria-hidden="true"></i>
+            <span class="setup-choice-title">{{ $t('setup.device_' + d.id) }}</span>
+            <span class="setup-choice-desc">{{ $t('setup.device_' + d.id + '_desc') }}</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- Which controller? -->
+      <section v-if="current === 'controller'">
+        <h1>{{ $t('setup.controller_title') }}</h1>
+        <p class="setup-lead">{{ $t('setup.controller_lead') }}</p>
+        <div class="setup-choices">
+          <button v-for="c in controllerChoices" :key="c.id" type="button" class="setup-choice"
+                  :class="{ selected: answers.controller === c.id }"
+                  :aria-pressed="answers.controller === c.id" @click="answers.controller = c.id">
+            <i :class="c.icon" aria-hidden="true"></i>
+            <span class="setup-choice-title">{{ $t('setup.controller_' + c.id) }}</span>
+            <span class="setup-choice-desc">{{ $t('setup.controller_' + c.id + '_desc') }}</span>
+          </button>
+        </div>
+        <div class="form-check form-switch setup-extra" v-if="answers.controller === 'playstation'">
+          <input class="form-check-input" type="checkbox" role="switch" id="psButtons" v-model="answers.psButtons">
+          <label class="form-check-label" for="psButtons">
+            {{ $t('setup.controller_ps_buttons') }}
+            <span class="form-text d-block">{{ $t('setup.controller_ps_buttons_desc') }}</span>
+          </label>
+        </div>
+      </section>
+
+      <!-- Will you use the PC while someone streams? -->
+      <section v-if="current === 'screen'">
+        <h1>{{ $t('setup.screen_title') }}</h1>
+        <p class="setup-lead">{{ $t('setup.screen_lead') }}</p>
+        <div class="setup-choices setup-choices-two">
+          <button type="button" class="setup-choice" :class="{ selected: answers.screen === 'own' }"
+                  :aria-pressed="answers.screen === 'own'" @click="answers.screen = 'own'">
+            <i class="fas fa-clone" aria-hidden="true"></i>
+            <span class="setup-choice-title">{{ $t('setup.screen_own') }}</span>
+            <span class="setup-choice-desc">{{ $t('setup.screen_own_desc') }}</span>
+          </button>
+          <button type="button" class="setup-choice" :class="{ selected: answers.screen === 'mirror' }"
+                  :aria-pressed="answers.screen === 'mirror'" @click="answers.screen = 'mirror'">
+            <i class="fas fa-display" aria-hidden="true"></i>
+            <span class="setup-choice-title">{{ $t('setup.screen_mirror') }}</span>
+            <span class="setup-choice-desc">{{ $t('setup.screen_mirror_desc') }}</span>
+          </button>
+        </div>
+        <p class="setup-warning" v-if="answers.screen === 'own' && vdisplayStatus">
+          <i class="fas fa-triangle-exclamation" aria-hidden="true"></i> {{ $t('setup.screen_driver_problem') }}
+        </p>
+      </section>
+
+      <!-- When you stop playing -->
+      <section v-if="current === 'stop'">
+        <h1>{{ $t('setup.stop_title') }}</h1>
+        <p class="setup-lead">{{ $t('setup.stop_lead') }}</p>
+        <div class="setup-choices setup-choices-two">
+          <button type="button" class="setup-choice" :class="{ selected: answers.stop === 'keep' }"
+                  :aria-pressed="answers.stop === 'keep'" @click="answers.stop = 'keep'">
+            <i class="fas fa-pause" aria-hidden="true"></i>
+            <span class="setup-choice-title">{{ $t('setup.stop_keep') }}</span>
+            <span class="setup-choice-desc">{{ $t('setup.stop_keep_desc') }}</span>
+          </button>
+          <button type="button" class="setup-choice" :class="{ selected: answers.stop === 'close' }"
+                  :aria-pressed="answers.stop === 'close'" @click="answers.stop = 'close'">
+            <i class="fas fa-power-off" aria-hidden="true"></i>
+            <span class="setup-choice-title">{{ $t('setup.stop_close') }}</span>
+            <span class="setup-choice-desc">{{ $t('setup.stop_close_desc') }}</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- Away from home? -->
+      <section v-if="current === 'away'">
+        <h1>{{ $t('setup.away_title') }}</h1>
+        <p class="setup-lead">{{ $t('setup.away_lead') }}</p>
+        <div class="setup-choices setup-choices-two">
+          <button type="button" class="setup-choice" :class="{ selected: answers.away === 'home' }"
+                  :aria-pressed="answers.away === 'home'" @click="answers.away = 'home'">
+            <i class="fas fa-house" aria-hidden="true"></i>
+            <span class="setup-choice-title">{{ $t('setup.away_home') }}</span>
+            <span class="setup-choice-desc">{{ $t('setup.away_home_desc') }}</span>
+          </button>
+          <button type="button" class="setup-choice" :class="{ selected: answers.away === 'away' }"
+                  :aria-pressed="answers.away === 'away'" @click="answers.away = 'away'">
+            <i class="fas fa-earth-americas" aria-hidden="true"></i>
+            <span class="setup-choice-title">{{ $t('setup.away_away') }}</span>
+            <span class="setup-choice-desc">{{ $t('setup.away_away_desc') }}</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- Review, then save -->
+      <section v-if="current === 'review'">
+        <h1>{{ $t('setup.review_title') }}</h1>
+        <p class="setup-lead">{{ $t('setup.review_lead') }}</p>
+        <ul class="setup-summary">
+          <li v-for="line in summary" :key="line"><i class="fas fa-check" aria-hidden="true"></i> {{ line }}</li>
+        </ul>
+
+        <h2 class="setup-subtitle">{{ $t('setup.moonlight_title') }}</h2>
+        <p>{{ $t('setup.moonlight_lead') }}</p>
+        <div class="setup-recs">
+          <div class="setup-rec" v-for="d in chosenDevices" :key="d.id">
+            <p class="setup-rec-name"><i :class="d.icon" aria-hidden="true"></i> {{ $t('setup.device_' + d.id) }}</p>
+            <dl>
+              <dt>{{ $t('setup.rec_resolution') }}</dt><dd>{{ d.rec.resolution || $t('setup.rec_native') }}</dd>
+              <dt>{{ $t('setup.rec_fps') }}</dt><dd>{{ d.rec.fps }}</dd>
+              <dt>{{ $t('setup.rec_bitrate') }}</dt><dd>{{ d.rec.bitrate }}</dd>
+            </dl>
+            <p class="form-text mb-0">{{ $t('setup.device_' + d.id + '_tip') }}</p>
+          </div>
+        </div>
+        <p class="form-text">{{ $t('setup.moonlight_wifi') }}</p>
+        <p class="setup-warning" v-if="error"><i class="fas fa-triangle-exclamation" aria-hidden="true"></i> {{ error }}</p>
+      </section>
+
+      <!-- Saved -->
+      <section v-if="step === 'done'">
+        <h1>{{ $t('setup.done_title') }}</h1>
+        <p class="setup-lead" v-if="restarting" role="status">
+          <span class="spinner-border spinner-border-sm" aria-hidden="true"></span> {{ $t('setup.done_restarting') }}
+        </p>
+        <template v-else>
+          <p class="setup-lead">{{ pairedCount ? $t('setup.done_paired') : $t('setup.done_pair') }}</p>
+          <div class="setup-actions">
+            <a class="btn btn-outline-secondary" href="./">{{ $t('setup.done_home') }}</a>
+            <a class="btn btn-primary btn-lg" href="./pin" v-if="!pairedCount">{{ $t('setup.done_pair_button') }}</a>
+          </div>
+        </template>
+      </section>
+
+      <!-- Back and next -->
+      <div class="setup-actions" v-if="step > 0 && step !== 'done'">
+        <button class="btn btn-outline-secondary" @click="back" :disabled="saving">{{ $t('setup.back') }}</button>
+        <button class="btn btn-primary btn-lg" v-if="current !== 'review'" :disabled="!answered" @click="step++">
+          {{ $t('setup.next') }}
+        </button>
+        <button class="btn btn-primary btn-lg" v-else :disabled="saving" @click="finish">
+          <span class="spinner-border spinner-border-sm" v-if="saving" aria-hidden="true"></span>
+          {{ $t('setup.save') }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+
+  <script type="module">
+    import { createApp } from 'vue'
+    import { initApp } from './init'
+    import Navbar from './Navbar.vue'
+
+    // Recommended Moonlight settings for each kind of device. Numbers are the same in every language.
+    const DEVICES = [
+      { id: 'tv4k', icon: 'fas fa-tv', rec: { resolution: '3840 × 2160 (4K)', fps: '60', bitrate: '50–80 Mbps' } },
+      { id: 'tv1080', icon: 'fas fa-tv', rec: { resolution: '1920 × 1080', fps: '60', bitrate: '20–30 Mbps' } },
+      { id: 'phone', icon: 'fas fa-mobile-screen', rec: { resolution: '', fps: '60', bitrate: '15–20 Mbps' } },
+      { id: 'tablet', icon: 'fas fa-tablet-screen-button', rec: { resolution: '', fps: '60', bitrate: '20–30 Mbps' } },
+      { id: 'handheld', icon: 'fas fa-gamepad', rec: { resolution: '1280 × 800', fps: '60', bitrate: '15–20 Mbps' } },
+      { id: 'computer', icon: 'fas fa-laptop', rec: { resolution: '', fps: '60', bitrate: '30–50 Mbps' } },
+    ];
+
+    const CONTROLLERS = [
+      { id: 'xbox', icon: 'fab fa-xbox' },
+      { id: 'playstation', icon: 'fab fa-playstation' },
+      { id: 'switch', icon: 'fas fa-gamepad' },
+      { id: 'other', icon: 'fas fa-gamepad' },
+      { id: 'none', icon: 'fas fa-keyboard' },
+    ];
+
+    const isOn = (v) => v === 'enabled' || v === 'true' || v === true;
+
+    const app = createApp({
+      components: { Navbar },
+      data() {
+        return {
+          loaded: false,
+          step: 0,
+          questions: ['device', 'controller', 'screen', 'stop', 'away', 'review'],
+          deviceChoices: DEVICES,
+          controllerChoices: CONTROLLERS,
+          answers: {
+            devices: [],
+            controller: '',
+            psButtons: true,
+            screen: 'own',
+            stop: 'keep',
+            away: 'home',
+          },
+          config: {},
+          vdisplayStatus: 0,
+          pairedCount: 0,
+          saving: false,
+          restarting: false,
+          error: '',
+        };
+      },
+      computed: {
+        current() {
+          return typeof this.step === 'number' && this.step > 0 ? this.questions[this.step - 1] : null;
+        },
+        answered() {
+          if (this.current === 'device') return this.answers.devices.length > 0;
+          if (this.current === 'controller') return !!this.answers.controller;
+          return true;
+        },
+        chosenDevices() {
+          return DEVICES.filter((d) => this.answers.devices.includes(d.id));
+        },
+        summary() {
+          const t = this.$t;
+          const lines = [];
+          const c = this.answers.controller;
+          if (c === 'none') {
+            lines.push(t('setup.sum_no_controller'));
+          } else if (c === 'playstation' && this.answers.psButtons) {
+            lines.push(t('setup.sum_controller_ps'));
+          } else {
+            lines.push(t('setup.sum_controller_xbox'));
+          }
+          lines.push(this.answers.screen === 'own' ? t('setup.sum_screen_own') : t('setup.sum_screen_mirror'));
+          lines.push(this.answers.stop === 'keep' ? t('setup.sum_stop_keep') : t('setup.sum_stop_close'));
+          lines.push(this.answers.away === 'away' ? t('setup.sum_away') : t('setup.sum_home'));
+          return lines;
+        },
+      },
+      async created() {
+        try {
+          const config = await fetch('./api/config', { credentials: 'include' }).then((r) => r.json());
+          this.vdisplayStatus = config.vdisplayStatus ?? 0;
+          for (const key of ['status', 'platform', 'version', 'vdisplayStatus']) {
+            delete config[key];
+          }
+          this.config = config;
+
+          // Start from the current settings when setup is run again
+          if (config.setup_complete) {
+            if (config.gamepad === 'ds4') {
+              this.answers.controller = 'playstation';
+            } else if (config.controller === 'disabled') {
+              this.answers.controller = 'none';
+            }
+            this.answers.screen = config.headless_mode === undefined || isOn(config.headless_mode) ? 'own' : 'mirror';
+            this.answers.stop = isOn(config.end_session_on_disconnect) ? 'close' : 'keep';
+            this.answers.away = isOn(config.upnp) ? 'away' : 'home';
+          }
+
+          const clients = await fetch('./api/clients/list', { credentials: 'include' }).then((r) => r.json()).catch(() => null);
+          this.pairedCount = clients && clients.named_certs ? clients.named_certs.length : 0;
+        } catch (e) {
+          console.error(e);
+        }
+        this.loaded = true;
+      },
+      methods: {
+        toggleDevice(id) {
+          const i = this.answers.devices.indexOf(id);
+          if (i >= 0) {
+            this.answers.devices.splice(i, 1);
+          } else {
+            this.answers.devices.push(id);
+          }
+        },
+        back() {
+          this.step = Math.max(0, this.step - 1);
+          window.scrollTo(0, 0);
+        },
+        settingsFromAnswers() {
+          const a = this.answers;
+          const s = { ...this.config };
+          const set = (key, on) => { s[key] = on ? 'enabled' : 'disabled'; };
+
+          // Controller: Xbox 360 is the most compatible and has the most reliable rumble
+          if (a.controller === 'none') {
+            set('controller', true);  // a controller plugged in later still works
+          } else {
+            set('controller', true);
+            s.gamepad = (a.controller === 'playstation' && a.psButtons) ? 'ds4' : 'x360';
+          }
+          set('forward_rumble', true);
+
+          // The stream's own screen, made the main display while streaming, with the mouse kept off it
+          set('headless_mode', a.screen === 'own');
+          set('virtual_display_primary', a.screen === 'own');
+          set('isolated_virtual_display_option', a.screen === 'own');
+
+          set('end_session_on_disconnect', a.stop === 'close');
+          set('upnp', a.away === 'away');
+          set('setup_complete', true);
+          return s;
+        },
+        async save(settings) {
+          const r = await fetch('./api/config', {
+            credentials: 'include',
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(settings),
+          });
+          if (r.status !== 200) {
+            throw new Error(this.$t('setup.save_failed'));
+          }
+        },
+        async restart() {
+          this.restarting = true;
+          await fetch('./api/restart', {
+            credentials: 'include',
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+          }).catch(() => {});
+          // Wait for TunaStream to come back
+          await new Promise((r) => setTimeout(r, 3000));
+          for (let i = 0; i < 40; i++) {
+            const ok = await fetch('./api/configLocale').then((r) => r.ok).catch(() => false);
+            if (ok) break;
+            await new Promise((r) => setTimeout(r, 1500));
+          }
+          this.restarting = false;
+        },
+        async finish() {
+          this.saving = true;
+          this.error = '';
+          try {
+            await this.save(this.settingsFromAnswers());
+            this.step = 'done';
+            window.scrollTo(0, 0);
+            await this.restart();
+          } catch (e) {
+            this.error = e.message || String(e);
+          }
+          this.saving = false;
+        },
+        async skip() {
+          this.saving = true;
+          try {
+            await this.save({ ...this.config, setup_complete: 'enabled' });
+            document.location.href = './';
+          } catch (e) {
+            this.error = e.message || String(e);
+            this.saving = false;
+          }
+        },
+      },
+    });
+
+    initApp(app);
+  </script>
+</body>
+
+</html>

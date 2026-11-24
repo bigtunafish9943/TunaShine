@@ -123,7 +123,7 @@ expect "config reports this build's version" "$(json version <<< "$config")" "$e
 if [[ "$config" == *"vdisplayStatus"* ]]; then pass "virtual display status is reported"; else fail "virtual display status is reported"; fi
 
 # Pages
-for page in "" pin apps config troubleshooting password; do
+for page in "" pin apps config troubleshooting password setup; do
   body=$(get "/$page")
   if [[ "$body" == *"<title>TunaStream</title>"* && "$body" == *'id="app"'* ]]; then pass "page /$page loads"; else fail "page /$page loads (${#body} bytes)"; fi
 done
@@ -140,10 +140,13 @@ status=$(get /api/status)
 expect "status answers" "$(json status <<< "$status")" "True"
 expect "status lists no controllers with nobody streaming" "$(python -c "import json,sys; print(len(json.load(sys.stdin)['controllers']))" <<< "$status" 2>/dev/null)" "0"
 
+expect "setup is not yet done on a fresh install" "$(get /api/config | json setup_complete)" "None"
 expect "settings can be saved" "$(post /api/config '{"end_session_on_disconnect":"enabled","virtual_display_primary":"disabled","headless_mode":"disabled"}' | json status)" "True"
 config=$(get /api/config)
 expect "saved setting is read back: end session on disconnect" "$(json end_session_on_disconnect <<< "$config")" "enabled"
 expect "saved setting is read back: virtual display primary" "$(json virtual_display_primary <<< "$config")" "disabled"
+expect "setup can be marked done" "$(post /api/config '{"setup_complete":"enabled"}' | json status)" "True"
+expect "setup done is read back" "$(get /api/config | json setup_complete)" "enabled"
 
 expect "end session answers with nothing running" "$(post /api/apps/close '{}' | json status)" "True"
 
