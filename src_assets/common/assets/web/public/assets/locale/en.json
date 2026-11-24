@@ -560,6 +560,7 @@
     "update_stage_installing": "Installing TunaStream {version}. TunaStream will restart in a moment.",
     "update_stage_restarting": "Waiting for TunaStream to start again. This page reloads when it is back.",
     "update_stage_up_to_date": "TunaStream is already up to date.",
+    "update_stage_verified": "TunaStream {version} downloaded and checked.",
     "updates": "Updates",
     "vdisplay_failed": "The last stream could not create its virtual display, so it showed this PC's own screen instead.",
     "vdisplay_failed_fix": "Restart TunaStream to reconnect to the display driver.",

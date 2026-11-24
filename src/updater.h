@@ -10,7 +10,7 @@
 namespace updater {
   /// Where an update is up to, as shown in the web interface
   struct state_t {
-    std::string stage;  ///< idle, checking, downloading, installing, up_to_date or failed
+    std::string stage;  ///< idle, checking, downloading, installing, up_to_date, verified or failed
     std::string version;  ///< Version being installed, if known
     std::string error;  ///< What went wrong, when stage is failed
   };
@@ -18,9 +18,11 @@ namespace updater {
   /**
    * @brief Find the latest release, download its installer and run it in the background.
    * @details Returns at once; follow progress with state(). Only one update runs at a time.
+   * @param verify_only Download the latest release and check its checksum, then stop without
+   *                    installing, even if it is not newer. Used by the automated tests.
    * @return False if an update is already running.
    */
-  bool start();
+  bool start(bool verify_only = false);
 
   /// Current progress of the update started by start().
   state_t state();

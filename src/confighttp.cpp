@@ -794,9 +794,23 @@ namespace confighttp {
 
     print_req(request);
 
+    // {"verifyOnly": true} downloads and checks the latest installer without installing it
+    bool verify_only = false;
+    try {
+      std::stringstream ss;
+      ss << request->content.rdbuf();
+      auto body = ss.str();
+      if (!body.empty()) {
+        auto input = nlohmann::json::parse(body);
+        verify_only = input.is_object() && input.value("verifyOnly", false);
+      }
+    } catch (const std::exception &) {
+      // An unreadable body just means a normal update
+    }
+
     nlohmann::json output_tree;
     output_tree["status"] = true;
-    output_tree["started"] = updater::start();
+    output_tree["started"] = updater::start(verify_only);
     send_response(response, output_tree);
   }
 
