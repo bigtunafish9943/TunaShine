@@ -29,6 +29,9 @@
       <div class="home-status-item">
         <dt>{{ $t('index.status_streaming') }}</dt>
         <dd>{{ currentAppName || $t('index.streaming_nothing') }}</dd>
+        <button v-if="currentAppName" type="button" class="btn btn-sm btn-danger me-2" :disabled="ending" @click="endSession">
+          {{ $t('index.end_session') }}
+        </button>
         <a href="./apps">{{ $t('index.manage_apps') }}</a>
       </div>
       <div class="home-status-item">
@@ -132,6 +135,7 @@
         currentAppName: "",
         clientCount: null,
         customPort: null,
+        ending: false,
       }
     },
     async created() {
@@ -165,6 +169,24 @@
       this.loading = false;
     },
     methods: {
+      /** Quit the app that is being streamed, which also disconnects whoever is playing. */
+      async endSession() {
+        if (!confirm(this.$t('index.end_session_confirm', { app: this.currentAppName }))) {
+          return;
+        }
+        this.ending = true;
+        try {
+          await fetch("./api/apps/close", {
+            credentials: 'include',
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+          });
+        } catch (e) {
+          console.error(e);
+        }
+        await this.loadStatus();
+        this.ending = false;
+      },
       /** Load what the status row shows. Each part is optional, so failures only leave a blank. */
       async loadStatus() {
         try {
