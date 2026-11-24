@@ -573,3 +573,47 @@ html[data-bs-theme=dark] body .btn-outline-secondary {
         justify-content: flex-end;
     }
 }
+
+/* ---------- Home page: who is playing ---------- */
+.home-players {
+    margin: -0.5rem 0 1.5rem;
+    padding: 1rem 1.4rem;
+    background-color: var(--ts-surface);
+    border: 1px solid var(--ts-surface-border);
+    border-left: 4px solid var(--ts-accent);
+    border-radius: 0.75rem;
+}
+
+.home-players ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.home-players li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem 0.9rem;
+    padding: 0.25rem 0;
+}
+
+.home-player-name {
+    font-weight: 600;
+    color: var(--bs-emphasis-color);
+}
+
+.home-player-detail {
+    color: var(--bs-secondary-color);
+}
+
+.home-controller {
+    padding: 0.1rem 0.6rem;
+    border-radius: 1rem;
+    background-color: var(--bs-tertiary-bg);
+    font-size: 0.9rem;
+}
+
+.home-controller i {
+    color: var(--ts-accent);
+}

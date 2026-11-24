@@ -36,7 +36,9 @@
 #include "network.h"
 #include "nvhttp.h"
 #include "platform/common.h"
+#include "input.h"
 #include "process.h"
+#include "rtsp.h"
 #include "stream.h"
 #include "utility.h"
 #include "uuid.h"
@@ -701,6 +703,36 @@ namespace confighttp {
     nlohmann::json output_tree;
     output_tree["status"] = true;
     output_tree["clients"] = stream::session::test_rumble();
+    send_response(response, output_tree);
+  }
+
+  /**
+   * @brief What is being streamed right now: the running app and each connected controller.
+   * @param response The HTTP response object.
+   * @param request The HTTP request object.
+   *
+   * @api_examples{/api/status| GET| null}
+   */
+  void getStatus(resp_https_t response, req_https_t request) {
+    if (!authenticate(response, request)) {
+      return;
+    }
+
+    print_req(request);
+
+    nlohmann::json output_tree;
+    output_tree["status"] = true;
+    output_tree["app"] = proc::proc.get_last_run_app_name();
+    output_tree["sessions"] = rtsp_stream::session_count();
+    nlohmann::json controllers = nlohmann::json::array();
+    for (const auto &gamepad : input::gamepad_status()) {
+      controllers.push_back({
+        {"device", gamepad.device},
+        {"controller", gamepad.controller},
+        {"emulated", gamepad.emulated},
+      });
+    }
+    output_tree["controllers"] = controllers;
     send_response(response, output_tree);
   }
 
@@ -1561,6 +1593,7 @@ namespace confighttp {
     server.resource["^/api/apps/launch$"]["POST"] = launchApp;
     server.resource["^/api/apps/close$"]["POST"] = closeApp;
     server.resource["^/api/rumble-test$"]["POST"] = rumbleTest;
+    server.resource["^/api/status$"]["GET"] = getStatus;
     server.resource["^/api/logs$"]["GET"] = getLogs;
     server.resource["^/api/config$"]["GET"] = getConfig;
     server.resource["^/api/config$"]["POST"] = saveConfig;

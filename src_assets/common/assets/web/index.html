@@ -48,6 +48,21 @@
       </div>
     </dl>
 
+    <!-- Who is playing, and what their controllers look like to games -->
+    <div class="home-players" v-if="players.length">
+      <h2 class="h5">{{ $t('index.players_title') }}</h2>
+      <ul>
+        <li v-for="player in players" :key="player.device">
+          <span class="home-player-name">{{ player.device || $t('index.unnamed_device') }}</span>
+          <span v-if="player.controllers.length === 0" class="home-player-detail">{{ $t('index.no_controllers') }}</span>
+          <span v-for="c in player.controllers" class="home-controller" :title="$t('index.controller_hint')">
+            <i class="fas fa-gamepad"></i>
+            {{ $t('index.controller_n', { n: c.controller + 1 }) }}: {{ c.emulated || $t('index.controller_unknown') }}
+          </span>
+        </li>
+      </ul>
+    </div>
+
     <!-- First-time setup, shown until a device is paired -->
     <div class="card p-2 my-4" v-if="clientCount === 0">
       <div class="card-body">
@@ -136,6 +151,8 @@
         clientCount: null,
         customPort: null,
         ending: false,
+        players: [],
+        statusTimer: null,
       }
     },
     async created() {
@@ -149,6 +166,10 @@
         const port = parseInt(config.port, 10);
         this.customPort = (port && port !== 47989) ? port : null;
         this.loadStatus();
+        // Keep the status row current while the page is open
+        this.statusTimer = setInterval(() => {
+          if (!document.hidden && !this.ending) this.loadStatus();
+        }, 5000);
         console.log("Version: ", this.version.version)
         const latest = await fetch("https://api.github.com/repos/bigtunafish9943/TunaStream/releases/latest").then((r) => r.ok ? r.json() : null);
         this.githubVersion = latest ? new TunaStreamVersion(latest, null) : null;
@@ -197,9 +218,23 @@
         } catch (e) {
           console.error(e);
         }
+        let connected = [];
         try {
           const clients = await fetch("./api/clients/list").then((r) => r.json());
           this.clientCount = (clients.named_certs || []).length;
+          connected = (clients.named_certs || []).filter((c) => c.connected).map((c) => c.name);
+        } catch (e) {
+          console.error(e);
+        }
+        try {
+          const status = await fetch("./api/status").then((r) => r.ok ? r.json() : null);
+          const controllers = (status && status.controllers) || [];
+          // One entry per connected device, with the controllers it brought
+          const names = [...new Set([...connected, ...controllers.map((c) => c.device)])];
+          this.players = names.map((device) => ({
+            device,
+            controllers: controllers.filter((c) => c.device === device),
+          }));
         } catch (e) {
           console.error(e);
         }
