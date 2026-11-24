@@ -4,8 +4,8 @@
 <head>
   <%- header %>
   <style>
-    .setup {
-      max-width: 46rem;
+    .container.setup {
+      max-width: 48rem;
       padding-top: 2.5rem;
       padding-bottom: 3rem;
     }
@@ -201,12 +201,13 @@
     <div class="setup-panel" v-if="loaded">
 
       <!-- Progress through the questions -->
-      <div class="setup-progress" v-if="step > 0 && step <= questions.length" aria-hidden="true">
+      <div class="setup-progress" v-if="step > 0 && step !== 'done'" aria-hidden="true">
         <span v-for="(q, i) in questions" :key="q" :class="{ done: i < step - 1, current: i === step - 1 }"></span>
       </div>
-      <p class="setup-count" v-if="step > 0 && step <= questions.length">
-        {{ $t('setup.step_of', { step: step, total: questions.length }) }}
+      <p class="setup-count" v-if="step > 0 && step < questions.length">
+        {{ $t('setup.step_of', { step: step, total: questions.length - 1 }) }}
       </p>
+      <p class="setup-count" v-else-if="current === 'review'">{{ $t('setup.step_last') }}</p>
 
       <!-- Start -->
       <section v-if="step === 0">
