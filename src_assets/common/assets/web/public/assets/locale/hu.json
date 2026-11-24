@@ -28,10 +28,8 @@
   "apps": {
     "actions": "Tevékenységek",
     "add_cmds": "Parancsok hozzáadása",
-    "add_new": "Új hozzáadása",
     "app_name": "Alkalmazás neve",
     "app_name_desc": "Alkalmazás neve, a Moonlight-on feltüntetett módon",
-    "applications_desc": "Az alkalmazások csak a kliensgép újraindításakor frissülnek",
     "applications_title": "Alkalmazások",
     "auto_detach": "Folytassa a streaminget, ha az alkalmazás gyorsan kilép",
     "auto_detach_desc": "Ez megpróbálja automatikusan felismerni az olyan indító típusú alkalmazásokat, amelyek gyorsan bezáródnak egy másik program vagy saját példányuk elindítása után. Ha egy indító típusú alkalmazást észlel, azt leválasztott alkalmazásként kezeli.",
@@ -61,7 +59,6 @@
     "env_qres_example": "Példa - QRes a felbontás automatizálásához:",
     "env_qres_path": "qres útvonal",
     "env_var_name": "Var neve",
-    "env_vars_about": "A környezeti változókról",
     "env_vars_desc": "Alapértelmezés szerint minden parancs megkapja ezeket a környezeti változókat:",
     "env_xrandr_example": "Példa - Xrandr a felbontás automatizálásához:",
     "exit_timeout": "Kilépési időkorlát",
@@ -393,7 +390,6 @@
     "configuration": "Konfiguráció",
     "home": "Home",
     "password": "Jelszó módosítása",
-    "pin": "PIN",
     "theme_auto": "Auto",
     "theme_dark": "Sötét",
     "theme_light": "Világos",
@@ -409,21 +405,15 @@
     "success_msg": "A jelszó módosítása sikeresen megtörtént! Ez az oldal hamarosan újratöltődik, a böngésző kérni fogja az új hitelesítő adatokat."
   },
   "pin": {
-    "device_name": "Eszköz neve",
     "pair_failure": "A párosítás sikertelen: Ellenőrizze, hogy a PIN kód helyesen lett-e beírva",
-    "pair_success": "Siker! Kérjük, ellenőrizze a Holdfényt a folytatáshoz",
-    "pin_pairing": "PIN párosítás",
-    "send": "Küldés",
     "warning_msg": "Győződjön meg róla, hogy hozzáférése van a párosított ügyfélhez. Ez a szoftver teljes irányítást adhat a számítógépének, ezért legyen óvatos!"
   },
   "resource_card": {
-    "github_discussions": "GitHub Discussions",
     "legal": "Jogi",
     "legal_desc": "A szoftver további használatával Ön elfogadja a következő dokumentumokban foglalt feltételeket.",
     "license": "Licenc",
     "lizardbyte_website": "LizardByte honlapja",
     "resources": "Források",
-    "resources_desc": "Források a TunaStream-hoz!",
     "third_party_notice": "Harmadik fél közleménye"
   },
   "troubleshooting": {
@@ -452,11 +442,6 @@
     "unpair_title": "Eszközök párosításának feloldása"
   },
   "welcome": {
-    "confirm_password": "Jelszó megerősítése",
-    "create_creds": "Mielőtt elkezdené, új felhasználónevet és jelszót kell létrehoznia a webes felhasználói felülethez való hozzáféréshez.",
-    "create_creds_alert": "A TunaStream webes felhasználói felületének eléréséhez az alábbi hitelesítő adatokra van szükség. Tartsa őket biztonságban, mivel soha többé nem fogja látni őket!",
-    "greeting": "Üdvözlünk a TunaStream-ban!",
-    "login": "Bejelentkezés",
-    "welcome_success": "Ez az oldal hamarosan újratöltődik, és a böngésző kérni fogja az új hitelesítő adatokat."
+    "confirm_password": "Jelszó megerősítése"
   }
 }

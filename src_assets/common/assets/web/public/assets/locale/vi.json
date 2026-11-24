@@ -28,10 +28,8 @@
   "apps": {
     "actions": "Hành động",
     "add_cmds": "Thêm lệnh",
-    "add_new": "Thêm mới",
     "app_name": "Tên ứng dụng",
     "app_name_desc": "Tên ứng dụng, hiển thị trên Moonlight",
-    "applications_desc": "Ứng dụng chỉ được làm mới khi Client được khởi động lại.",
     "applications_title": "Ứng dụng",
     "auto_detach": "Không ngắt stream nếu ứng dụng thoát trong thời gian ngắn",
     "auto_detach_desc": "Tùy chọn này sẽ cố gắng tự động nhận diện các ứng dụng dạng launcher, thường thoát ngay sau khi mở một chương trình khác hoặc một phiên bản khác của chính nó.\nKhi phát hiện launcher như vậy, hệ thống sẽ xử lý nó như một ứng dụng tách biệt để tránh ngắt kết nối stream.",
@@ -61,7 +59,6 @@
     "env_qres_example": "Ví dụ - QRes cho độ phân giải động:",
     "env_qres_path": "Đường dẫn qres",
     "env_var_name": "Tên biến",
-    "env_vars_about": "Về biến môi trường",
     "env_vars_desc": "Tất cả các lệnh đều được gán các biến môi trường sau theo mặc định:",
     "env_xrandr_example": "Ví dụ - Xrandr cho độ phân giải động:",
     "exit_timeout": "Thời gian chờ thoát",
@@ -393,7 +390,6 @@
     "configuration": "Cấu hình",
     "home": "Trang chủ",
     "password": "Thay đổi mật khẩu",
-    "pin": "Mã PIN",
     "theme_auto": "Tự động",
     "theme_dark": "Tối",
     "theme_light": "Ánh sáng",
@@ -409,21 +405,15 @@
     "success_msg": "Mật khẩu đã được thay đổi thành công! Trang này sẽ được tải lại trong giây lát, trình duyệt của bạn sẽ yêu cầu bạn nhập thông tin đăng nhập mới."
   },
   "pin": {
-    "device_name": "Tên thiết bị",
     "pair_failure": "Kết nối không thành công: Vui lòng kiểm tra xem mã PIN đã được nhập chính xác chưa.",
-    "pair_success": "Thành công! Vui lòng kiểm tra Moonlight để tiếp tục.",
-    "pin_pairing": "Kết nối PIN",
-    "send": "Gửi",
     "warning_msg": "Đảm bảo bạn có quyền truy cập vào máy tính mà bạn đang kết nối. Phần mềm này có thể cho phép kiểm soát hoàn toàn máy tính của bạn, vì vậy hãy cẩn thận!"
   },
   "resource_card": {
-    "github_discussions": "Thảo luận trên GitHub",
     "legal": "Pháp lý",
     "legal_desc": "Bằng cách tiếp tục sử dụng phần mềm này, bạn đồng ý với các điều khoản và điều kiện được quy định trong các tài liệu sau đây.",
     "license": "Giấy phép",
     "lizardbyte_website": "Trang web LizardByte",
     "resources": "Tài nguyên",
-    "resources_desc": "Tài nguyên cho Ánh nắng!",
     "third_party_notice": "Thông báo từ bên thứ ba"
   },
   "troubleshooting": {
@@ -452,11 +442,6 @@
     "unpair_title": "Ngắt kết nối thiết bị"
   },
   "welcome": {
-    "confirm_password": "Xác nhận mật khẩu",
-    "create_creds": "Trước khi bắt đầu, chúng tôi cần bạn tạo một tên người dùng và mật khẩu mới để truy cập vào giao diện người dùng web (Web UI).",
-    "create_creds_alert": "Các thông tin đăng nhập sau đây là cần thiết để truy cập giao diện người dùng web của TunaStream. Hãy giữ chúng an toàn, vì bạn sẽ không bao giờ thấy chúng nữa!",
-    "greeting": "Chào mừng đến với TunaStream!",
-    "login": "Đăng nhập",
-    "welcome_success": "Trang này sẽ được tải lại trong giây lát, trình duyệt của bạn sẽ yêu cầu bạn nhập lại thông tin đăng nhập."
+    "confirm_password": "Xác nhận mật khẩu"
   }
 }

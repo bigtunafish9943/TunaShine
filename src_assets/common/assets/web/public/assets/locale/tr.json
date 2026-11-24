@@ -28,10 +28,8 @@
   "apps": {
     "actions": "Eylemler",
     "add_cmds": "Komutlar Ekle",
-    "add_new": "Yeni Ekle",
     "app_name": "Uygulama Adı",
     "app_name_desc": "Uygulama Adı, Moonlight'ta gösterildiği gibi",
-    "applications_desc": "Uygulamalar yalnızca İstemci yeniden başlatıldığında yenilenir",
     "applications_title": "Uygulamalar",
     "auto_detach": "Uygulama hızlı bir şekilde çıkarsa akışa devam edin",
     "auto_detach_desc": "Bu, başka bir programı veya kendi örneğini başlattıktan sonra hızla kapanan başlatıcı tipi uygulamaları otomatik olarak tespit etmeye çalışacaktır. Başlatıcı tipi bir uygulama tespit edildiğinde, bu uygulama ayrılmış bir uygulama olarak değerlendirilir.",
@@ -61,7 +59,6 @@
     "env_qres_example": "Örnek - Çözünürlük Otomasyonu için QRes:",
     "env_qres_path": "qres yolu",
     "env_var_name": "Var Adı",
-    "env_vars_about": "Ortam Değişkenleri Hakkında",
     "env_vars_desc": "Tüm komutlar varsayılan olarak bu ortam değişkenlerini alır:",
     "env_xrandr_example": "Örnek - Çözüm Otomasyonu için Xrandr:",
     "exit_timeout": "Çıkış Zaman Aşımı",
@@ -385,7 +382,6 @@
     "configuration": "Konfigürasyon",
     "home": "Ana Sayfa",
     "password": "Şifre Değiştir",
-    "pin": "Pin",
     "theme_auto": "Otomatik",
     "theme_dark": "Karanlık",
     "theme_light": "Açık",
@@ -401,21 +397,15 @@
     "success_msg": "Şifre başarıyla değiştirildi! Bu sayfa yakında yeniden yüklenecek, tarayıcınız sizden yeni kimlik bilgilerinizi isteyecektir."
   },
   "pin": {
-    "device_name": "Cihaz Adı",
     "pair_failure": "Eşleştirme Başarısız: PIN'in doğru yazılıp yazılmadığını kontrol edin",
-    "pair_success": "Başarılı! Devam etmek için lütfen Moonlight'ı kontrol edin",
-    "pin_pairing": "PIN Eşleştirme",
-    "send": "Gönder",
     "warning_msg": "Eşleştirdiğiniz istemciye erişiminiz olduğundan emin olun. Bu yazılım bilgisayarınıza tam kontrol sağlayabilir, bu yüzden dikkatli olun!"
   },
   "resource_card": {
-    "github_discussions": "GitHub Tartışmaları",
     "legal": "Yasal",
     "legal_desc": "Bu yazılımı kullanmaya devam ederek aşağıdaki belgelerde yer alan hüküm ve koşulları kabul etmiş olursunuz.",
     "license": "Lisans",
     "lizardbyte_website": "LizardByte Web Sitesi",
     "resources": "Kaynaklar",
-    "resources_desc": "Günışığı için Kaynaklar!",
     "third_party_notice": "Üçüncü Taraf Bildirimi"
   },
   "troubleshooting": {
@@ -444,11 +434,6 @@
     "unpair_title": "Cihazların Eşleşmesini Kaldırma"
   },
   "welcome": {
-    "confirm_password": "Şifreyi onayla",
-    "create_creds": "Başlamadan önce, Web UI'ye erişmek için yeni bir kullanıcı adı ve şifre oluşturmanız gerekmektedir.",
-    "create_creds_alert": "TunaStream'ın Web kullanıcı arayüzüne erişmek için aşağıdaki kimlik bilgileri gereklidir. Onları güvende tutun, çünkü bir daha asla görmeyeceksiniz!",
-    "greeting": "TunaStream'a hoş geldiniz!",
-    "login": "Giriş",
-    "welcome_success": "Bu sayfa yakında yeniden yüklenecek, tarayıcınız sizden yeni kimlik bilgilerinizi isteyecek"
+    "confirm_password": "Şifreyi onayla"
   }
 }
