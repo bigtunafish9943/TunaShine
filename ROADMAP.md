@@ -36,6 +36,20 @@ Everything here is built and passes the automated checks, but has not yet been c
 - **More documentation.** A troubleshooting guide for rumble, the connection and stop/start exists; the virtual
   display and permissions still need their own pages.
 
+## TunaReceive: our own client
+
+A TunaStream build of Moonlight for Android and Android TV (starting with NVIDIA Shield), sideloaded as an APK
+from this repository's releases. Moonlight for Android is GPL-3.0, like TunaStream, so it can be forked the same
+way. What it would add over stock Moonlight:
+
+- **Controller rumble that works over Bluetooth and with 2.4G adapters**, including 8BitDo controllers
+  ([moonlight-android#1442](https://github.com/moonlight-stream/moonlight-android/issues/1442)).
+- **Smooth-video defaults** that match TunaStream's frame-rate matching, and the stream health readout on screen.
+- **TunaStream actions from the couch**: end the session, play it on the PC, repair the virtual screen.
+- Pairing without typing a PIN, by scanning a code shown on the TunaStream home page.
+
+Built and published by GitHub Actions like the host. Starts once the host has settled on real hardware.
+
 ## Later (needs testing on real hardware for each change)
 
 - Startup and service reliability on Windows 11 24H2 and later.

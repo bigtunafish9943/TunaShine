@@ -71,6 +71,7 @@ namespace proc {
 #ifdef _WIN32
   VDISPLAY::DRIVER_STATUS vDisplayDriverStatus = VDISPLAY::DRIVER_STATUS::UNKNOWN;
   std::atomic_bool vdisplay_failed {false};
+  std::atomic_bool display_restore_failed {false};
 
   void onVDisplayWatchdogFailed() {
     vDisplayDriverStatus = VDISPLAY::DRIVER_STATUS::WATCHDOG_FAILED;
@@ -746,6 +747,7 @@ namespace proc {
 
     // Normally already done by the resume request, before capture starts
     reclaim_primary_display();
+    display_restore_failed = false;
 
     if (config::tunastream.game_frame_limit && frame_limit_fps > 0) {
       platf::set_game_frame_limit(frame_limit_fps);
@@ -843,8 +845,10 @@ namespace proc {
       if (VDISPLAY::getPrimaryDisplay() != previous_primary) {
         if (VDISPLAY::setPrimaryDisplay(previous_primary.c_str())) {
           BOOST_LOG(info) << "Primary display handed back to " << this->previous_primary_display;
+          display_restore_failed = false;
         } else {
           BOOST_LOG(warning) << "Couldn't hand the primary display back to " << this->previous_primary_display;
+          display_restore_failed = true;
         }
       }
     }

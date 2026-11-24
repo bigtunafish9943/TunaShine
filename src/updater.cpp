@@ -188,11 +188,17 @@ namespace updater {
         return;
       }
 
-      // Find the installer among the release's files
+      // The installer for this release has exactly this name; nothing else is accepted
+      std::string bare_version = version;
+      if (!bare_version.empty() && (bare_version[0] == 'v' || bare_version[0] == 'V')) {
+        bare_version.erase(0, 1);
+      }
+      const std::string expected_name = "TunaStream-" + bare_version + "-setup.exe";
+
       std::string url, digest, name;
       for (const auto &asset : release.value("assets", nlohmann::json::array())) {
         std::string asset_name = asset.value("name", "");
-        if (asset_name.size() > 10 && asset_name.ends_with("-setup.exe")) {
+        if (asset_name == expected_name) {
           name = asset_name;
           url = asset.value("browser_download_url", "");
           digest = asset.value("digest", "");
@@ -201,6 +207,12 @@ namespace updater {
       }
       if (url.empty() || !url.starts_with(DOWNLOAD_PREFIX)) {
         set_stage("failed", version, "The release has no installer to download.");
+        return;
+      }
+      // Never download, let alone run, an installer without a published checksum to check it against
+      if (!digest.starts_with("sha256:") || digest.size() != 7 + 64) {
+        BOOST_LOG(error) << "Release "sv << version << " has no SHA-256 checksum for its installer; not updating"sv;
+        set_stage("failed", version, "The release has no published checksum, so it was not installed.");
         return;
       }
 
@@ -230,7 +242,7 @@ namespace updater {
       }
 
       // GitHub publishes a SHA-256 for every release file; refuse a file that does not match
-      if (digest.starts_with("sha256:")) {
+      {
         auto expected = digest.substr(7);
         auto actual = sha256_of_file(installer);
         std::transform(expected.begin(), expected.end(), expected.begin(), ::tolower);
@@ -241,15 +253,13 @@ namespace updater {
           set_stage("failed", version, "The downloaded installer did not match its published checksum, so it was not run.");
           return;
         }
-      } else {
-        BOOST_LOG(warning) << "Release has no published checksum; installing without one"sv;
       }
 
       if (verify_only) {
         // A check that the latest release downloads and matches its checksum; nothing is installed
         BOOST_LOG(info) << "Update check: "sv << name << " downloaded and matched its checksum"sv;
         std::filesystem::remove(installer, ec);
-        set_stage(digest.starts_with("sha256:") ? "verified" : "failed", version, digest.starts_with("sha256:") ? "" : "The release has no published checksum.");
+        set_stage("verified", version);
         return;
       }
 
