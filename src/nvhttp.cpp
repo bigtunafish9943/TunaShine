@@ -1407,6 +1407,12 @@ namespace nvhttp {
       launch_session->input_only = true;
     }
 
+    if (no_active_sessions && proc::proc.virtual_display) {
+      // The primary display was handed back to the PC when the last client left.
+      // Take it again before capture starts, so the stream does not begin with a display change.
+      proc::proc.reclaim_primary_display();
+    }
+
     if (no_active_sessions && !proc::proc.virtual_display) {
       // We want to prepare display only if there are no active sessions
       // and the current session isn't virtual display at the moment.

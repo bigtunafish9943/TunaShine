@@ -138,6 +138,12 @@ namespace proc {
     std::string get_running_app_uuid();
     boost::process::v1::environment get_env();
     void resume();
+
+    /**
+     * @brief Make the virtual display primary again after it was handed back in pause().
+     * @details Does nothing unless a virtual display is in use and it is not primary.
+     */
+    void reclaim_primary_display();
     /**
      * @brief Called when the last client is gone.
      * @param connection_lost True if the client went silent rather than disconnecting on purpose.
