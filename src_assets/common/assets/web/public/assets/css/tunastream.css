@@ -856,3 +856,38 @@ body .dropdown-menu {
     font-size: 0.85rem;
     color: var(--bs-secondary-color);
 }
+
+/* A game paused on the stream's screen, with a way to carry on at the PC */
+.home-paused {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem 1.5rem;
+    margin: 0 0 1.5rem;
+    padding: 1rem 1.25rem;
+    background-color: var(--ts-surface);
+    border: 1px solid var(--ts-surface-border);
+    border-left: 4px solid var(--ts-accent);
+    border-radius: 0.75rem;
+}
+
+.home-paused p {
+    margin: 0;
+}
+
+.home-paused-title {
+    font-weight: 600;
+    font-size: 1.05rem;
+}
+
+.home-paused-desc {
+    color: var(--bs-secondary-color);
+    max-width: 40rem;
+    margin-top: 0.25rem !important;
+}
+
+.home-paused-error {
+    color: var(--bs-warning-text-emphasis);
+    margin-top: 0.5rem !important;
+}

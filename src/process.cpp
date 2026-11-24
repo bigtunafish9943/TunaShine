@@ -894,6 +894,28 @@ namespace proc {
 #endif
   }
 
+  bool proc_t::continue_on_host() {
+#ifdef _WIN32
+    if (!running() || !this->virtual_display || !_launch_session) {
+      return false;
+    }
+
+    if (!VDISPLAY::removeVirtualDisplay(_launch_session->display_guid)) {
+      BOOST_LOG(warning) << "Couldn't remove the virtual display to move ["sv << _app_name << "] to this PC's screen"sv;
+      return false;
+    }
+
+    BOOST_LOG(info) << "Moved ["sv << _app_name << "] to this PC's own screen"sv;
+    this->virtual_display = false;
+    this->display_name.clear();
+    this->previous_primary_display.clear();
+    config::video.output_name = initial_display;
+    return true;
+#else
+    return false;
+#endif
+  }
+
   void proc_t::terminate(bool immediate, bool needs_refresh) {
     ++session_generation;
     platf::set_game_frame_limit(0);
@@ -957,7 +979,7 @@ namespace proc {
       } else if (this->virtual_display) {
         BOOST_LOG(warning) << "Virtual Display remove failed";
       } else {
-        BOOST_LOG(warning) << "Virtual Display remove failed, but it seems it was not created correctly either.";
+        BOOST_LOG(info) << "Virtual Display was already removed";
       }
     }
 

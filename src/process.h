@@ -163,6 +163,20 @@ namespace proc {
     void pause(bool connection_lost = false);
     void terminate(bool immediate = false, bool needs_refresh = true);
 
+    /**
+     * @brief Move a paused app from the stream's virtual display to this PC's own screen.
+     * @details Removes the virtual display; Windows then moves the app's windows to the PC's
+     *          monitor. A client that reconnects afterwards streams the PC's own screen.
+     *          Call only when nobody is streaming.
+     * @return False if no app is running on a virtual display, or it could not be removed.
+     */
+    bool continue_on_host();
+
+    /// True while the running app is on the stream's virtual display.
+    bool on_virtual_display() const {
+      return virtual_display;
+    }
+
     /// How long an app is kept running after its last client's connection drops,
     /// when it would otherwise be ended on disconnect.
     static constexpr std::chrono::seconds reconnect_grace_period {120};
