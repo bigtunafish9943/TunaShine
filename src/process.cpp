@@ -82,9 +82,83 @@ namespace proc {
     if (vDisplayDriverStatus == VDISPLAY::DRIVER_STATUS::OK) {
       if (!VDISPLAY::startPingThread(onVDisplayWatchdogFailed)) {
         onVDisplayWatchdogFailed();
+        BOOST_LOG(warning) << "Virtual display driver opened, but its watchdog did not answer"sv;
         return;
       }
+    } else if (vDisplayDriverStatus == VDISPLAY::DRIVER_STATUS::VERSION_INCOMPATIBLE) {
+      BOOST_LOG(warning) << "Virtual display driver is a version TunaStream can't use; reinstall it from Troubleshooting"sv;
+    } else {
+      BOOST_LOG(warning) << "Couldn't open the virtual display driver: it is missing, disabled or in use by another program"sv;
     }
+  }
+
+  static std::atomic_bool vdisplay_repairing {false};
+
+  bool vdisplay_repair_running() {
+    return vdisplay_repairing;
+  }
+
+  bool start_vdisplay_repair() {
+    if (vdisplay_repairing.exchange(true)) {
+      return false;
+    }
+
+    std::thread([]() {
+      auto done = util::fail_guard([]() {
+        vdisplay_repairing = false;
+      });
+
+      BOOST_LOG(info) << "Repairing the virtual display driver"sv;
+      VDISPLAY::closeVDisplayDevice();
+      vDisplayDriverStatus = VDISPLAY::DRIVER_STATUS::UNKNOWN;
+
+      // The installer ships the driver and its install script next to tunastream.exe
+      wchar_t exe[MAX_PATH] {};
+      GetModuleFileNameW(nullptr, exe, MAX_PATH);
+      auto script = std::filesystem::path {exe}.parent_path() / L"drivers" / L"sudovda" / L"install.bat";
+      std::error_code ec;
+      if (std::filesystem::exists(script, ec)) {
+        wchar_t system_dir[MAX_PATH] {};
+        GetSystemDirectoryW(system_dir, MAX_PATH);
+        std::wstring cmd_exe = std::wstring {system_dir} + L"\\cmd.exe";
+        std::wstring command = L"cmd.exe /c \"\"" + script.wstring() + L"\"\"";
+        auto working_dir = script.parent_path().wstring();
+
+        STARTUPINFOW startup {};
+        startup.cb = sizeof(startup);
+        PROCESS_INFORMATION process {};
+        if (CreateProcessW(cmd_exe.c_str(), command.data(), nullptr, nullptr, FALSE, CREATE_NO_WINDOW, nullptr, working_dir.c_str(), &startup, &process)) {
+          WaitForSingleObject(process.hProcess, 120000);
+          DWORD exit_code = 0;
+          GetExitCodeProcess(process.hProcess, &exit_code);
+          CloseHandle(process.hThread);
+          CloseHandle(process.hProcess);
+          BOOST_LOG(info) << "Virtual display driver reinstall finished with code "sv << exit_code;
+        } else {
+          BOOST_LOG(error) << "Couldn't run the virtual display driver installer: "sv << GetLastError();
+        }
+      } else {
+        BOOST_LOG(warning) << "Virtual display driver installer not found at "sv << script.string() << "; reconnecting only"sv;
+      }
+
+      // The device can take a few seconds to appear after installing
+      for (int attempt = 0; attempt < 10; ++attempt) {
+        initVDisplayDriver();
+        if (vDisplayDriverStatus == VDISPLAY::DRIVER_STATUS::OK) {
+          break;
+        }
+        std::this_thread::sleep_for(1s);
+      }
+
+      if (vDisplayDriverStatus == VDISPLAY::DRIVER_STATUS::OK) {
+        vdisplay_failed = false;
+        BOOST_LOG(info) << "Virtual display driver is working again"sv;
+      } else {
+        BOOST_LOG(error) << "Virtual display driver still isn't working after the repair"sv;
+      }
+    }).detach();
+
+    return true;
   }
 #endif
 

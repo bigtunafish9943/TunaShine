@@ -59,6 +59,25 @@
         </div>
       </div>
     </div>
+    <!-- Virtual screen driver -->
+    <div class="card p-2 my-4" v-if="platform === 'windows'">
+      <div class="card-body">
+        <h2 id="vdisplay">{{ $t('troubleshooting.vdisplay_title') }}</h2>
+        <p>{{ $t('troubleshooting.vdisplay_desc') }}</p>
+        <div class="alert" :class="vdisplayStatus === 0 ? 'alert-success' : 'alert-warning'" v-if="vdisplayStatus !== null && !vdisplayRepairing">
+          <b>{{ $t('troubleshooting.vdisplay_status_' + vdisplayStatusName) }}</b>
+          <span class="d-block">{{ $t('troubleshooting.vdisplay_reason_' + vdisplayStatusName) }}</span>
+        </div>
+        <div class="alert alert-info" v-if="vdisplayRepairing" role="status">
+          <span class="spinner-border spinner-border-sm" aria-hidden="true"></span> {{ $t('troubleshooting.vdisplay_repairing') }}
+        </div>
+        <div class="alert alert-warning" v-if="vdisplayRepairError">{{ vdisplayRepairError }}</div>
+        <button class="btn btn-primary" :disabled="vdisplayRepairing" @click="repairVdisplay">
+          <i class="fas fa-screwdriver-wrench"></i> {{ $t('troubleshooting.vdisplay_repair') }}
+        </button>
+        <p class="form-text mt-2 mb-0">{{ $t('troubleshooting.vdisplay_repair_note') }}</p>
+      </div>
+    </div>
     <!-- Rumble test -->
     <div class="card p-2 my-4">
       <div class="card-body">
@@ -166,6 +185,9 @@
           closeAppPressed: false,
           rumblePressed: false,
           rumbleClients: null,
+          vdisplayStatus: null,
+          vdisplayRepairing: false,
+          vdisplayRepairError: '',
           closeAppStatus: null,
           ddResetPressed: false,
           ddResetStatus: null,
@@ -195,13 +217,58 @@
 
         this.logInterval = setInterval(() => {
           this.refreshLogs();
+          this.refreshVdisplay();
         }, 5000);
         this.refreshLogs();
+        this.refreshVdisplay();
       },
       beforeDestroy() {
         clearInterval(this.logInterval);
       },
+      computed: {
+        vdisplayStatusName() {
+          return { 0: 'ok', 1: 'unknown', '-1': 'failed', '-2': 'version', '-3': 'watchdog' }[this.vdisplayStatus] || 'unknown';
+        },
+      },
       methods: {
+        async refreshVdisplay() {
+          try {
+            const status = await fetch("./api/status", { credentials: 'include' }).then((r) => r.ok ? r.json() : null);
+            if (status && status.vdisplayStatus !== undefined) {
+              this.vdisplayStatus = status.vdisplayStatus;
+              this.vdisplayRepairing = !!status.vdisplayRepairing;
+            }
+          } catch (e) {
+            console.error(e);
+          }
+        },
+        async repairVdisplay() {
+          this.vdisplayRepairError = '';
+          this.vdisplayRepairing = true;
+          try {
+            const r = await fetch("./api/vdisplay/repair", {
+              credentials: 'include',
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: '{}',
+            }).then((r) => r.json());
+            if (!r.status) {
+              this.vdisplayRepairError = r.error || this.$t('troubleshooting.vdisplay_repair_failed');
+              this.vdisplayRepairing = false;
+              return;
+            }
+          } catch (e) {
+            this.vdisplayRepairError = this.$t('troubleshooting.vdisplay_repair_failed');
+            this.vdisplayRepairing = false;
+            return;
+          }
+          // Follow progress until the repair finishes
+          for (let i = 0; i < 90; i++) {
+            await new Promise((r) => setTimeout(r, 2000));
+            await this.refreshVdisplay();
+            if (!this.vdisplayRepairing) break;
+          }
+        },
         refreshLogs() {
           fetch("./api/logs", {
             credentials: 'include'

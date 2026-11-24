@@ -776,6 +776,8 @@ namespace confighttp {
     output_tree["streams"] = streams;
 #ifdef _WIN32
     output_tree["vdisplayFailed"] = proc::vdisplay_failed.load();
+    output_tree["vdisplayStatus"] = (int) proc::vDisplayDriverStatus;
+    output_tree["vdisplayRepairing"] = proc::vdisplay_repair_running();
 #endif
     send_response(response, output_tree);
   }
@@ -787,6 +789,34 @@ namespace confighttp {
    *
    * @api_examples{/api/update| POST| null}
    */
+  /**
+   * @brief Reinstall the virtual display driver and reconnect to it.
+   * @details Refused while streaming, since reinstalling removes the stream's screen.
+   *          Progress shows in /api/status as vdisplayRepairing and vdisplayStatus.
+   */
+  void repairVirtualDisplay(resp_https_t response, req_https_t request) {
+    if (!validateContentType(response, request, "application/json") || !authenticate(response, request)) {
+      return;
+    }
+
+    print_req(request);
+
+    nlohmann::json output_tree;
+#ifdef _WIN32
+    if (rtsp_stream::session_count() > 0) {
+      output_tree["status"] = false;
+      output_tree["error"] = "Stop streaming first: repairing removes the stream's screen.";
+    } else {
+      output_tree["status"] = true;
+      output_tree["started"] = proc::start_vdisplay_repair();
+    }
+#else
+    output_tree["status"] = false;
+    output_tree["error"] = "Only available on Windows.";
+#endif
+    send_response(response, output_tree);
+  }
+
   void startUpdate(resp_https_t response, req_https_t request) {
     if (!validateContentType(response, request, "application/json") || !authenticate(response, request)) {
       return;
@@ -1689,6 +1719,7 @@ namespace confighttp {
     server.resource["^/api/status$"]["GET"] = getStatus;
     server.resource["^/api/update$"]["GET"] = getUpdate;
     server.resource["^/api/update$"]["POST"] = startUpdate;
+    server.resource["^/api/vdisplay/repair$"]["POST"] = repairVirtualDisplay;
     server.resource["^/api/logs$"]["GET"] = getLogs;
     server.resource["^/api/config$"]["GET"] = getConfig;
     server.resource["^/api/config$"]["POST"] = saveConfig;

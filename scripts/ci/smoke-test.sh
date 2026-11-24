@@ -149,6 +149,7 @@ expect "saved setting is read back: virtual display primary" "$(json virtual_dis
 expect "setup can be marked done" "$(post /api/config '{"setup_complete":"enabled"}' | json status)" "True"
 expect "setup done is read back" "$(get /api/config | json setup_complete)" "enabled"
 
+expect "status reports virtual screen repair state" "$(get /api/status | json vdisplayRepairing)" "False"
 expect "end session answers with nothing running" "$(post /api/apps/close '{}' | json status)" "True"
 
 # The updater: this build is newer than any published release, so a real check against GitHub must
