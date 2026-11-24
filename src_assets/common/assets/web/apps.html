@@ -87,9 +87,7 @@
   <div class="container">
     <div class="my-4" v-if="!showEditForm">
         <h1>{{ $t('apps.applications_title') }}</h1>
-        <div>{{ $t('apps.applications_desc') }}</div>
-        <div>{{ $t('apps.applications_reorder_desc') }}</div>
-        <div class="pre-wrap">{{ $t('apps.applications_tips') }}</div>
+        <p class="mb-0">{{ $t('apps.applications_desc') }}</p>
     </div>
     <div class="my-4" v-else>
         <h1>{{ editForm.name || "&lt; NO NAME &gt;"}}</h1>
@@ -105,57 +103,61 @@
           </button>
         </div>
     </div>
-    <div class="card p-4" v-if="!showEditForm">
-      <table class="table">
-        <thead>
-          <tr>
-            <th scope="col">{{ $t('apps.name') }}</th>
-            <th scope="col" class="text-end actions-col">{{ $t('apps.actions') }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="(app,i) in apps"
-            :key="app.uuid"
-            :class="{dragover: app.dragover}"
-            draggable="true"
-            @dragstart="onDragStart($event, i)"
-            @dragenter="onDragEnter($event, app)"
-            @dragover="onDragOver($event)"
-            @dragleave="onDragLeave(app)"
-            @dragend="onDragEnd()"
-            @drop="onDrop($event, app, i)"
-          >
-            <td @dblclick="exportLauncherFile(app)">{{app.name || ' '}}</td>
-            <td v-if="app.uuid" class="text-end">
-              <button class="btn btn-primary me-1" :disabled="actionDisabled" @click="editApp(app)">
-                <i class="fas fa-edit"></i>
-              </button>
-              <button class="btn btn-danger me-1" :disabled="actionDisabled" @click="showDeleteForm(app)">
-                <i class="fas fa-trash"></i>
-              </button>
-              <button class="btn btn-warning" :disabled="actionDisabled" @click="closeApp()" v-if="currentApp === app.uuid">
-                <i class="fas fa-stop"></i>
-              </button>
-              <a class="btn btn-success" :disabled="actionDisabled" @click.prevent="launchApp(event, app)" :href="'art://launch?host_uuid=' + hostUUID + '&host_name=' + hostName + '&app_uuid=' + app.uuid + '&app_name=' + app.name" v-else>
-                <i class="fas fa-play"></i>
-              </a>
-            </td>
-            <td v-else></td>
-          </tr>
-        </tbody>
-      </table>
-      <div class="mt-2">
+    <div v-if="!showEditForm">
+      <ol class="app-list">
+        <li
+          v-for="(app,i) in apps"
+          :key="app.uuid"
+          class="app-row"
+          :class="{dragover: app.dragover, 'app-running': app.uuid && currentApp === app.uuid}"
+          draggable="true"
+          @dragstart="onDragStart($event, i)"
+          @dragenter="onDragEnter($event, app)"
+          @dragover="onDragOver($event)"
+          @dragleave="onDragLeave(app)"
+          @dragend="onDragEnd()"
+          @drop="onDrop($event, app, i)"
+        >
+          <span class="app-grip" :title="$t('apps.drag_to_reorder')" aria-hidden="true"><i class="fas fa-grip-vertical"></i></span>
+          <span class="app-monogram" aria-hidden="true">{{ (app.name || '?').trim().charAt(0).toUpperCase() }}</span>
+          <span class="app-name" @dblclick="exportLauncherFile(app)">
+            {{ app.name || ' ' }}
+            <span class="app-badge" v-if="app.uuid && currentApp === app.uuid">{{ $t('apps.streaming_now') }}</span>
+          </span>
+          <span class="app-actions" v-if="app.uuid">
+            <button class="btn btn-warning" :disabled="actionDisabled" @click="closeApp()" v-if="currentApp === app.uuid">
+              <i class="fas fa-stop"></i> {{ $t('apps.stop') }}
+            </button>
+            <a class="btn btn-success" :disabled="actionDisabled" @click.prevent="launchApp(event, app)" :href="'art://launch?host_uuid=' + hostUUID + '&host_name=' + hostName + '&app_uuid=' + app.uuid + '&app_name=' + app.name" v-else>
+              <i class="fas fa-play"></i> {{ $t('apps.launch') }}
+            </a>
+            <button class="btn btn-outline-secondary" :disabled="actionDisabled" @click="editApp(app)">
+              <i class="fas fa-pen"></i> {{ $t('apps.edit') }}
+            </button>
+            <button class="btn btn-outline-danger" :disabled="actionDisabled" @click="showDeleteForm(app)" :title="$t('apps.delete')" :aria-label="$t('apps.delete')">
+              <i class="fas fa-trash"></i>
+            </button>
+          </span>
+        </li>
+      </ol>
+      <div class="app-list-footer">
         <button class="btn btn-primary" @click="newApp" :disabled="actionDisabled">
           <i class="fas fa-plus"></i> {{ $t('apps.add_new') }}
         </button>
-        <button class="btn btn-secondary float-end" @click="alphabetizeApps" :disabled="actionDisabled" v-if="!listReordered">
-          <i class="fas fa-sort-alpha-up"></i> {{ $t('apps.alphabetize') }}
-        </button>
-        <button class="btn btn-warning float-end" @click="saveOrder" :disabled="actionDisabled" v-if="listReordered">
+        <button class="btn btn-warning" @click="saveOrder" :disabled="actionDisabled" v-if="listReordered">
           <i class="fas fa-floppy-disk"></i> {{ $t('apps.save_order') }}
         </button>
+        <button class="btn btn-outline-secondary" @click="alphabetizeApps" :disabled="actionDisabled" v-else>
+          <i class="fas fa-sort-alpha-up"></i> {{ $t('apps.alphabetize') }}
+        </button>
       </div>
+      <details class="app-more app-tips mt-4">
+        <summary>{{ $t('apps.tips_title') }}</summary>
+        <ul>
+          <li>{{ $t('apps.applications_reorder_desc') }}</li>
+          <li>{{ $t('apps.applications_tips') }}</li>
+        </ul>
+      </details>
     </div>
     <div class="edit-form card mt-2" v-else>
       <div class="p-4">
