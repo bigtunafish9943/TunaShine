@@ -13,6 +13,9 @@
       <template v-if="hostName">{{ $t('index.running_on', { host: hostName }) }}</template>
       {{ $t('index.version_is', { version: version.version }) }}
     </p>
+    <div class="alert alert-info" v-if="customPort">
+      {{ $t('index.custom_port', { port: customPort, host: hostName || 'this-pc' }) }}
+    </div>
     <div class="alert alert-danger" v-if="fancyLogs.find(x => x.level === 'Fatal')">
       <p v-html="$t('index.startup_errors')"></p>
       <ul>
@@ -128,6 +131,7 @@
         hostName: "",
         currentAppName: "",
         clientCount: null,
+        customPort: null,
       }
     },
     async created() {
@@ -137,6 +141,9 @@
         this.version = new ApolloVersion(null, config.version);
         this.platform = config.platform;
         this.vdisplayStatus = config.vdisplayStatus ?? 0;
+        // Set when TunaShine is not on the default port, e.g. installed next to Sunshine
+        const port = parseInt(config.port, 10);
+        this.customPort = (port && port !== 47989) ? port : null;
         this.loadStatus();
         console.log("Version: ", this.version.version)
         const latest = await fetch("https://api.github.com/repos/bigtunafish9943/TunaShine/releases/latest").then((r) => r.ok ? r.json() : null);
