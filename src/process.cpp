@@ -316,6 +316,17 @@ namespace proc {
             VDISPLAY::changeDisplaySettings2(vdisplayName.c_str(), render_width, render_height, target_fps, true);
           }
 
+          // Games and new windows open on the primary display, so make the virtual display
+          // primary for them to show up in the stream. The other displays stay active, and
+          // Windows picks its usual primary again once the virtual display is removed.
+          if (config::video.virtual_display_primary) {
+            if (VDISPLAY::setPrimaryDisplay(vdisplayName.c_str())) {
+              BOOST_LOG(info) << "Virtual Display set as the primary display";
+            } else {
+              BOOST_LOG(warning) << "Couldn't set the Virtual Display as the primary display";
+            }
+          }
+
           // Set virtual_display to true when everything went fine
           this->virtual_display = true;
           this->display_name = platf::to_utf8(vdisplayName);
