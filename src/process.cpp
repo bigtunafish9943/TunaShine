@@ -8,7 +8,9 @@
  #define BOOST_PROCESS_VERSION 1
 #endif
 // standard includes
+#include <algorithm>
 #include <atomic>
+#include <cctype>
 #include <filesystem>
 #include <string>
 #include <thread>
@@ -557,6 +559,26 @@ namespace proc {
     }
 
     std::error_code ec;
+    // Some programs open on the monitor they used last rather than the primary one (Steam's
+    // Big Picture does). From here on, windows the app opens elsewhere are moved to the stream.
+    if (this->virtual_display) {
+      auto mentions_steam = [](const std::string &text) {
+        auto lower = text;
+        std::transform(lower.begin(), lower.end(), lower.begin(), [](unsigned char c) {
+          return std::tolower(c);
+        });
+        return lower.find("steam") != std::string::npos;
+      };
+      bool steam_app = mentions_steam(_app.name) || mentions_steam(_app.cmd);
+      for (auto &cmd : _app.detached) {
+        steam_app = steam_app || mentions_steam(cmd);
+      }
+      for (auto &cmd : _app.prep_cmds) {
+        steam_app = steam_app || mentions_steam(cmd.do_cmd);
+      }
+      _window_herder = platf::herd_new_windows(this->display_name, steam_app);
+    }
+
     _app_prep_begin = std::begin(_app.prep_cmds);
     _app_prep_it = _app_prep_begin;
 
@@ -807,6 +829,8 @@ namespace proc {
   void proc_t::pause(bool connection_lost) {
     // Nobody is streaming now, so the PC's own frame rate limit applies again
     platf::set_game_frame_limit(0);
+    // ...and windows stay wherever the person at the PC puts them
+    _window_herder.reset();
 
     if (!running()) {
       BOOST_LOG(info) << "Session already stopped, do not run pause commands.";
@@ -933,6 +957,7 @@ namespace proc {
   void proc_t::terminate(bool immediate, bool needs_refresh) {
     ++session_generation;
     platf::set_game_frame_limit(0);
+    _window_herder.reset();
     frame_limit_fps = 0;
     std::error_code ec;
     placebo = false;
