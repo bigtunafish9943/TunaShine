@@ -1,97 +1,119 @@
 <p align="center">
-  <img src="apollo.svg" width="128" height="128" alt="TunaShine icon">
+  <img src="apollo.svg" width="112" height="112" alt="">
 </p>
 
-# TunaShine
+<h1 align="center">TunaShine</h1>
 
-TunaShine is a self-hosted game and desktop streaming host for Windows. You install it on your gaming PC and
-play from a phone, tablet, handheld, TV or another computer using a
-[Moonlight](https://moonlight-stream.org)-compatible client.
+<p align="center">
+  Play your PC's games on your phone, tablet, handheld or TV.<br>
+  A self-hosted streaming host for Windows that works with <a href="https://moonlight-stream.org">Moonlight</a>.
+</p>
 
-It is a fork of [Apollo](https://github.com/ClassicOldSong/Apollo), which is itself a fork of
-[Sunshine](https://github.com/LizardByte/Sunshine).
+<p align="center">
+  <img src="docs/images/home.png" width="820" alt="The TunaShine home page, showing what is streaming, paired devices and virtual display status">
+</p>
 
-> [!NOTE]
-> TunaShine is at an early stage and its builds are untested. So far it differs from the Apollo version it was
-> forked from in name, icon and two small rumble changes. The goals below describe where it is heading, not what
-> is finished; see the [roadmap](ROADMAP.md).
-
-## Goals
-
-- **Easier setup.** One installer that leaves you ready to pair, with fewer manual steps.
-- **A better interface.** A redesigned web UI for pairing, apps and settings.
-- **Reliable controller rumble**, including when the client is on Wi-Fi.
-
-## What you get from Apollo
-
-- Built-in virtual display with HDR support that matches each client's resolution and frame rate automatically.
-  No monitor or dummy plug is needed.
-- Hardware encoding on AMD, Intel and Nvidia GPUs, with a software fallback.
-- Per-client permissions.
-- Clipboard sync.
-- Commands that run when a client connects or disconnects.
-- Input-only mode.
-
-## Download
-
-There are no tagged releases yet. Every change is built automatically, and the Windows installer for each build
-is attached to its run on the [Actions](https://github.com/bigtunafish9943/TunaShine/actions) page, under
-**Artifacts** (you need to be signed in to GitHub to download it).
-
-These builds are untested development builds.
-
-## Clients
-
-- [Moonlight](https://moonlight-stream.org) on Windows, macOS, Linux, Android, iOS and more.
-- [Artemis](https://github.com/ClassicOldSong/moonlight-android) on Android, which adds client-side control of the
-  virtual display.
-
-## Permissions
-
-The first client you pair gets full permissions. Clients paired after that can only view streams and list apps
-until you grant more. If a new client shows `Permission Denied` when launching an app, or its mouse and keyboard
-do nothing, open that client in the web UI and grant `Launch Apps`, `Mouse Input` or `Keyboard Input`.
-
-## Virtual display
-
-TunaShine uses the SudoVDA driver. A virtual display is created when a stream starts and removed when the app
-quits. Each client gets a fixed display identity, so Windows remembers its display settings.
+TunaShine runs on your gaming PC and streams it to another device over your network. It is a fork of
+[Apollo](https://github.com/ClassicOldSong/Apollo), which is a fork of
+[Sunshine](https://github.com/LizardByte/Sunshine), with the aim of being easier to set up and nicer to use.
 
 > [!WARNING]
-> Remove any other virtual display driver before using this one. Running two causes conflicts.
+> TunaShine is new and its builds have had very little testing. Expect rough edges, and keep your Sunshine or
+> Apollo installer handy in case you need to go back.
 
-On a laptop with two GPUs, set `Adapter Name` to the discrete GPU and enable `Headless mode` in the
-`Audio/Video` tab, then restart.
+## What's different from Apollo
 
-## HDR
+- **A redesigned web interface.** A status page that tells you what is streaming, which devices are paired and
+  whether the virtual display is working; settings in a side menu instead of two rows of tabs; a Save button that
+  stays on screen; light and dark themes.
+- **Get your screen back when you stop playing.** With *End session when the last client disconnects* turned on,
+  closing the client quits the app, removes the virtual display and returns the picture to your monitor. Apollo only
+  offers this per app.
+- **Faster controller rumble.** Rumble reaches the client within about 20 ms instead of up to 150 ms, and a
+  reconnected controller no longer loses its first rumble.
+- **Builds on current tools.** Fixes so the project compiles with today's MSYS2 packages, including OpenSSL 4.
 
-HDR needs Windows 11 23H2 or later. How good it looks depends mostly on the client device.
+Everything else works as it does in Apollo, including:
+
+- A built-in virtual display that matches each device's resolution and refresh rate, with HDR. No monitor or dummy
+  plug needed.
+- Hardware encoding on AMD, Intel and Nvidia GPUs, with a software fallback.
+- Permissions for each paired device.
+- Clipboard sync, input-only mode, and commands that run when a device connects or disconnects.
+
+<p align="center">
+  <img src="docs/images/settings.png" width="820" alt="The settings page with its section menu on the left">
+</p>
+
+## Install
+
+1. **Uninstall Sunshine or Apollo** if you have either. They use the same network ports and drivers, so they can't
+   run alongside TunaShine.
+2. **Download the installer.** There are no tagged releases yet. Open the
+   [Actions](https://github.com/bigtunafish9943/TunaShine/actions) page while signed in to GitHub, pick the newest run
+   with a green tick, and download `windows-installer` under **Artifacts**.
+3. **Run `TunaShine.exe`** from the zip. Windows will warn about an unknown publisher because the installer is not
+   code-signed; choose **More info**, then **Run anyway**. The installer also sets up the virtual display and
+   virtual gamepad drivers.
+4. **Open TunaShine** from the Start menu or its tray icon, and choose a username and password for the web
+   interface.
+
+## Pair a device
+
+1. Install [Moonlight](https://moonlight-stream.org) on the device you want to play on. On Android,
+   [Artemis](https://github.com/ClassicOldSong/moonlight-android) adds control over the virtual display.
+2. Add your PC in the client. It shows a PIN.
+3. In TunaShine, open **PIN**, enter that PIN and give the device a name.
+4. Pick **Desktop** or a game in the client.
+
+The first device you pair gets every permission. Devices paired later can only view streams and list apps until you
+grant more, so if a new device says `Permission Denied`, or its mouse and keyboard do nothing, open it under
+**PIN** and turn on *Launch Apps*, *Mouse Input* or *Keyboard Input*.
+
+## Good to know
+
+- **Screen stays on the virtual display after you stop.** By default, closing the client only pauses the session.
+  Turn on *End session when the last client disconnects* under **Configuration**, or *Terminate on Pause* for a
+  single app, to get your monitor back straight away.
+- **Other virtual display drivers.** Remove them before using TunaShine; two at once cause conflicts.
+- **Laptops with two GPUs.** Under **Configuration > Audio/Video**, set *Adapter Name* to the discrete GPU and
+  enable *Headless mode*, then restart.
+- **HDR** needs Windows 11 23H2 or later, and how good it looks depends mostly on the device you stream to.
 
 ## Requirements
 
-| Component | Minimum |
-|-----------|---------|
-| OS        | Windows 10 or later |
-| GPU       | AMD VCE 1.0+, Intel with QuickSync, or an NVENC-capable Nvidia card |
-| CPU       | AMD Ryzen 3 or Intel Core i3 |
-| RAM       | 4 GB |
-| Network   | 5 GHz Wi-Fi (802.11ac); wired Ethernet recommended for 4K |
+| | Minimum |
+|---|---|
+| OS | Windows 10 or later |
+| GPU | AMD VCE 1.0+, Intel with QuickSync, or an NVENC-capable Nvidia card |
+| CPU | AMD Ryzen 3 or Intel Core i3 |
+| RAM | 4 GB |
+| Network | 5 GHz Wi-Fi (802.11ac). Wired Ethernet is recommended for 4K |
+
+## Where it's going
+
+Next up: confirming the rumble fix on real hardware, clearer recovery when the virtual display fails, HDR landing
+on the wrong display, and TunaShine's own documentation. The full list, including what is out of reach for a host
+fork, is in the [roadmap](ROADMAP.md).
+
+Found a bug or have an idea? [Open an issue](https://github.com/bigtunafish9943/TunaShine/issues).
 
 ## Building
 
-Pushing to this repository builds the Windows installer with GitHub Actions; see
-[`.github/workflows/build-windows.yml`](.github/workflows/build-windows.yml). To build locally, follow
+Every push builds the Windows installer with GitHub Actions; see
+[`build-windows.yml`](.github/workflows/build-windows.yml). To build on your own PC, follow
 [docs/building.md](docs/building.md).
 
 ## Credits
 
-TunaShine exists because of the work of others:
+TunaShine stands on other people's work:
 
 - [Apollo](https://github.com/ClassicOldSong/Apollo) by ClassicOldSong
 - [Sunshine](https://github.com/LizardByte/Sunshine) by LizardByte and its contributors
 - [Moonlight](https://github.com/moonlight-stream) and its contributors
-- [SudoVDA](https://github.com/SudoMaker/SudoVDA) and [ViGEmBus](https://github.com/nefarius/ViGEmBus)
+- [SudoVDA](https://github.com/SudoMaker/SudoVDA), the virtual display driver, and
+  [ViGEmBus](https://github.com/nefarius/ViGEmBus), the virtual gamepad driver
 
 ## License
 
-[GPL-3.0](LICENSE), the same license as Apollo and Sunshine.
+[GPL-3.0](LICENSE), the same as Apollo and Sunshine.
