@@ -48,8 +48,8 @@ Everything else works as it does in Apollo, including:
 
 ## Install
 
-1. **Uninstall Sunshine or Apollo** if you have either. They use the same network ports and drivers, so they can't
-   run alongside TunaShine.
+1. **Keep Sunshine or Apollo if you like.** When the installer finds either one, it gives TunaShine its own port
+   (48989) and a name ending in `-TunaShine`, so both can run and show up separately in your client.
 2. **Download the installer.** There are no tagged releases yet. Open the
    [Actions](https://github.com/bigtunafish9943/TunaShine/actions) page while signed in to GitHub, pick the newest run
    with a green tick, and download `windows-installer` under **Artifacts**.
@@ -73,6 +73,9 @@ grant more, so if a new device says `Permission Denied`, or its mouse and keyboa
 
 ## Good to know
 
+- **Running next to Sunshine or Apollo.** TunaShine appears in your client as a separate PC and needs its own
+  pairing. If the client doesn't find it, add it by hand as `your-pc-name:48989`. Stream from one host at a time:
+  two streaming the same desktop at once fight over the display and the encoder.
 - **Screen stays on the virtual display after you stop.** By default, closing the client only pauses the session.
   Turn on *End session when the last client disconnects* under **Configuration**, or *Terminate on Pause* for a
   single app, to get your monitor back straight away.
