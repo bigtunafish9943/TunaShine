@@ -228,12 +228,12 @@ namespace platf {
 
           DWORD pid = 0;
           GetWindowThreadProcessId(hwnd, &pid);
-          process_info_t info;
-          if (!pid || !process_info(pid, info)) {
+          process_info_t proc;
+          if (!pid || !process_info(pid, proc)) {
             continue;
           }
-          const bool started_for_stream = to_u64(info.created) >= launched_at;
-          if (!started_for_stream && !(include_steam && is_steam(info.exe))) {
+          const bool started_for_stream = to_u64(proc.created) >= launched_at;
+          if (!started_for_stream && !(include_steam && is_steam(proc.exe))) {
             // Opened by a program that was already running: the person at the PC's, so leave it
             existing.insert(hwnd);
             continue;
@@ -248,7 +248,7 @@ namespace platf {
           wchar_t title[128] {};
           GetWindowTextW(hwnd, title, 128);
           move_to(hwnd, target);
-          BOOST_LOG(info) << "Moved a window onto the stream's screen: ["sv << to_utf8(title) << "] ("sv << to_utf8(info.exe) << ')';
+          BOOST_LOG(info) << "Moved a window onto the stream's screen: ["sv << to_utf8(title) << "] ("sv << to_utf8(proc.exe) << ')';
         }
       }
 
