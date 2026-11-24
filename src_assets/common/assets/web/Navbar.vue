@@ -74,7 +74,7 @@ export default {
       const config = await fetch("./api/config", { credentials: 'include' }).then((r) => r.ok ? r.json() : null);
       if (!config || !config.version) return;
       this.installedVersion = config.version;
-      const latest = await fetch("https://api.github.com/repos/bigtunafish9943/TunaStream/releases/latest").then((r) => r.ok ? r.json() : null);
+      const latest = await this.latestRelease();
       if (!latest) return;
       const installed = new TunaStreamVersion(null, config.version);
       const available = new TunaStreamVersion(latest, null);
@@ -91,6 +91,29 @@ export default {
     }
   },
   methods: {
+    // Every page shows this bar, and GitHub allows a PC only 60 unsigned lookups an hour,
+    // so the answer is kept for 30 minutes and shared by all pages
+    async latestRelease() {
+      const KEY = 'tunastream.latestRelease';
+      try {
+        const cached = JSON.parse(localStorage.getItem(KEY) || 'null');
+        if (cached && Date.now() - cached.at < 30 * 60 * 1000 && cached.release) {
+          return cached.release;
+        }
+      } catch (e) {
+        // No usable copy: ask GitHub
+      }
+      const release = await fetch("https://api.github.com/repos/bigtunafish9943/TunaStream/releases/latest").then((r) => r.ok ? r.json() : null);
+      if (release) {
+        try {
+          // Only what the banner needs
+          localStorage.setItem(KEY, JSON.stringify({ at: Date.now(), release: { tag_name: release.tag_name, name: release.name, html_url: release.html_url, body: '' } }));
+        } catch (e) {
+          // Storage full or blocked: fine, it's only a shortcut
+        }
+      }
+      return release;
+    },
     dismiss() {
       this.dismissed = true;
       try {
