@@ -60,6 +60,9 @@ namespace proc {
   // "end the session if nobody reconnects" task can tell it is out of date.
   static std::atomic_uint64_t session_generation {0};
 
+  // Frame rate games are capped at while this app streams; 0 when there is no cap
+  static std::atomic_int frame_limit_fps {0};
+
   int input_only_app_id = -1;
   std::string input_only_app_id_str;
   int terminate_app_id = -1;
@@ -409,6 +412,12 @@ namespace proc {
       }
     }
 
+    // Cap games at the stream's frame rate before the app starts, so it reads the cap when it starts
+    if (config::tunastream.game_frame_limit && launch_session->fps > 0) {
+      frame_limit_fps = (launch_session->fps + 500) / 1000;
+      platf::set_game_frame_limit(frame_limit_fps);
+    }
+
     std::string fps_str;
     char fps_buf[8];
     snprintf(fps_buf, sizeof(fps_buf), "%.3f", (float)launch_session->fps / 1000.0f);
@@ -664,6 +673,10 @@ namespace proc {
     // Normally already done by the resume request, before capture starts
     reclaim_primary_display();
 
+    if (config::tunastream.game_frame_limit && frame_limit_fps > 0) {
+      platf::set_game_frame_limit(frame_limit_fps);
+    }
+
     if (!_app.state_cmds.empty()) {
       auto exec_thread = std::thread([cmd_list = _app.state_cmds, app_working_dir = _app.working_dir, _env = _env]() mutable {
 
@@ -706,6 +719,9 @@ namespace proc {
   }
 
   void proc_t::pause(bool connection_lost) {
+    // Nobody is streaming now, so the PC's own frame rate limit applies again
+    platf::set_game_frame_limit(0);
+
     if (!running()) {
       BOOST_LOG(info) << "Session already stopped, do not run pause commands.";
       return;
@@ -806,6 +822,8 @@ namespace proc {
 
   void proc_t::terminate(bool immediate, bool needs_refresh) {
     ++session_generation;
+    platf::set_game_frame_limit(0);
+    frame_limit_fps = 0;
     std::error_code ec;
     placebo = false;
 

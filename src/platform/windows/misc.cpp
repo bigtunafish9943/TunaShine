@@ -7,6 +7,7 @@
 #include <filesystem>
 #include <iomanip>
 #include <iterator>
+#include <mutex>
 #include <set>
 #include <sstream>
 
@@ -27,6 +28,7 @@
 #include <dwmapi.h>
 #include <iphlpapi.h>
 #include <iterator>
+#include <mutex>
 #include <timeapi.h>
 #include <UserEnv.h>
 #include <WinSock2.h>
@@ -1105,6 +1107,30 @@ namespace platf {
     }
   }
 
+  // Driver settings are changed from the streaming thread and the app launcher
+  static std::mutex nvprefs_mutex;
+
+  void set_game_frame_limit(int fps) {
+    std::lock_guard lg {nvprefs_mutex};
+    if (!nvprefs_instance.load()) {
+      return;  // Not an NVIDIA GPU, or the driver API is unavailable
+    }
+    if (fps > 0) {
+      if (!nvprefs_instance.owning_undo_file()) {
+        nvprefs_instance.restore_from_and_delete_undo_file_if_exists();
+      }
+      if (nvprefs_instance.set_frame_limit((unsigned int) fps)) {
+        BOOST_LOG(info) << "Games are capped at "sv << fps << " FPS while streaming"sv;
+      }
+    } else if (nvprefs_instance.owning_undo_file()) {
+      // Puts back the user's own driver settings, including the frame rate limit
+      if (nvprefs_instance.restore_global_profile()) {
+        BOOST_LOG(info) << "Removed the streaming frame rate cap"sv;
+      }
+    }
+    nvprefs_instance.unload();
+  }
+
   void streaming_will_start() {
     static std::once_flag load_wlanapi_once_flag;
     std::call_once(load_wlanapi_once_flag, []() {
@@ -1151,6 +1177,7 @@ namespace platf {
     SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
 
     // Modify NVIDIA control panel settings again, in case they have been changed externally since tunastream launch
+    std::lock_guard nvprefs_lock {nvprefs_mutex};
     if (nvprefs_instance.load()) {
       if (!nvprefs_instance.owning_undo_file()) {
         nvprefs_instance.restore_from_and_delete_undo_file_if_exists();

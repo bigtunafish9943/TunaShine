@@ -9,6 +9,8 @@
 
 namespace nvprefs {
 
+  class undo_data_t;
+
   class nvprefs_interface {
   public:
     nvprefs_interface();
@@ -28,7 +30,15 @@ namespace nvprefs {
 
     bool restore_global_profile();
 
+    /**
+     * @brief Cap games at the stream's frame rate through the driver's global Max Frame Rate.
+     * @details Undone by restore_global_profile(), or at the next start after a crash.
+     */
+    bool set_frame_limit(unsigned int fps);
+
   private:
+    bool commit_global_profile_change(const undo_data_t &undo_data);
+
     struct impl;
     std::unique_ptr<impl> pimpl;
   };

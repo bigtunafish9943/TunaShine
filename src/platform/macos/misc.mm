@@ -219,6 +219,14 @@ namespace platf {
     // Unimplemented
   }
 
+  // Frame rate caps and capture counters are only implemented on Windows
+  void set_game_frame_limit(int) {
+  }
+
+  capture_counters_t capture_counters() {
+    return {};
+  }
+
   void streaming_will_start() {
     // Nothing to do
   }
