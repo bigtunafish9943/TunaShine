@@ -74,7 +74,8 @@ grant more, so if a new device says `Permission Denied`, or its mouse and keyboa
 ## Good to know
 
 - **Running next to Sunshine or Apollo.** TunaShine appears in your client as a separate PC and needs its own
-  pairing. If the client doesn't find it, add it by hand as `your-pc-name:48989`. Stream from one host at a time:
+  pairing. If the client doesn't find it, add it by hand using the PC's IP address and the port, such as
+  `192.168.1.20:48989`. Stream from one host at a time:
   two streaming the same desktop at once fight over the display and the encoder.
 - **Screen stays on the virtual display after you stop.** By default, closing the client only pauses the session.
   Turn on *End session when the last client disconnects* under **Configuration**, or *Terminate on Pause* for a

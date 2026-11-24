@@ -14,7 +14,7 @@
       {{ $t('index.version_is', { version: version.version }) }}
     </p>
     <div class="alert alert-info" v-if="customPort">
-      {{ $t('index.custom_port', { port: customPort, host: hostName || 'this-pc' }) }}
+      {{ $t('index.custom_port', { port: customPort }) }}
     </div>
     <div class="alert alert-danger" v-if="fancyLogs.find(x => x.level === 'Fatal')">
       <p v-html="$t('index.startup_errors')"></p>
