@@ -34,10 +34,10 @@ virtual gamepad.
 
 ### 8BitDo Ultimate 2
 
-- **Use the 2.4G adapter, not Bluetooth, on an Android TV box or phone.** Over Bluetooth, 8BitDo controllers often
-  connect but don't rumble in Moonlight on Android
-  ([moonlight-android#1442](https://github.com/moonlight-stream/moonlight-android/issues/1442)). Plugged into the
-  device's USB port (with a USB-C to USB-A adapter if needed), the adapter shows up as an Xbox controller.
+- **On an Android TV box (such as the NVIDIA Shield), connect it over Bluetooth in D mode.** Its 2.4G adapter is
+  meant for Windows PCs: plugged into a TV box it is detected but doesn't control anything.
+- Over Bluetooth, some Android TV boxes don't pass rumble to 8BitDo controllers. **Rumble now** on the
+  Troubleshooting page shows whether yours does.
 - **Pick "Xbox-style controller" in setup**, or set the controller type to **Xbox 360**. Its gyro used to make
   automatic mode choose a PlayStation 4 controller.
 - **Back paddles and L4/R4** reach the PC only as the buttons they're mapped to. Map them to existing buttons in
@@ -56,7 +56,8 @@ virtual gamepad.
 **It connects, then stutters or drops.**
 
 - Use 5 GHz Wi-Fi or a cable for the PC. Wired on the PC end makes the biggest difference.
-- Lower the bitrate in the client before changing anything on the PC.
+- Lower the bitrate in the client before changing anything on the PC. In TunaReceive, *Fit picture quality to
+  this connection* (in the PC's menu) measures the connection and suggests one.
 - A stream that drops and comes back shows `CLIENT DISCONNECTED (connection lost)` in the log. One that the
   client ended on purpose shows `CLIENT DISCONNECTED`.
 
@@ -64,6 +65,8 @@ virtual gamepad.
 
 - TunaStream streams a virtual monitor and makes it the main display while someone is streaming, so games open
   there. The log shows `Virtual Display created at` followed by `Virtual Display set as the primary display`.
+- Programs that remember their monitor, like Steam's Big Picture, are moved onto it for three minutes after the
+  app starts. The log shows `Moved a window onto the stream's screen` for each one.
 - `Virtual Display creation failed` means the display driver did not respond. The home page shows *Driver
   problem*. Restart TunaStream from the Troubleshooting page; if it persists, reinstall TunaStream.
 - To stream your real monitor instead, turn off **Give each stream its own screen** under
