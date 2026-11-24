@@ -288,6 +288,7 @@ namespace config {
     std::vector<prep_cmd_t> prep_cmds;
     std::vector<prep_cmd_t> state_cmds;
     std::vector<server_cmd_t> server_cmds;
+    bool end_session_on_disconnect;  ///< End the session and restore displays when the last client disconnects
   };
 
   extern video_t video;

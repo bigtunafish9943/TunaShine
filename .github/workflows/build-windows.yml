@@ -128,3 +128,37 @@ jobs:
             build/cpack_artifacts/*.exe
             build/cpack_artifacts/*.zip
           if-no-files-found: error
+
+  web-preview:
+    # Publishes the built web UI to the web-preview branch so its pages can be
+    # opened and reviewed without installing a build.
+    name: Web UI preview
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Build web UI
+        run: |
+          npm install
+          npm run build
+
+      - name: Push to web-preview branch
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          cd build/assets/web
+          git init -q -b web-preview
+          git add -A
+          git -c user.name="github-actions[bot]" \
+              -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+              commit -q -m "Web UI build for ${GITHUB_SHA}"
+          git push -f "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" web-preview

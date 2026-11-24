@@ -298,6 +298,8 @@
     "hevc_mode_2": "TunaShine will advertise support for HEVC Main profile",
     "hevc_mode_3": "TunaShine will advertise support for HEVC Main and Main10 (HDR) profiles",
     "hevc_mode_desc": "Allows the client to request HEVC Main or HEVC Main10 video streams. HEVC is more CPU-intensive to encode, so enabling this may reduce performance when using software encoding.",
+    "end_session_on_disconnect": "End session when the last client disconnects",
+    "end_session_on_disconnect_desc": "When you close the client, quit the running app, remove the virtual display and give the screen back to this PC right away, instead of keeping the session paused until you quit it. Applies to every app; \"Terminate on Pause\" does the same for a single app.",
     "hide_tray_controls": "Hide tray control options",
     "hide_tray_controls_desc": "Do not show \"Force Stop\", \"Restart\" and \"Quit\" in tray menu.",
     "high_resolution_scrolling": "High Resolution Scrolling Support",
