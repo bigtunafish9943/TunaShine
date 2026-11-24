@@ -5,7 +5,7 @@ cmake_minimum_required(VERSION 3.20)
 # todo - set this conditionally
 
 project(TunaStream VERSION 0.0.0
-        DESCRIPTION "Self-hosted game stream host for Artemis"
+        DESCRIPTION "Self-hosted game streaming for Windows"
         HOMEPAGE_URL "https://github.com/bigtunafish9943/TunaStream")
 
 set(PROJECT_LICENSE "GPL-3.0-only")

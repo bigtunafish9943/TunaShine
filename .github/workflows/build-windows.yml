@@ -184,3 +184,56 @@ jobs:
               -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
               commit -q -m "Web UI build for ${GITHUB_SHA}"
           git push -f "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" web-preview
+
+  release:
+    # Every successful build of master is published as a release, so the installer can be
+    # downloaded without signing in to GitHub, and the update check in the app can see it.
+    name: Publish release
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    env:
+      VERSION: 0.1.${{ github.run_number }}
+    steps:
+      - name: Download installer
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-installer
+          path: dist
+
+      - name: Name the files after the version
+        run: |
+          cd dist
+          ls -la
+          for f in *.exe; do mv "$f" "TunaStream-${VERSION}-setup.exe"; done
+          for f in *.zip; do mv "$f" "TunaStream-${VERSION}-portable.zip"; done
+          ls -la
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo "Automatic build from master, commit ${GITHUB_SHA::7}."
+            echo
+            echo "**Download** \`TunaStream-${VERSION}-setup.exe\` and run it. Windows warns about an unknown"
+            echo "publisher because the installer is not code-signed: choose **More info**, then **Run anyway**."
+            echo
+            echo "The portable zip runs without installing, but does not set up the virtual display or"
+            echo "virtual gamepad drivers."
+            echo
+            echo "### Changes"
+            git_log=$(curl -s -H "Authorization: Bearer ${GH_TOKEN}" \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits?sha=${GITHUB_SHA}&per_page=15" \
+              | python3 -c "import json,sys; [print('- ' + c['commit']['message'].split(chr(10))[0]) for c in json.load(sys.stdin) if not c['commit']['message'].startswith('Merge')]" || true)
+            echo "${git_log}"
+          } > notes.md
+          gh release create "v${VERSION}" dist/* \
+            --repo "${GITHUB_REPOSITORY}" \
+            --target "${GITHUB_SHA}" \
+            --title "TunaStream ${VERSION}" \
+            --notes-file notes.md \
+            --latest
