@@ -1,31 +1,12 @@
 <template>
-    <div class="card p-2 mt-4">
-        <div class="card-body">
-            <h2>{{ $t('resource_card.resources') }}</h2>
-            <br>
-            <p>{{ $t('resource_card.resources_desc') }}</p>
-            <div class="card-group p-4 align-items-center">
-                <a class="btn btn-secondary m-1" href="./help">
-                    <i class="fas fa-fw fa-life-ring"></i> {{ $t('resource_card.troubleshooting_guide') }}</a>
-                <a class="btn btn-secondary m-1" href="https://github.com/bigtunafish9943/TunaStream/issues" target="_blank">
-                    <i class="fab fa-fw fa-github"></i> {{ $t('resource_card.github_discussions') }}</a>
-            </div>
-        </div>
-    </div>
-    <!-- Legal -->
-    <div class="card p-2 mt-4">
-        <div class="card-body">
-            <h2>{{ $t('resource_card.legal') }}</h2>
-            <br>
-            <p>{{ $t('resource_card.legal_desc') }}</p>
-            <div class="card-group p-4 align-items-center">
-                <a class="btn btn-danger m-1" href="https://github.com/bigtunafish9943/TunaStream/blob/master/LICENSE"
-                    target="_blank">
-                    <i class="fas fa-fw fa-file-alt"></i> {{ $t('resource_card.license') }}</a>
-                <a class="btn btn-danger m-1" href="https://github.com/bigtunafish9943/TunaStream/blob/master/NOTICE"
-                    target="_blank">
-                    <i class="fas fa-fw fa-exclamation"></i> {{ $t('resource_card.third_party_notice') }}</a>
-            </div>
-        </div>
-    </div>
+  <!-- Quiet footer: help, reporting a problem, and the license notices the GPL asks for -->
+  <footer class="page-footer">
+    <nav class="page-footer-links" :aria-label="$t('resource_card.resources')">
+      <a href="./help"><i class="fas fa-fw fa-life-ring"></i> {{ $t('resource_card.troubleshooting_guide') }}</a>
+      <a href="https://github.com/bigtunafish9943/TunaStream/issues" target="_blank" rel="noopener"><i class="fab fa-fw fa-github"></i> {{ $t('resource_card.github_discussions') }}</a>
+      <a href="https://github.com/bigtunafish9943/TunaStream/blob/master/LICENSE" target="_blank" rel="noopener">{{ $t('resource_card.license') }}</a>
+      <a href="https://github.com/bigtunafish9943/TunaStream/blob/master/NOTICE" target="_blank" rel="noopener">{{ $t('resource_card.third_party_notice') }}</a>
+    </nav>
+    <p class="page-footer-credit">{{ $t('resource_card.credit') }}</p>
+  </footer>
 </template>

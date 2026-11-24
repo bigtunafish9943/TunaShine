@@ -89,10 +89,7 @@
           <div v-if="client.editing" class="list-group-item d-flex align-items-stretch flex-column">
             <div class="d-flex align-items-center">
               <div class="p-2 flex-grow-1 d-flex align-items-center">
-                <span class="badge" :class="client.editPerm >= 0x04000000 ? 'bg-danger' : 'bg-primary'">
-                  [ {{permToStr(client.editPerm)}} ]
-                </span>
-                &nbsp;
+                <span class="perm-badge" :class="'perm-' + permLevel(client.editPerm)">{{ $t('pin.perm_' + permLevel(client.editPerm)) }}</span>
                 <input v-model="client.editName" @keyup.enter="saveClient(client)" class="form-control flex-grow-1" type="text" :placeholder="$t('pin.device_name')">
               </div>
               <div class="me-2 btn btn-success" @click="saveClient(client)"><i class="fas fa-check"></i></div>
@@ -197,11 +194,8 @@
           </div>
           <div v-else class="list-group-item d-flex align-items-center">
             <div class="p-2 flex-grow-1 d-flex align-items-center">
-              <span class="badge" :class="client.perm >= 0x04000000 ? 'bg-danger' : 'bg-primary'">
-                [ {{permToStr(client.perm)}} ]
-              </span>
-              &nbsp;
-              <span class="me-2">{{client.name != "" ? client.name : $t('pin.unpair_single_unknown')}}</span>
+              <span class="device-name">{{client.name != "" ? client.name : $t('pin.unpair_single_unknown')}}</span>
+              <span class="perm-badge" :class="'perm-' + permLevel(client.perm)">{{ $t('pin.perm_' + permLevel(client.perm)) }}</span>
             </div>
             <div v-if="client.connected" class="me-2 btn btn-warning" @click="disconnectClient(client.uuid)"><i class="fas fa-link-slash"></i></div>
             <div class="me-2 btn btn-primary" @click="editClient(client)"><i class="fas fa-edit"></i></div>
@@ -613,6 +607,14 @@
             this.refreshClients();
           }, 1000);
         });
+      },
+      /** What a device may do, in one word for its badge: full, play, watch or none. */
+      permLevel(perm) {
+        const m = permissionMapping;
+        if ((perm & m._all) === m._all) return 'full';
+        if ((perm & m.launch) && (perm & m._all_inputs)) return 'play';
+        if (perm & m.view) return 'watch';
+        return 'none';
       },
       permToStr(perm) {
         const permSegments = [];
