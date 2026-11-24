@@ -405,3 +405,43 @@ body .list-group-item-light {
 .app-more[open] {
     padding-bottom: 0.5rem;
 }
+
+/* ---------- Sign-in and first-run pages ---------- */
+body .auth-card {
+    padding: 2rem 2rem 1.5rem;
+}
+
+.auth-brand {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    margin: -2rem -2rem 1.5rem;
+    padding: 1.5rem 1rem;
+    background-color: var(--ts-navy);
+    border-bottom: 2px solid var(--ts-accent);
+    border-radius: 0.75rem 0.75rem 0 0;
+}
+
+.auth-brand img {
+    height: 44px;
+    width: auto;
+}
+
+.auth-brand .brand-word {
+    font-family: var(--ts-display);
+    font-size: 1.9rem;
+    font-weight: 600;
+    color: #ffffff;
+    letter-spacing: -0.01em;
+}
+
+.auth-brand .brand-word b {
+    font-weight: 600;
+    color: var(--ts-accent);
+}
+
+.auth-title {
+    font-size: 1.5rem;
+    margin-bottom: 0.75rem;
+}
