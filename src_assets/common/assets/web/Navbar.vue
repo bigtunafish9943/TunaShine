@@ -2,7 +2,8 @@
   <nav class="navbar navbar-light navbar-expand-lg navbar-background header">
     <div class="container">
       <a class="navbar-brand" href="./" title="TunaShine">
-        <img src="/images/logo-apollo-45.png" height="45" alt="TunaShine">
+        <img src="/images/logo-apollo-45.png" height="45" alt="">
+        <span>TunaShine</span>
       </a>
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
               aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
@@ -46,40 +47,18 @@ export default {
     console.log("Header mounted!")
   },
   mounted() {
-    let el = document.querySelector("a[href='" + document.location.pathname + "']");
+    // Mark the link for the current page. Links are relative ("./pin") while the path is
+    // absolute ("/pin"), so compare the last path segment.
+    const page = document.location.pathname.replace(/\/+$/, "").split("/").pop().replace(/\.html$/, "");
+    const target = (page === "" || page === "index") ? "./" : "./" + page;
+    const el = this.$el.querySelector("a.nav-link[href='" + target + "']");
     if (el) el.classList.add("active")
   }
 }
 </script>
 
 <style>
-.navbar-background {
-  background-color: #ffc400
-}
-
-.header .nav-link {
-  color: rgba(0, 0, 0, .65) !important;
-}
-
-.header .nav-link.active {
-  color: rgb(0, 0, 0) !important;
-  font-weight: 500;
-}
-
-.header .nav-link:hover {
-  color: rgb(0, 0, 0) !important;
-  font-weight: 500;
-}
-
-.header .navbar-toggler {
-  color: rgba(var(--bs-dark-rgb), .65) !important;
-  border: var(--bs-border-width) solid rgba(var(--bs-dark-rgb), 0.15) !important;
-}
-
-.header .navbar-toggler-icon {
-  --bs-navbar-toggler-icon-bg: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%2833, 37, 41, 0.75%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e") !important;
-}
-
+/* Navbar colors live in assets/css/apollo.css with the rest of the theme */
 .form-control::placeholder {
   opacity: 0.5;
 }
