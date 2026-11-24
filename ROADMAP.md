@@ -27,6 +27,10 @@ What TunaShine is working toward, roughly in order. Nothing here is a promise or
 - Frame pacing and micro-stutter with virtual displays.
 - Gradual cleanup of the capture, display and input layers as each area is touched.
 
+- **Two people using one PC independently.** Today a stream shares the mouse, keyboard and window focus with
+  whoever is at the PC. Fully separate use means a separate Windows session for each person, which is what Duo
+  does by patching Remote Desktop. That is a large project with licensing questions, not a setting.
+
 ## Outside this repository
 
 - **SudoVDA driver fixes** (sleep/wake hangs, HAGS regressions, teardown crashes). The driver is a separate

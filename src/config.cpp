@@ -437,7 +437,7 @@ namespace config {
   }  // namespace dd
 
   video_t video {
-    false, // headless_mode
+    true, // headless_mode: stream on a virtual display unless turned off
     true, // limit_framerate
     false, // double_refreshrate
 

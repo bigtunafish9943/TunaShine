@@ -30,14 +30,16 @@ TunaShine runs on your gaming PC and streams it to another device over your netw
 - **Get your screen back when you stop playing.** With *End session when the last client disconnects* turned on,
   closing the client quits the app, removes the virtual display and returns the picture to your monitor. Apollo only
   offers this per app.
+- **Streams on a virtual monitor by default.** Every stream gets its own virtual display sized to the device, so
+  you don't need a spare monitor or a dummy plug, and your real monitor keeps its own picture. In Apollo this is
+  off unless the client or the app asks for it.
 - **Faster controller rumble.** Rumble reaches the client within about 20 ms instead of up to 150 ms, and a
   reconnected controller no longer loses its first rumble.
 - **Builds on current tools.** Fixes so the project compiles with today's MSYS2 packages, including OpenSSL 4.
 
 Everything else works as it does in Apollo, including:
 
-- A built-in virtual display that matches each device's resolution and refresh rate, with HDR. No monitor or dummy
-  plug needed.
+- A built-in virtual display that matches each device's resolution and refresh rate, with HDR.
 - Hardware encoding on AMD, Intel and Nvidia GPUs, with a software fallback.
 - Permissions for each paired device.
 - Clipboard sync, input-only mode, and commands that run when a device connects or disconnects.
@@ -80,6 +82,11 @@ grant more, so if a new device says `Permission Denied`, or its mouse and keyboa
 - **Screen stays on the virtual display after you stop.** By default, closing the client only pauses the session.
   Turn on *End session when the last client disconnects* under **Configuration**, or *Terminate on Pause* for a
   single app, to get your monitor back straight away.
+- **Using the PC while it streams.** The stream's virtual display is an extra monitor on the same Windows desktop,
+  so your real monitor stays usable. Windows still has one mouse, one keyboard and one focused window for both of
+  you: clicking a window on your monitor takes focus away from the game being streamed. It works best when the
+  person streaming plays with a controller. Turn on *Move the Virtual Display to the bottom right-most corner*
+  under **Configuration > Audio/Video** to stop the mouse sliding between the two.
 - **Other virtual display drivers.** Remove them before using TunaShine; two at once cause conflicts.
 - **Laptops with two GPUs.** Under **Configuration > Audio/Video**, set *Adapter Name* to the discrete GPU and
   enable *Headless mode*, then restart.
