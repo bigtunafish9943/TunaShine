@@ -107,24 +107,6 @@ jobs:
           cpack -G ZIP 2>&1 | tee -a ../package.log
           ls -la cpack_artifacts
 
-      - name: Report errors
-        if: failure()
-        shell: bash
-        run: |
-          # Publish the tail of whichever log failed as an annotation, so the
-          # cause is visible without downloading the full log.
-          for f in package.log build.log configure.log; do
-            if [ -f "$f" ]; then log="$f"; break; fi
-          done
-          if [ -z "${log:-}" ]; then echo "::error::Failed before any log was written"; exit 0; fi
-          {
-            grep -n -E "error:|error |FAILED:|undefined reference|No such file|CMake Error" "$log" | head -n 60
-            echo "--- last lines of $log ---"
-            tail -n 40 "$log"
-          } | cut -c1-260 > excerpt.txt
-          msg=$(sed -e 's/%/%25/g' excerpt.txt | tr -d '\r' | awk '{printf "%s%%0A", $0}')
-          echo "::error title=$log::$msg"
-
       - name: Upload installer
         uses: actions/upload-artifact@v4
         with:
@@ -133,6 +115,41 @@ jobs:
             build/cpack_artifacts/*.exe
             build/cpack_artifacts/*.zip
           if-no-files-found: error
+
+      - name: Smoke test
+        # Starts the packaged program on this machine and checks that it serves its web
+        # interface and that TunaShine's own settings and actions respond. Runs after the
+        # upload so a failing test still leaves an installer to inspect.
+        shell: bash
+        run: |
+          set -o pipefail
+          bash scripts/ci/smoke-test.sh build/cpack_artifacts/*.zip "$PWD" "$BUILD_VERSION" 2>&1 | tee smoke.log
+
+      - name: Report smoke test summary
+        if: success()
+        shell: bash
+        run: |
+          passed=$(grep -c "^PASS:" smoke.log || true)
+          msg=$(grep -E "^(PASS|RESULT):|Warning:|Error:|Fatal:" smoke.log | cut -c1-200 | head -n 70 | sed -e 's/%/%25/g' | tr -d '\r' | awk '{printf "%s%%0A", $0}')
+          echo "::notice title=Smoke test passed ($passed checks)::$msg"
+
+      - name: Report errors
+        if: failure()
+        shell: bash
+        run: |
+          # Publish the tail of whichever log failed as an annotation, so the
+          # cause is visible without downloading the full log.
+          for f in smoke.log package.log build.log configure.log; do
+            if [ -f "$f" ]; then log="$f"; break; fi
+          done
+          if [ -z "${log:-}" ]; then echo "::error::Failed before any log was written"; exit 0; fi
+          {
+            grep -n -E "^FAIL:|error:|error |FAILED:|undefined reference|No such file|CMake Error" "$log" | head -n 60
+            echo "--- last lines of $log ---"
+            tail -n 45 "$log"
+          } | cut -c1-260 > excerpt.txt
+          msg=$(sed -e 's/%/%25/g' excerpt.txt | tr -d '\r' | awk '{printf "%s%%0A", $0}')
+          echo "::error title=$log::$msg"
 
   web-preview:
     # Publishes the built web UI to the web-preview branch so its pages can be
