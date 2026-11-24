@@ -4,14 +4,14 @@ setlocal EnableDelayedExpansion
 rem Check if parameter is provided
 if "%~1"=="" (
     echo Usage: %0 [add^|remove]
-    echo   add    - Adds TunaShine directories to system PATH
-    echo   remove - Removes TunaShine directories from system PATH
+    echo   add    - Adds TunaStream directories to system PATH
+    echo   remove - Removes TunaStream directories from system PATH
     exit /b 1
 )
 
-rem Get TunaShine root directory
+rem Get TunaStream root directory
 for %%I in ("%~dp0\..") do set "ROOT_DIR=%%~fI"
-echo TunaShine root directory: !ROOT_DIR!
+echo TunaStream root directory: !ROOT_DIR!
 
 rem Define directories to add to path
 set "PATHS_TO_MANAGE[0]=!ROOT_DIR!"
@@ -48,9 +48,9 @@ if /i "%~1"=="add" (
         rem Set the new path in the registry
         reg add "%KEY_NAME%" /v "%VALUE_NAME%" /t REG_EXPAND_SZ /d "!NEW_PATH!" /f
         if !ERRORLEVEL!==0 (
-            echo Successfully added TunaShine directories to PATH
+            echo Successfully added TunaStream directories to PATH
         ) else (
-            echo Failed to add TunaShine directories to PATH
+            echo Failed to add TunaStream directories to PATH
         )
     ) else (
         echo No changes needed to PATH
@@ -96,9 +96,9 @@ if /i "%~1"=="remove" (
         rem Set the new path in the registry
         reg add "%KEY_NAME%" /v "%VALUE_NAME%" /t REG_EXPAND_SZ /d "!CURRENT_PATH!" /f
         if !ERRORLEVEL!==0 (
-            echo Successfully removed TunaShine directories from PATH
+            echo Successfully removed TunaStream directories from PATH
         ) else (
-            echo Failed to remove TunaShine directories from PATH
+            echo Failed to remove TunaStream directories from PATH
         )
     ) else (
         echo No changes needed to PATH

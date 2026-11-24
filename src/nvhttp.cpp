@@ -65,10 +65,10 @@ namespace nvhttp {
   static std::string otp_device_name;
   static std::chrono::time_point<std::chrono::steady_clock> otp_creation_time;
 
-  class SunshineHTTPSServer: public SimpleWeb::ServerBase<SunshineHTTPS> {
+  class TunaStreamHTTPSServer: public SimpleWeb::ServerBase<TunaStreamHTTPS> {
   public:
-    SunshineHTTPSServer(const std::string &certification_file, const std::string &private_key_file):
-        ServerBase<SunshineHTTPS>::ServerBase(443),
+    TunaStreamHTTPSServer(const std::string &certification_file, const std::string &private_key_file):
+        ServerBase<TunaStreamHTTPS>::ServerBase(443),
         context(boost::asio::ssl::context::tls_server) {
       // Disabling TLS 1.0 and 1.1 (see RFC 8996)
       context.set_options(boost::asio::ssl::context::no_tlsv1);
@@ -138,7 +138,7 @@ namespace nvhttp {
     }
   };
 
-  using https_server_t = SunshineHTTPSServer;
+  using https_server_t = TunaStreamHTTPSServer;
   using http_server_t = SimpleWeb::Server<SimpleWeb::HTTP>;
 
   struct conf_intern_t {
@@ -151,8 +151,8 @@ namespace nvhttp {
   client_t client_root;
   std::atomic<uint32_t> session_id_counter;
 
-  using resp_https_t = std::shared_ptr<typename SimpleWeb::ServerBase<SunshineHTTPS>::Response>;
-  using req_https_t = std::shared_ptr<typename SimpleWeb::ServerBase<SunshineHTTPS>::Request>;
+  using resp_https_t = std::shared_ptr<typename SimpleWeb::ServerBase<TunaStreamHTTPS>::Response>;
+  using req_https_t = std::shared_ptr<typename SimpleWeb::ServerBase<TunaStreamHTTPS>::Request>;
   using resp_http_t = std::shared_ptr<typename SimpleWeb::ServerBase<SimpleWeb::HTTP>::Response>;
   using req_http_t = std::shared_ptr<typename SimpleWeb::ServerBase<SimpleWeb::HTTP>::Request>;
 
@@ -369,11 +369,11 @@ namespace nvhttp {
     client_t &client = client_root;
     client.named_devices.push_back(named_cert_p);
 
-#if defined SUNSHINE_TRAY && SUNSHINE_TRAY >= 1
+#if defined TUNASTREAM_TRAY && TUNASTREAM_TRAY >= 1
     system_tray::update_tray_paired(named_cert_p->name);
 #endif
 
-    if (!config::sunshine.flags[config::flag::FRESH_STATE]) {
+    if (!config::tunastream.flags[config::flag::FRESH_STATE]) {
       save_state();
       load_state();
     }
@@ -451,7 +451,7 @@ namespace nvhttp {
       launch_session->fps = 60000; // 60fps * 1000 denominator
     }
 
-    launch_session->device_name = named_cert_p->name.empty() ? "ApolloDisplay"s : named_cert_p->name;
+    launch_session->device_name = named_cert_p->name.empty() ? "TunaStreamDisplay"s : named_cert_p->name;
     launch_session->unique_id = named_cert_p->uuid;
     launch_session->perm = named_cert_p->perm;
     launch_session->enable_sops = util::from_view(get_arg(args, "sops", "0"));
@@ -653,7 +653,7 @@ namespace nvhttp {
   struct tunnel;
 
   template<>
-  struct tunnel<SunshineHTTPS> {
+  struct tunnel<TunaStreamHTTPS> {
     static auto constexpr to_string = "HTTPS"sv;
   };
 
@@ -714,7 +714,7 @@ namespace nvhttp {
       response->close_connection_after_response = true;
     });
 
-    if (!config::sunshine.enable_pairing) {
+    if (!config::tunastream.enable_pairing) {
       tree.put("root.<xmlattr>.status_code", 403);
       tree.put("root.<xmlattr>.status_message", "Pairing is disabled for this instance");
 
@@ -782,7 +782,7 @@ namespace nvhttp {
           return;
         }
 
-        if (config::sunshine.flags[config::flag::PIN_STDIN]) {
+        if (config::tunastream.flags[config::flag::PIN_STDIN]) {
           std::string pin;
 
           std::cout << "Please insert pin: "sv;
@@ -790,7 +790,7 @@ namespace nvhttp {
 
           getservercert(ptr->second, tree, pin);
         } else {
-#if defined SUNSHINE_TRAY && SUNSHINE_TRAY >= 1
+#if defined TUNASTREAM_TRAY && TUNASTREAM_TRAY >= 1
           system_tray::update_tray_require_pin();
 #endif
           ptr->second.async_insert_pin.response = std::move(response);
@@ -884,7 +884,7 @@ namespace nvhttp {
     print_req<T>(request);
 
     int pair_status = 0;
-    if constexpr (std::is_same_v<SunshineHTTPS, T>) {
+    if constexpr (std::is_same_v<TunaStreamHTTPS, T>) {
       auto args = request->parse_query_string();
       auto clientID = args.find("uniqueid"s);
 
@@ -898,7 +898,7 @@ namespace nvhttp {
     pt::ptree tree;
 
     tree.put("root.<xmlattr>.status_code", 200);
-    tree.put("root.hostname", config::nvhttp.sunshine_name);
+    tree.put("root.hostname", config::nvhttp.tunastream_name);
 
     tree.put("root.appversion", VERSION);
     tree.put("root.GfeVersion", GFE_VERSION);
@@ -909,16 +909,16 @@ namespace nvhttp {
 
     // Only include the MAC address for requests sent from paired clients over HTTPS.
     // For HTTP requests, use a placeholder MAC address that Moonlight knows to ignore.
-    if constexpr (std::is_same_v<SunshineHTTPS, T>) {
+    if constexpr (std::is_same_v<TunaStreamHTTPS, T>) {
       tree.put("root.mac", platf::get_mac_address(net::addr_to_normalized_string(local_endpoint.address())));
 
       auto named_cert_p = get_verified_cert(request);
       if (!!(named_cert_p->perm & PERM::server_cmd)) {
         pt::ptree& root_node = tree.get_child("root");
 
-        if (config::sunshine.server_cmds.size() > 0) {
+        if (config::tunastream.server_cmds.size() > 0) {
           // Broadcast server_cmds
-          for (const auto& cmd : config::sunshine.server_cmds) {
+          for (const auto& cmd : config::tunastream.server_cmds) {
             pt::ptree cmd_node;
             cmd_node.put_value(cmd.cmd_name);
             root_node.push_back(std::make_pair("ServerCommand", cmd_node));
@@ -990,7 +990,7 @@ namespace nvhttp {
 
     tree.put("root.PairStatus", pair_status);
 
-    if constexpr (std::is_same_v<SunshineHTTPS, T>) {
+    if constexpr (std::is_same_v<TunaStreamHTTPS, T>) {
       int current_appid = proc::proc.running();
       // When input only mode is enabled, the only resume method should be launching the same app again.
       if (config::input.enable_input_only_mode && current_appid != proc::input_only_app_id) {
@@ -1067,7 +1067,7 @@ namespace nvhttp {
   }
 
   void applist(resp_https_t response, req_https_t request) {
-    print_req<SunshineHTTPS>(request);
+    print_req<TunaStreamHTTPS>(request);
 
     pt::ptree tree;
 
@@ -1090,7 +1090,7 @@ namespace nvhttp {
 
       auto app_list = proc::proc.get_apps();
 
-      bool enable_legacy_ordering = config::sunshine.legacy_ordering && named_cert_p->enable_legacy_ordering;
+      bool enable_legacy_ordering = config::tunastream.legacy_ordering && named_cert_p->enable_legacy_ordering;
       size_t bits;
       if (enable_legacy_ordering) {
         bits = zwpad::pad_width_for_count(app_list.size());
@@ -1149,7 +1149,7 @@ namespace nvhttp {
   }
 
   void launch(bool &host_audio, resp_https_t response, req_https_t request) {
-    print_req<SunshineHTTPS>(request);
+    print_req<TunaStreamHTTPS>(request);
 
     pt::ptree tree;
     auto g = util::fail_guard([&]() {
@@ -1346,7 +1346,7 @@ namespace nvhttp {
   }
 
   void resume(bool &host_audio, resp_https_t response, req_https_t request) {
-    print_req<SunshineHTTPS>(request);
+    print_req<TunaStreamHTTPS>(request);
 
     pt::ptree tree;
     auto g = util::fail_guard([&]() {
@@ -1457,13 +1457,13 @@ namespace nvhttp {
 
     rtsp_stream::launch_session_raise(launch_session);
 
-#if defined SUNSHINE_TRAY && SUNSHINE_TRAY >= 1
+#if defined TUNASTREAM_TRAY && TUNASTREAM_TRAY >= 1
     system_tray::update_tray_client_connected(named_cert_p->name);
 #endif
   }
 
   void cancel(resp_https_t response, req_https_t request) {
-    print_req<SunshineHTTPS>(request);
+    print_req<TunaStreamHTTPS>(request);
 
     pt::ptree tree;
     auto g = util::fail_guard([&]() {
@@ -1499,7 +1499,7 @@ namespace nvhttp {
   }
 
   void appasset(resp_https_t response, req_https_t request) {
-    print_req<SunshineHTTPS>(request);
+    print_req<TunaStreamHTTPS>(request);
 
     auto fg = util::fail_guard([&]() {
       response->write(SimpleWeb::StatusCode::server_error_internal_server_error);
@@ -1530,7 +1530,7 @@ namespace nvhttp {
   }
 
   void getClipboard(resp_https_t response, req_https_t request) {
-    print_req<SunshineHTTPS>(request);
+    print_req<TunaStreamHTTPS>(request);
 
     auto named_cert_p = get_verified_cert(request);
 
@@ -1578,7 +1578,7 @@ namespace nvhttp {
 
   void
   setClipboard(resp_https_t response, req_https_t request) {
-    print_req<SunshineHTTPS>(request);
+    print_req<TunaStreamHTTPS>(request);
 
     auto named_cert_p = get_verified_cert(request);
 
@@ -1644,9 +1644,9 @@ namespace nvhttp {
 
     auto port_http = net::map_port(PORT_HTTP);
     auto port_https = net::map_port(PORT_HTTPS);
-    auto address_family = net::af_from_enum_string(config::sunshine.address_family);
+    auto address_family = net::af_from_enum_string(config::tunastream.address_family);
 
-    bool clean_slate = config::sunshine.flags[config::flag::FRESH_STATE];
+    bool clean_slate = config::tunastream.flags[config::flag::FRESH_STATE];
 
     if (!clean_slate) {
       load_state();
@@ -1720,9 +1720,9 @@ namespace nvhttp {
       tree.put("root.<xmlattr>.status_message"s, "The client is not authorized. Certificate verification failed."s);
     };
 
-    https_server.default_resource["GET"] = not_found<SunshineHTTPS>;
-    https_server.resource["^/serverinfo$"]["GET"] = serverinfo<SunshineHTTPS>;
-    https_server.resource["^/pair$"]["GET"] = pair<SunshineHTTPS>;
+    https_server.default_resource["GET"] = not_found<TunaStreamHTTPS>;
+    https_server.resource["^/serverinfo$"]["GET"] = serverinfo<TunaStreamHTTPS>;
+    https_server.resource["^/pair$"]["GET"] = pair<TunaStreamHTTPS>;
     https_server.resource["^/applist$"]["GET"] = applist;
     https_server.resource["^/appasset$"]["GET"] = appasset;
     https_server.resource["^/launch$"]["GET"] = [&host_audio](auto resp, auto req) {

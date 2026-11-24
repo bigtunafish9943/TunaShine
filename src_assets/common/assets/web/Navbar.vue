@@ -1,9 +1,9 @@
 <template>
   <nav class="navbar navbar-light navbar-expand-lg navbar-background header">
     <div class="container">
-      <a class="navbar-brand" href="./" title="TunaShine">
-        <img src="/images/logo-apollo-45.png" height="45" alt="">
-        <span>TunaShine</span>
+      <a class="navbar-brand" href="./" title="TunaStream">
+        <img src="/images/logo-tunastream-45.png" height="34" alt="">
+        <span class="brand-word">Tuna<b>Stream</b></span>
       </a>
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
               aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
@@ -58,7 +58,7 @@ export default {
 </script>
 
 <style>
-/* Navbar colors live in assets/css/apollo.css with the rest of the theme */
+/* Navbar colors live in assets/css/tunastream.css with the rest of the theme */
 .form-control::placeholder {
   opacity: 0.5;
 }

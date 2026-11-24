@@ -3,27 +3,27 @@
  * @brief Definitions for the system tray icon and notification system.
  */
 // macros
-#if defined SUNSHINE_TRAY && SUNSHINE_TRAY >= 1
+#if defined TUNASTREAM_TRAY && TUNASTREAM_TRAY >= 1
 
   #if defined(_WIN32)
     #define WIN32_LEAN_AND_MEAN
     #include <accctrl.h>
     #include <aclapi.h>
     #include "platform/windows/utils.h"
-    #define TRAY_ICON WEB_DIR "images/apollo.ico"
-    #define TRAY_ICON_PLAYING WEB_DIR "images/apollo-playing.ico"
-    #define TRAY_ICON_PAUSING WEB_DIR "images/apollo-pausing.ico"
-    #define TRAY_ICON_LOCKED WEB_DIR "images/apollo-locked.ico"
+    #define TRAY_ICON WEB_DIR "images/tunastream.ico"
+    #define TRAY_ICON_PLAYING WEB_DIR "images/tunastream-playing.ico"
+    #define TRAY_ICON_PAUSING WEB_DIR "images/tunastream-pausing.ico"
+    #define TRAY_ICON_LOCKED WEB_DIR "images/tunastream-locked.ico"
   #elif defined(__linux__) || defined(linux) || defined(__linux)
-    #define TRAY_ICON SUNSHINE_TRAY_PREFIX "-tray"
-    #define TRAY_ICON_PLAYING SUNSHINE_TRAY_PREFIX "-playing"
-    #define TRAY_ICON_PAUSING SUNSHINE_TRAY_PREFIX "-pausing"
-    #define TRAY_ICON_LOCKED SUNSHINE_TRAY_PREFIX "-locked"
+    #define TRAY_ICON TUNASTREAM_TRAY_PREFIX "-tray"
+    #define TRAY_ICON_PLAYING TUNASTREAM_TRAY_PREFIX "-playing"
+    #define TRAY_ICON_PAUSING TUNASTREAM_TRAY_PREFIX "-pausing"
+    #define TRAY_ICON_LOCKED TUNASTREAM_TRAY_PREFIX "-locked"
   #elif defined(__APPLE__) || defined(__MACH__)
-    #define TRAY_ICON WEB_DIR "images/logo-apollo-16.png"
-    #define TRAY_ICON_PLAYING WEB_DIR "images/apollo-playing-16.png"
-    #define TRAY_ICON_PAUSING WEB_DIR "images/apollo-pausing-16.png"
-    #define TRAY_ICON_LOCKED WEB_DIR "images/apollo-locked-16.png"
+    #define TRAY_ICON WEB_DIR "images/logo-tunastream-16.png"
+    #define TRAY_ICON_PLAYING WEB_DIR "images/tunastream-playing-16.png"
+    #define TRAY_ICON_PAUSING WEB_DIR "images/tunastream-pausing-16.png"
+    #define TRAY_ICON_LOCKED WEB_DIR "images/tunastream-locked-16.png"
     #include <dispatch/dispatch.h>
   #endif
 
@@ -100,12 +100,12 @@ namespace system_tray {
     // If we're running in a service, return a special status to
     // tell it to terminate too, otherwise it will just respawn us.
     if (GetConsoleWindow() == nullptr) {
-      lifetime::exit_sunshine(ERROR_SHUTDOWN_IN_PROGRESS, true);
+      lifetime::exit_tunastream(ERROR_SHUTDOWN_IN_PROGRESS, true);
       return;
     }
   #endif
 
-    lifetime::exit_sunshine(0, true);
+    lifetime::exit_tunastream(0, true);
   }
 
   // Tray menu
@@ -115,7 +115,7 @@ namespace system_tray {
     .menu =
       (struct tray_menu[]) {
         // todo - use boost/locale to translate menu strings
-        { .text = "Open TunaShine", .cb = tray_open_ui_cb },
+        { .text = "Open TunaStream", .cb = tray_open_ui_cb },
         { .text = "-" },
         // { .text = "-" },
         // { .text = "Donate",
@@ -448,14 +448,14 @@ namespace system_tray {
     }
 
   #ifdef _WIN32
-    std::string tmp_str = "Open TunaShine (" + config::nvhttp.sunshine_name + ":" + std::to_string(net::map_port(confighttp::PORT_HTTPS)) + ")";
+    std::string tmp_str = "Open TunaStream (" + config::nvhttp.tunastream_name + ":" + std::to_string(net::map_port(confighttp::PORT_HTTPS)) + ")";
     static const std::string title_str = utf8ToAcp(tmp_str);
   #else
-    static const std::string title_str = "Open TunaShine (" + config::nvhttp.sunshine_name + ":" + std::to_string(net::map_port(confighttp::PORT_HTTPS)) + ")";
+    static const std::string title_str = "Open TunaStream (" + config::nvhttp.tunastream_name + ":" + std::to_string(net::map_port(confighttp::PORT_HTTPS)) + ")";
   #endif
     tray.menu[0].text = title_str.c_str();
 
-    if (config::sunshine.hide_tray_controls) {
+    if (config::tunastream.hide_tray_controls) {
       tray.menu[1].text = nullptr;
     }
 

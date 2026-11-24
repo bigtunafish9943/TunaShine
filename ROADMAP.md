@@ -1,6 +1,6 @@
 # Roadmap
 
-What TunaShine is working toward, roughly in order. Nothing here is a promise or a date.
+What TunaStream is working toward, roughly in order. Nothing here is a promise or a date.
 
 ## Now
 
@@ -15,7 +15,7 @@ Everything here is built and passes the automated checks, but has not yet been c
 - **Easier setup and a better web UI.** New theme, status home page with first-device steps and an End session
   button, settings in a side menu, a single Devices page for pairing and permissions with one-click presets, and
   an app editor that folds rarely used options away.
-- **Installs next to Sunshine or Apollo**, on its own port.
+- **Installs next to another streaming host**, on its own port.
 
 ## Next
 
@@ -38,7 +38,7 @@ Everything here is built and passes the automated checks, but has not yet been c
 ## Outside this repository
 
 - **SudoVDA driver fixes** (sleep/wake hangs, HAGS regressions, teardown crashes). The driver is a separate
-  project and Windows only loads signed drivers. TunaShine can detect and recover from driver failures, but
+  project and Windows only loads signed drivers. TunaStream can detect and recover from driver failures, but
   cannot ship a modified driver without getting it signed.
 - **Extra audio codecs (AC-3, E-AC-3) and new video codecs (such as Pyrowave).** These need support in the client
   app as well as the host.

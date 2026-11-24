@@ -1,46 +1,46 @@
 # linux specific packaging
 
-install(DIRECTORY "${SUNSHINE_SOURCE_ASSETS_DIR}/linux/assets/"
-        DESTINATION "${SUNSHINE_ASSETS_DIR}")
+install(DIRECTORY "${TUNASTREAM_SOURCE_ASSETS_DIR}/linux/assets/"
+        DESTINATION "${TUNASTREAM_ASSETS_DIR}")
 
 # copy assets (excluding shaders) to build directory, for running without install
-file(COPY "${SUNSHINE_SOURCE_ASSETS_DIR}/linux/assets/"
+file(COPY "${TUNASTREAM_SOURCE_ASSETS_DIR}/linux/assets/"
         DESTINATION "${CMAKE_BINARY_DIR}/assets"
         PATTERN "shaders" EXCLUDE)
 # use symbolic link for shaders directory
-file(CREATE_LINK "${SUNSHINE_SOURCE_ASSETS_DIR}/linux/assets/shaders"
+file(CREATE_LINK "${TUNASTREAM_SOURCE_ASSETS_DIR}/linux/assets/shaders"
         "${CMAKE_BINARY_DIR}/assets/shaders" COPY_ON_ERROR SYMBOLIC)
 
-if(${SUNSHINE_BUILD_APPIMAGE} OR ${SUNSHINE_BUILD_FLATPAK})
-    install(FILES "${SUNSHINE_SOURCE_ASSETS_DIR}/linux/misc/60-sunshine.rules"
-            DESTINATION "${SUNSHINE_ASSETS_DIR}/udev/rules.d")
-    install(FILES "${SUNSHINE_SOURCE_ASSETS_DIR}/linux/misc/60-sunshine.conf"
-            DESTINATION "${SUNSHINE_ASSETS_DIR}/modules-load.d")
-    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/sunshine.service"
-            DESTINATION "${SUNSHINE_ASSETS_DIR}/systemd/user")
+if(${TUNASTREAM_BUILD_APPIMAGE} OR ${TUNASTREAM_BUILD_FLATPAK})
+    install(FILES "${TUNASTREAM_SOURCE_ASSETS_DIR}/linux/misc/60-tunastream.rules"
+            DESTINATION "${TUNASTREAM_ASSETS_DIR}/udev/rules.d")
+    install(FILES "${TUNASTREAM_SOURCE_ASSETS_DIR}/linux/misc/60-tunastream.conf"
+            DESTINATION "${TUNASTREAM_ASSETS_DIR}/modules-load.d")
+    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/tunastream.service"
+            DESTINATION "${TUNASTREAM_ASSETS_DIR}/systemd/user")
 else()
     find_package(Systemd)
     find_package(Udev)
 
     if(UDEV_FOUND)
-        install(FILES "${SUNSHINE_SOURCE_ASSETS_DIR}/linux/misc/60-sunshine.rules"
+        install(FILES "${TUNASTREAM_SOURCE_ASSETS_DIR}/linux/misc/60-tunastream.rules"
                 DESTINATION "${UDEV_RULES_INSTALL_DIR}")
     endif()
     if(SYSTEMD_FOUND)
-        install(FILES "${CMAKE_CURRENT_BINARY_DIR}/sunshine.service"
+        install(FILES "${CMAKE_CURRENT_BINARY_DIR}/tunastream.service"
                 DESTINATION "${SYSTEMD_USER_UNIT_INSTALL_DIR}")
-        install(FILES "${SUNSHINE_SOURCE_ASSETS_DIR}/linux/misc/60-sunshine.conf"
+        install(FILES "${TUNASTREAM_SOURCE_ASSETS_DIR}/linux/misc/60-tunastream.conf"
                 DESTINATION "${SYSTEMD_MODULES_LOAD_DIR}")
     endif()
 endif()
 
 # Post install
-set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA "${SUNSHINE_SOURCE_ASSETS_DIR}/linux/misc/postinst")
-set(CPACK_RPM_POST_INSTALL_SCRIPT_FILE "${SUNSHINE_SOURCE_ASSETS_DIR}/linux/misc/postinst")
+set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA "${TUNASTREAM_SOURCE_ASSETS_DIR}/linux/misc/postinst")
+set(CPACK_RPM_POST_INSTALL_SCRIPT_FILE "${TUNASTREAM_SOURCE_ASSETS_DIR}/linux/misc/postinst")
 
 # Apply setcap for RPM
 # https://github.com/coreos/rpm-ostree/discussions/5036#discussioncomment-10291071
-set(CPACK_RPM_USER_FILELIST "%caps(cap_sys_admin+p) ${SUNSHINE_EXECUTABLE_PATH}")
+set(CPACK_RPM_USER_FILELIST "%caps(cap_sys_admin+p) ${TUNASTREAM_EXECUTABLE_PATH}")
 
 # Dependencies
 set(CPACK_DEB_COMPONENT_INSTALL ON)
@@ -97,39 +97,39 @@ endif()
 set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS OFF)
 
 # application icon
-if(NOT ${SUNSHINE_BUILD_FLATPAK})
-    install(FILES "${CMAKE_SOURCE_DIR}/apollo.svg"
+if(NOT ${TUNASTREAM_BUILD_FLATPAK})
+    install(FILES "${CMAKE_SOURCE_DIR}/tunastream.svg"
             DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/scalable/apps")
 else()
-    install(FILES "${CMAKE_SOURCE_DIR}/apollo.svg"
+    install(FILES "${CMAKE_SOURCE_DIR}/tunastream.svg"
             DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/scalable/apps"
             RENAME "${PROJECT_FQDN}.svg")
 endif()
 
 # tray icon
-if(${SUNSHINE_TRAY} STREQUAL 1)
-    if(NOT ${SUNSHINE_BUILD_FLATPAK})
-        install(FILES "${CMAKE_SOURCE_DIR}/apollo.svg"
+if(${TUNASTREAM_TRAY} STREQUAL 1)
+    if(NOT ${TUNASTREAM_BUILD_FLATPAK})
+        install(FILES "${CMAKE_SOURCE_DIR}/tunastream.svg"
                 DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/scalable/status"
-                RENAME "apollo-tray.svg")
-        install(FILES "${SUNSHINE_SOURCE_ASSETS_DIR}/common/assets/web/public/images/apollo-playing.svg"
+                RENAME "tunastream-tray.svg")
+        install(FILES "${TUNASTREAM_SOURCE_ASSETS_DIR}/common/assets/web/public/images/tunastream-playing.svg"
                 DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/scalable/status")
-        install(FILES "${SUNSHINE_SOURCE_ASSETS_DIR}/common/assets/web/public/images/apollo-pausing.svg"
+        install(FILES "${TUNASTREAM_SOURCE_ASSETS_DIR}/common/assets/web/public/images/tunastream-pausing.svg"
                 DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/scalable/status")
-        install(FILES "${SUNSHINE_SOURCE_ASSETS_DIR}/common/assets/web/public/images/apollo-locked.svg"
+        install(FILES "${TUNASTREAM_SOURCE_ASSETS_DIR}/common/assets/web/public/images/tunastream-locked.svg"
                 DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/scalable/status")
     else()
         # flatpak icons must be prefixed with the app id or they will not be included in the flatpak
-        install(FILES "${CMAKE_SOURCE_DIR}/apollo.svg"
+        install(FILES "${CMAKE_SOURCE_DIR}/tunastream.svg"
                 DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/scalable/status"
                 RENAME "${PROJECT_FQDN}-tray.svg")
-        install(FILES "${SUNSHINE_SOURCE_ASSETS_DIR}/common/assets/web/public/images/apollo-playing.svg"
+        install(FILES "${TUNASTREAM_SOURCE_ASSETS_DIR}/common/assets/web/public/images/tunastream-playing.svg"
                 DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/scalable/status"
                 RENAME "${PROJECT_FQDN}-playing.svg")
-        install(FILES "${SUNSHINE_SOURCE_ASSETS_DIR}/common/assets/web/public/images/apollo-pausing.svg"
+        install(FILES "${TUNASTREAM_SOURCE_ASSETS_DIR}/common/assets/web/public/images/tunastream-pausing.svg"
                 DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/scalable/status"
                 RENAME "${PROJECT_FQDN}-pausing.svg")
-        install(FILES "${SUNSHINE_SOURCE_ASSETS_DIR}/common/assets/web/public/images/apollo-locked.svg"
+        install(FILES "${TUNASTREAM_SOURCE_ASSETS_DIR}/common/assets/web/public/images/tunastream-locked.svg"
                 DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/scalable/status"
                 RENAME "${PROJECT_FQDN}-locked.svg")
     endif()
@@ -146,7 +146,7 @@ endif()
 # desktop file
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_FQDN}.desktop"
         DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/applications")
-if(NOT ${SUNSHINE_BUILD_APPIMAGE} AND NOT ${SUNSHINE_BUILD_FLATPAK})
+if(NOT ${TUNASTREAM_BUILD_APPIMAGE} AND NOT ${TUNASTREAM_BUILD_FLATPAK})
     install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_FQDN}.terminal.desktop"
             DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/applications")
 endif()

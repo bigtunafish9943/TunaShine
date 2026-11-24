@@ -118,7 +118,7 @@ jobs:
 
       - name: Smoke test
         # Starts the packaged program on this machine and checks that it serves its web
-        # interface and that TunaShine's own settings and actions respond. Runs after the
+        # interface and that TunaStream's own settings and actions respond. Runs after the
         # upload so a failing test still leaves an installer to inspect.
         shell: bash
         run: |
