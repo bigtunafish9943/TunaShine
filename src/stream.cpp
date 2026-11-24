@@ -2289,11 +2289,23 @@ namespace stream {
     }
 
     int set_bitrate(session_t &session, int kbps) {
-      // Never above what the device asked for when the stream started, never below a fifth of it
+      // The device asks in the units of its own bitrate setting. The encoder runs below that
+      // setting, because room for error correction and audio is taken out of it when the stream
+      // starts, so the request is scaled the same way: half the setting means half the encoder's rate.
       const int asked = session.config.monitor.bitrate;
-      const int clamped = std::clamp(kbps, std::max(1000, asked / 5), asked);
+      const int configured = session.config.configuredBitrateKbps;
+      std::int64_t wanted = kbps;
+      if (configured > 0 && asked > 0) {
+        wanted = (std::int64_t) kbps * asked / configured;
+      }
+      // Never above what the stream started with, never below a fifth of it
+      const int clamped = (int) std::clamp<std::int64_t>(wanted, std::max(1000, asked / 5), asked);
       session.health.bitrate_kbps = clamped;
       session.video.bitrate_events->raise(clamped);
+      // Answer in the device's units too
+      if (configured > 0 && asked > 0) {
+        return (int) ((std::int64_t) clamped * configured / asked);
+      }
       return clamped;
     }
 
