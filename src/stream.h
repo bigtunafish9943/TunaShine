@@ -50,6 +50,13 @@ namespace stream {
 
     std::shared_ptr<session_t> alloc(config_t &config, rtsp_stream::launch_session_t &launch_session);
     std::string uuid(const session_t& session);
+
+    /**
+     * @brief Ask the stream's encoder for a different bitrate, without a restart or key frame.
+     * @details Kept between a fifth of and the bitrate the device started the stream with.
+     * @return The bitrate actually asked for, in kbps.
+     */
+    int set_bitrate(session_t &session, int kbps);
     bool uuid_match(const session_t& session, const std::string_view& uuid);
     bool update_device_info(session_t& session, const std::string& name, const crypto::PERM& newPerm);
     int start(session_t &session, const std::string &addr_string);

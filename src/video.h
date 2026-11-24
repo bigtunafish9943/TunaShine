@@ -213,6 +213,11 @@ namespace video {
     virtual void request_normal_frame() = 0;
 
     virtual void invalidate_ref_frames(int64_t first_frame, int64_t last_frame) = 0;
+
+    /// Change the bitrate mid-stream, in kbps. Returns false where the encoder can't (all but NVENC).
+    virtual bool set_bitrate(int kbps) {
+      return false;
+    }
   };
 
   // encoders

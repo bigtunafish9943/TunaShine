@@ -16,6 +16,7 @@ const config = ref(props.config)
     <div class="mb-3">
       <label for="nvenc_preset" class="form-label">{{ $t('config.nvenc_preset') }}</label>
       <select id="nvenc_preset" class="form-select" v-model="config.nvenc_preset">
+        <option value="0">{{ $t('config.nvenc_preset_auto') }}</option>
         <option value="1">P1 {{ $t('config.nvenc_preset_1') }}</option>
         <option value="2">P2</option>
         <option value="3">P3</option>
@@ -43,7 +44,7 @@ const config = ref(props.config)
               id="nvenc_spatial_aq"
               locale-prefix="config"
               v-model="config.nvenc_spatial_aq"
-              default="false"
+              default="true"
     ></Checkbox>
 
     <!-- Single-frame VBV/HRD percentage increase -->

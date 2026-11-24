@@ -420,6 +420,10 @@ namespace video {
       }
     }
 
+    bool set_bitrate(int kbps) override {
+      return device && device->nvenc && kbps > 0 && device->nvenc->set_bitrate(static_cast<uint32_t>(kbps));
+    }
+
     nvenc::nvenc_encoded_frame encode_frame(uint64_t frame_index) {
       if (!device || !device->nvenc) {
         return {};
@@ -1953,6 +1957,8 @@ namespace video {
     auto packets = mail::man->queue<packet_t>(mail::video_packets);
     auto idr_events = mail->event<bool>(mail::idr);
     auto invalidate_ref_frames_events = mail->event<std::pair<int64_t, int64_t>>(mail::invalidate_ref_frames);
+    auto bitrate_events = mail->event<int>(mail::bitrate);
+    bool bitrate_change_unsupported_logged = false;
 
     {
       // Load a dummy image into the AVFrame to ensure we have something to encode
@@ -2009,6 +2015,16 @@ namespace video {
       if (idr_events->peek()) {
         requested_idr_frame = true;
         idr_events->pop();
+      }
+
+      // The client asked for a different bitrate (its network struggling, or recovered)
+      if (bitrate_events->peek()) {
+        if (auto kbps = bitrate_events->pop(0ms)) {
+          if (!session->set_bitrate(*kbps) && !bitrate_change_unsupported_logged) {
+            BOOST_LOG(info) << "This encoder can't change bitrate mid-stream; keeping "sv << config.bitrate << " kbps"sv;
+            bitrate_change_unsupported_logged = true;
+          }
+        }
       }
 
       if (requested_idr_frame) {

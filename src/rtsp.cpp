@@ -1020,6 +1020,17 @@ namespace rtsp_stream {
       config.monitor.encoderCscMode = util::from_view(args.at("x-nv-video[0].encoderCscMode"sv));
       config.monitor.videoFormat = util::from_view(args.at("x-nv-vqos[0].bitStreamFormat"sv));
       config.monitor.dynamicRange = util::from_view(args.at("x-nv-video[0].dynamicRangeMode"sv));
+
+      // TunaReceive can ask for 10-bit video without HDR: smoother gradients and a little better
+      // compression. The picture stays SDR (the stream's screen isn't switched to HDR), so this
+      // is the same 10-bit SDR encode used when HDR is asked for on an SDR display. HEVC and
+      // AV1 only, and only when the encoder can do 10-bit.
+      if (session.sdr_10bit && config.monitor.dynamicRange == 0 &&
+          ((config.monitor.videoFormat == 1 && video::active_hevc_mode >= 3) ||
+           (config.monitor.videoFormat == 2 && video::active_av1_mode >= 3))) {
+        config.monitor.dynamicRange = 1;
+        BOOST_LOG(info) << "Encoding 10-bit SDR video, as the device asked"sv;
+      }
       config.monitor.chromaSamplingType = util::from_view(args.at("x-ss-video[0].chromaSamplingType"sv));
       config.monitor.enableIntraRefresh = util::from_view(args.at("x-ss-video[0].intraRefresh"sv));
 
