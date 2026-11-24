@@ -36,7 +36,7 @@
               v-model="passwordData.confirmNewPassword" required />
           </div>
           <button type="submit" class="btn btn-primary w-100 mb-2" v-bind:disabled="loading">
-            {{ $t('welcome.login') }}
+            {{ $t('welcome.create_account') }}
           </button>
           <div class="alert alert-danger" v-if="error"><b>{{ $t('_common.error') }}</b> {{error}}</div>
           <div class="alert alert-success" v-if="success">
@@ -55,6 +55,9 @@
   import { createApp } from "vue"
   import ResourceCard from './ResourceCard.vue'
   import { initApp } from './init'
+  import { loadAutoTheme } from './theme'
+
+  loadAutoTheme()
 
   let app = createApp({
     components: {
