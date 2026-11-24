@@ -887,6 +887,18 @@ namespace platf {
 
   capture_counters_t capture_counters();
 
+  /// How this computer is connected to the network.
+  struct network_link_t {
+    bool known = false;  ///< False when it couldn't be worked out (or isn't implemented here)
+    bool wifi = false;  ///< True when traffic leaves over Wi-Fi rather than a cable
+    std::string name;  ///< The adapter's name
+    int mbps = 0;  ///< Link speed the adapter reports
+    int signal = 0;  ///< Wi-Fi signal quality, 0 to 100
+    int channel = 0;  ///< Wi-Fi channel number, 0 when unknown
+  };
+
+  network_link_t network_link();
+
   /**
    * @brief Cap games at the stream's frame rate, so each frame the game draws is one the stream sends.
    * @details Uses the graphics driver's own frame rate limit where available (NVIDIA). A limit the

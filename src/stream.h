@@ -84,7 +84,8 @@ namespace stream {
       double send_ms_avg;  ///< Average time to put one frame on the network
       double send_ms_max;  ///< Longest time to put one frame on the network
       int recoveries;  ///< Times the client asked for lost video to be resent or repaired
-      int bitrate_kbps;  ///< Bitrate the client asked for
+      int bitrate_kbps;  ///< Bitrate the video is being sent at right now
+      int fec_percent;  ///< Error correction being added to each frame right now
       int send_rate_mbps;  ///< Rate packets are paced at
       double window_s;  ///< Seconds the figures cover
     };

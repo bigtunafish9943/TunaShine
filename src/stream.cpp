@@ -449,7 +449,23 @@ namespace stream {
       std::chrono::steady_clock::time_point first_frame;
       std::chrono::steady_clock::time_point last_log;
       std::atomic_int send_rate_mbps {0};
+      std::atomic_int bitrate_kbps {0};  // current bitrate, once it has been changed mid-stream
+      std::atomic_int fec_percent {0};  // error correction being added to each frame right now
     } health;
+
+    // Times the client asked for lost video to be repaired or resent
+    std::atomic_uint32_t loss_events {0};
+
+    // Error correction that sizes itself (only touched by the video sending thread)
+    struct {
+      int percent = 0;  // 0 until the first frame
+      int floor = 0;  // don't go below this until floor_until
+      std::chrono::steady_clock::time_point floor_until;
+      std::chrono::steady_clock::duration floor_hold {};
+      std::chrono::steady_clock::time_point last_change;
+      std::chrono::steady_clock::time_point last_loss;
+      std::uint32_t events_seen = 0;
+    } fec;
   };
 
   /**
@@ -1002,6 +1018,7 @@ namespace stream {
         std::lock_guard lg {session->health.lock};
         session->health.recoveries.push_back(std::chrono::steady_clock::now());
       }
+      ++session->loss_events;
       session->video.idr_events->raise(true);
     });
 
@@ -1019,6 +1036,7 @@ namespace stream {
         std::lock_guard lg {session->health.lock};
         session->health.recoveries.push_back(std::chrono::steady_clock::now());
       }
+      ++session->loss_events;
       session->video.invalidate_ref_frames_events->raise(std::make_pair(firstFrame, lastFrame));
     });
 
@@ -1384,8 +1402,9 @@ namespace stream {
     stream::session::health_t out {};
     out.device = session.device_name;
     out.target_fps = session.config.monitor.framerate;
-    out.bitrate_kbps = session.config.monitor.bitrate;
+    out.bitrate_kbps = h.bitrate_kbps.load() > 0 ? h.bitrate_kbps.load() : session.config.monitor.bitrate;
     out.send_rate_mbps = h.send_rate_mbps.load();
+    out.fec_percent = h.fec_percent.load();
 
     if (h.samples.size() < 2) {
       return out;
@@ -1470,8 +1489,82 @@ namespace stream {
                       << s.skipped_per_sec << " game frames skipped/s, "sv
                       << s.gaps << " gaps, PC time avg "sv << s.pc_ms_avg << " ms worst "sv << s.pc_ms_max << " ms, "sv
                       << "send avg "sv << s.send_ms_avg << " ms worst "sv << s.send_ms_max << " ms, "sv
-                      << s.recoveries << " lost-video requests (last "sv << s.window_s << " s)"sv;
+                      << s.recoveries << " lost-video requests (last "sv << s.window_s << " s), "sv
+                      << s.bitrate_kbps << " kbps, error correction "sv << s.fec_percent << "%"sv;
     }
+  }
+
+  /**
+   * @brief Error correction that sizes itself to the connection.
+   * @details Every frame carries extra packets so the picture survives lost ones. A fixed 20%
+   *          is too much on a clean connection, where it is a fifth more data in the air for
+   *          nothing, and too little on a rough one. This starts at the configured amount, eases
+   *          down while the device reports no lost video, and steps straight back up the moment it
+   *          asks for a repair. A level that turned out too low is not tried again for a while, and
+   *          for longer each time.
+   * @return Percentage of extra packets to add to the next frame.
+   */
+  static int adaptive_fec(session_t &session) {
+    const int base = config::stream.fec_percentage;
+    if (!config::stream.adaptive_fec) {
+      return base;
+    }
+
+    auto &f = session.fec;
+    const auto now = std::chrono::steady_clock::now();
+    const int low = std::min(base, std::max(8, base / 2));
+    const int high = std::clamp(base + 10, base, 50);
+    const auto events = session.loss_events.load();
+
+    if (f.percent == 0) {
+      f.percent = base;
+      f.last_change = now;
+      f.events_seen = events;
+      f.floor_hold = 5min;
+      session.health.fec_percent = f.percent;
+      return f.percent;
+    }
+
+    // The device asks for a keyframe as the stream starts; that is not a lost packet
+    if (now - session.health.first_frame < 5s) {
+      f.events_seen = events;
+      f.last_change = now;
+      return f.percent;
+    }
+
+    if (events != f.events_seen) {
+      f.events_seen = events;
+      // Requests come in bursts; treat a burst as one event
+      if (now - f.last_loss > 2s) {
+        const int before = f.percent;
+        if (f.percent < base) {
+          // Less than the usual amount wasn't enough here: go back, and stay for a while
+          f.percent = base;
+          f.floor = base;
+          f.floor_until = now + f.floor_hold;
+          f.floor_hold = std::min<std::chrono::steady_clock::duration>(f.floor_hold * 2, 40min);
+        } else if (now - f.last_loss < 30s) {
+          // Losing video repeatedly even with the usual amount: add more
+          f.percent = std::min(high, f.percent + 5);
+        }
+        if (f.percent != before) {
+          BOOST_LOG(info) << "Error correction for "sv << session.device_name << ": "sv << before << "% to "sv << f.percent << "% (video was lost)"sv;
+        }
+        f.last_change = now;
+      }
+      f.last_loss = now;
+    } else if (now - f.last_change > 20s && now - f.last_loss > 20s) {
+      const int floor = now < f.floor_until ? std::max(low, f.floor) : low;
+      if (f.percent > floor) {
+        const int before = f.percent;
+        f.percent = std::max(floor, f.percent - 2);
+        BOOST_LOG(debug) << "Error correction for "sv << session.device_name << ": "sv << before << "% to "sv << f.percent << "% (connection is clean)"sv;
+      }
+      f.last_change = now;
+    }
+
+    session.health.fec_percent = f.percent;
+    return f.percent;
   }
 
   void videoBroadcastThread(udp::socket &sock) {
@@ -1553,7 +1646,7 @@ namespace stream {
         frame_header.frame_processing_latency = 0;
       }
 
-      auto fecPercentage = config::stream.fec_percentage;
+      auto fecPercentage = adaptive_fec(*session);
 
       // Insert space for packet headers
       auto blocksize = session->config.packetsize + MAX_RTP_HEADER_SIZE;
@@ -2196,6 +2289,7 @@ namespace stream {
       // Never above what the device asked for when the stream started, never below a fifth of it
       const int asked = session.config.monitor.bitrate;
       const int clamped = std::clamp(kbps, std::max(1000, asked / 5), asked);
+      session.health.bitrate_kbps = clamped;
       session.video.bitrate_events->raise(clamped);
       return clamped;
     }
