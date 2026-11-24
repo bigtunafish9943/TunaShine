@@ -172,6 +172,8 @@ expect "installed games and programs can be listed" "$(get /api/apps/discover | 
 expect "status lists other streaming hosts" "$(get /api/status | json otherHosts)" "["
 expect "other-host control refuses unknown services" "$(post /api/other-hosts '{"service":"Spooler","run":false}' | json status)" "False"
 expect "end session answers with nothing running" "$(post /api/apps/close '{}' | json status)" "True"
+expect "files waiting for devices can be listed" "$(get /api/files | json status)" "True"
+expect "a file can't be sent to an unpaired device" "$(curl -sk --max-time 20 -b "$jar" -c "$jar" -H "Content-Type: application/octet-stream" -X POST --data-binary "hello" "$base/api/files/send?uuid=not-a-device&name=a.txt" | json status)" "False"
 expect "picked apps can be added" "$(post /api/apps/add-many '{"apps":[{"name":"Smoke Test App","cmd":"cmd.exe /c exit","detached":"","workingDir":""}]}' | json added)" "1"
 expect "added app is in the app list" "$(get /api/apps)" "Smoke Test App"
 

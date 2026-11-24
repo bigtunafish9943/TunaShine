@@ -42,6 +42,7 @@
 #include "stream.h"
 #include "game_library.h"
 #include "other_hosts.h"
+#include "file_outbox.h"
 #include "pairing_backup.h"
 #include "updater.h"
 #include "utility.h"
@@ -1439,6 +1440,91 @@ namespace confighttp {
   }
 
   /**
+   * @brief Send to device: put a file in a paired device's outbox. The device collects it the
+   *        next time it checks (TunaReceive checks while it's open).
+   *        The body is the file itself; the device and the name are in the query string.
+   *
+   * @api_examples{/api/files/send?uuid=ABC&name=photo.jpg| POST| (file bytes)}
+   */
+  void sendFile(resp_https_t response, req_https_t request) {
+    if (!validateContentType(response, request, "application/octet-stream") || !authenticate(response, request)) {
+      return;
+    }
+    print_req(request);
+
+    auto args = request->parse_query_string();
+    auto uuid_it = args.find("uuid");
+    auto name_it = args.find("name");
+    if (uuid_it == args.end() || name_it == args.end()) {
+      bad_request(response, request, "Choose a device and a file");
+      return;
+    }
+    const std::string uuid = uuid_it->second;
+    const std::string name = name_it->second;
+
+    bool paired = false;
+    for (auto &client : nvhttp::get_all_clients()) {
+      if (client.value("uuid", "") == uuid) {
+        paired = true;
+      }
+    }
+    if (!paired) {
+      bad_request(response, request, "That device isn't paired");
+      return;
+    }
+
+    std::string error;
+    auto id = file_outbox::add(uuid, name, request->content, error);
+    nlohmann::json output_tree;
+    output_tree["status"] = !id.empty();
+    if (id.empty()) {
+      output_tree["error"] = error;
+    } else {
+      output_tree["id"] = id;
+    }
+    send_response(response, output_tree);
+  }
+
+  /**
+   * @brief Send to device: files still waiting for each device, as {"devices": {uuid: [{id, name, size}]}}.
+   *
+   * @api_examples{/api/files| GET| null}
+   */
+  void getFiles(resp_https_t response, req_https_t request) {
+    if (!authenticate(response, request)) {
+      return;
+    }
+    print_req(request);
+    nlohmann::json output_tree;
+    output_tree["status"] = true;
+    output_tree["devices"] = file_outbox::all();
+    output_tree["maxSize"] = file_outbox::max_file_size;
+    send_response(response, output_tree);
+  }
+
+  /**
+   * @brief Send to device: take back a file the device hasn't collected yet.
+   *
+   * @api_examples{/api/files/cancel| POST| {"uuid":"ABC","id":"1764012345678-photo.jpg"}}
+   */
+  void cancelFile(resp_https_t response, req_https_t request) {
+    if (!validateContentType(response, request, "application/json") || !authenticate(response, request)) {
+      return;
+    }
+    print_req(request);
+    std::stringstream ss;
+    ss << request->content.rdbuf();
+    try {
+      auto input = nlohmann::json::parse(ss.str());
+      nlohmann::json output_tree;
+      output_tree["status"] = file_outbox::remove(input.value("uuid", ""), input.value("id", ""));
+      send_response(response, output_tree);
+    } catch (std::exception &e) {
+      bad_request(response, request, e.what());
+    }
+  }
+
+  /**
    * @brief Upload a cover image.
    * @param response The HTTP response object.
    * @param request The HTTP request object.
@@ -1920,6 +2006,9 @@ namespace confighttp {
     server.resource["^/api/password$"]["POST"] = savePassword;
     server.resource["^/api/clients/unpair-all$"]["POST"] = unpairAll;
     server.resource["^/api/clients/list$"]["GET"] = getClients;
+    server.resource["^/api/files$"]["GET"] = getFiles;
+    server.resource["^/api/files/send$"]["POST"] = sendFile;
+    server.resource["^/api/files/cancel$"]["POST"] = cancelFile;
     server.resource["^/api/clients/update$"]["POST"] = updateClient;
     server.resource["^/api/clients/unpair$"]["POST"] = unpair;
     server.resource["^/api/clients/disconnect$"]["POST"] = disconnect;
