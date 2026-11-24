@@ -150,6 +150,7 @@ namespace config {
     bool isolated_virtual_display_option;
     bool ignore_encoder_probe_failure;
     bool virtual_display_primary;  ///< Make the virtual display the primary display while it exists
+    bool virtual_display_only;  ///< Refuse a stream rather than show the PC's own monitor when the virtual display can't be made
   };
 
   struct audio_t {

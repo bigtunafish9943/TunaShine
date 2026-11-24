@@ -1286,6 +1286,17 @@ namespace nvhttp {
           launch_session->input_only = true;
         }
 
+#ifdef _WIN32
+        // Same as resume: never pick up a game running on the PC's own monitor
+        if (no_active_sessions && !proc::proc.virtual_display && !launch_session->input_only && config::video.headless_mode && config::video.virtual_display_only) {
+          BOOST_LOG(info) << "Not reconnecting: the running app is on the PC's own monitor and streaming it is turned off"sv;
+          tree.put("root.gamesession", 0);
+          tree.put("root.<xmlattr>.status_code", 424);
+          tree.put("root.<xmlattr>.status_message", "The running game is on the PC's own screen. End the session on TunaStream's home page, then start the game again to give it its own screen.");
+          return;
+        }
+#endif
+
         if (no_active_sessions && !proc::proc.virtual_display) {
           display_device::configure_display(config::video, *launch_session);
           if (video::probe_encoders()) {
@@ -1320,9 +1331,9 @@ namespace nvhttp {
           tree.put("root.<xmlattr>.status_code", err);
           tree.put(
             "root.<xmlattr>.status_message",
-            err == 503
-            ? "Failed to initialize video capture/encoding. Is a display connected and turned on?"
-            : "Failed to start the specified application");
+            err == 503 ? "Failed to initialize video capture/encoding. Is a display connected and turned on?" :
+            err == 424 ? "TunaStream couldn't create the stream's own screen. On the PC, open TunaStream, go to Troubleshooting and press Repair virtual screen." :
+                         "Failed to start the specified application");
           tree.put("root.gamesession", 0);
 
           return;
@@ -1416,6 +1427,18 @@ namespace nvhttp {
       // Take it again before capture starts, so the stream does not begin with a display change.
       proc::proc.reclaim_primary_display();
     }
+
+#ifdef _WIN32
+    // The running game is on the PC's own monitor (started before the virtual display worked, or
+    // moved there with Play it here). Don't put the monitor on the device: ask for a fresh start.
+    if (no_active_sessions && !proc::proc.virtual_display && !launch_session->input_only && config::video.headless_mode && config::video.virtual_display_only) {
+      BOOST_LOG(info) << "Not resuming: the running app is on the PC's own monitor and streaming it is turned off"sv;
+      tree.put("root.resume", 0);
+      tree.put("root.<xmlattr>.status_code", 424);
+      tree.put("root.<xmlattr>.status_message", "The running game is on the PC's own screen. End the session on TunaStream's home page, then start the game again to give it its own screen.");
+      return;
+    }
+#endif
 
     if (no_active_sessions && !proc::proc.virtual_display) {
       // We want to prepare display only if there are no active sessions
