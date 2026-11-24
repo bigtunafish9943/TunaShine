@@ -136,6 +136,9 @@ done
 # TunaStream additions
 expect "rumble test answers, with nobody streaming" "$(post /api/rumble-test '{}' | json clients)" "0"
 expect "app list is served" "$(get /api/apps)" "Desktop"
+status=$(get /api/status)
+expect "status answers" "$(json status <<< "$status")" "True"
+expect "status lists no controllers with nobody streaming" "$(python -c "import json,sys; print(len(json.load(sys.stdin)['controllers']))" <<< "$status" 2>/dev/null)" "0"
 
 expect "settings can be saved" "$(post /api/config '{"end_session_on_disconnect":"enabled","virtual_display_primary":"disabled","headless_mode":"disabled"}' | json status)" "True"
 config=$(get /api/config)

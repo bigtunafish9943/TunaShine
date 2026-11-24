@@ -822,6 +822,13 @@ namespace platf {
   void free_gamepad(input_t &input, int nr);
 
   /**
+   * @brief Name of the controller type a gamepad is presented to games as, such as "Xbox 360".
+   * @param nr The gamepad's global index.
+   * @return Empty if the gamepad is not attached or the platform does not say.
+   */
+  std::string gamepad_type_name(int nr);
+
+  /**
    * @brief Get the supported platform capabilities to advertise to the client.
    * @return Capability flags.
    */

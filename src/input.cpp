@@ -13,6 +13,8 @@ extern "C" {
 #include <chrono>
 #include <cmath>
 #include <list>
+#include <map>
+#include <mutex>
 #include <thread>
 #include <unordered_map>
 
@@ -115,9 +117,32 @@ namespace input {
   static platf::input_t platf_input;
   static std::bitset<platf::MAX_GAMEPADS> gamepadMask {};
 
+  // Connected controllers, keyed by global gamepad id, for the web interface
+  static std::mutex gamepad_status_lock;
+  static std::map<int, gamepad_status_t> gamepad_status_map;
+
+  static void record_gamepad(int id, const std::string &device, int controller) {
+    std::lock_guard lg {gamepad_status_lock};
+    gamepad_status_map[id] = gamepad_status_t {device, controller, platf::gamepad_type_name(id)};
+  }
+
+  std::vector<gamepad_status_t> gamepad_status() {
+    std::lock_guard lg {gamepad_status_lock};
+    std::vector<gamepad_status_t> result;
+    for (const auto &[id, status] : gamepad_status_map) {
+      result.push_back(status);
+    }
+    return result;
+  }
+
   void free_gamepad(platf::input_t &platf_input, int id) {
     platf::gamepad_update(platf_input, id, platf::gamepad_state_t {});
     platf::free_gamepad(platf_input, id);
+
+    {
+      std::lock_guard lg {gamepad_status_lock};
+      gamepad_status_map.erase(id);
+    }
 
     free_id(gamepadMask, id);
   }
@@ -177,6 +202,9 @@ namespace input {
 
     // Keep track of alt+ctrl+shift key combo
     int shortcutFlags;
+
+    // Name of the paired device this session belongs to
+    std::string device_name;
 
     std::vector<gamepad_t> gamepads;
     std::unique_ptr<platf::client_input_t> client_context;
@@ -867,6 +895,7 @@ namespace input {
     }
 
     input->gamepads[packet->controllerNumber].id = id;
+    record_gamepad(id, input->device_name, packet->controllerNumber);
   }
 
   /**
@@ -1105,6 +1134,7 @@ namespace input {
       }
 
       gamepad.id = id;
+      record_gamepad(id, input->device_name, packet->controllerNumber);
     } else if (!(packet->activeGamepadMask & (1 << packet->controllerNumber)) && gamepad.id >= 0) {
       // If this is the final event for a gamepad being removed, free the gamepad and return.
       free_gamepad(platf_input, gamepad.id);
@@ -1691,11 +1721,12 @@ namespace input {
     return true;
   }
 
-  std::shared_ptr<input_t> alloc(safe::mail_t mail) {
+  std::shared_ptr<input_t> alloc(safe::mail_t mail, const std::string &device_name) {
     auto input = std::make_shared<input_t>(
       mail->event<input::touch_port_t>(mail::touch_port),
       mail->queue<platf::gamepad_feedback_msg_t>(mail::gamepad_feedback)
     );
+    input->device_name = device_name;
 
     // Workaround to ensure new frames will be captured when a client connects
     task_pool.pushDelayed([]() {

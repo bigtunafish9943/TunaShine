@@ -8,7 +8,9 @@
 #include <Windows.h>
 
 // standard includes
+#include <array>
 #include <cmath>
+#include <mutex>
 #include <thread>
 
 // lib includes
@@ -91,6 +93,10 @@ namespace platf {
   };
 
   constexpr float EARTH_G = 9.80665f;
+
+  // What each attached gamepad is presented to games as, for the web interface
+  static std::mutex gamepad_type_names_lock;
+  static std::array<std::string, MAX_GAMEPADS> gamepad_type_names;
 
 #define MPS2_TO_DS4_ACCEL(x) (int32_t) (((x) / EARTH_G) * 8192)
 #define DPS_TO_DS4_GYRO(x) (int32_t) ((x) * (1024 / 64))
@@ -274,6 +280,11 @@ namespace platf {
         return -1;
       }
 
+      {
+        std::lock_guard lg {gamepad_type_names_lock};
+        gamepad_type_names[id.globalIndex] = gp_type == Xbox360Wired ? "Xbox 360" : "DualShock 4";
+      }
+
       gamepad.feedback_queue = std::move(feedback_queue);
 
       if (gp_type == Xbox360Wired) {
@@ -295,6 +306,11 @@ namespace platf {
      */
     void free_target(int nr) {
       auto &gamepad = gamepads[nr];
+
+      {
+        std::lock_guard lg {gamepad_type_names_lock};
+        gamepad_type_names[nr].clear();
+      }
 
       if (gamepad.repeat_task) {
         task_pool.cancel(gamepad.repeat_task);
@@ -1229,6 +1245,14 @@ namespace platf {
     }
 
     return raw->vigem->alloc_gamepad_internal(id, feedback_queue, selectedGamepadType);
+  }
+
+  std::string gamepad_type_name(int nr) {
+    if (nr < 0 || nr >= MAX_GAMEPADS) {
+      return {};
+    }
+    std::lock_guard lg {gamepad_type_names_lock};
+    return gamepad_type_names[nr];
   }
 
   void free_gamepad(input_t &input, int nr) {

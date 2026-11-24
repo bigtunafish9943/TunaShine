@@ -23,7 +23,21 @@ namespace input {
 
   bool probe_gamepads();
 
-  std::shared_ptr<input_t> alloc(safe::mail_t mail);
+  /**
+   * @brief Create the input context for a streaming session.
+   * @param device_name Name of the paired device, used when reporting its controllers.
+   */
+  std::shared_ptr<input_t> alloc(safe::mail_t mail, const std::string &device_name = {});
+
+  /// A controller a streaming device has connected
+  struct gamepad_status_t {
+    std::string device;  ///< Name of the paired device it belongs to
+    int controller;  ///< The device's own number for it, starting at 0
+    std::string emulated;  ///< What games see it as, such as "Xbox 360"
+  };
+
+  /// Controllers currently connected by streaming devices, in the order they connected.
+  std::vector<gamepad_status_t> gamepad_status();
 
   struct touch_port_t: public platf::touch_port_t {
     int env_width, env_height;
