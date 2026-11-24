@@ -228,6 +228,11 @@ namespace platf {
       gamepad.client_relative_index = id.clientRelativeIndex;
       gamepad.last_report_ts = std::chrono::steady_clock::now();
 
+      // This slot may have been used by an earlier controller. Forget what was last sent to
+      // it, otherwise the duplicate check can swallow the first rumble or LED update.
+      gamepad.last_rumble = {};
+      gamepad.last_rgb_led = {};
+
       // Establish a connect to the ViGEm driver if we don't have one yet
       if (!client) {
         BOOST_LOG(debug) << "Connecting to ViGEmBus driver"sv;

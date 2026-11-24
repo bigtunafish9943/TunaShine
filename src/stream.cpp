@@ -1195,7 +1195,10 @@ namespace stream {
         break;
       }
 
-      server->iterate(150ms);
+      // Gamepad feedback (rumble, LED) is queued by other threads and only sent from this
+      // loop, so the wait here bounds how late it can go out when the client is not sending
+      // anything. Keep it short enough that a brief rumble pulse is not delayed or merged.
+      server->iterate(20ms);
     }
 
     // Let all remaining connections know the server is shutting down
