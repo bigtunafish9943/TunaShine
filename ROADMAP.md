@@ -16,13 +16,21 @@ Everything here is built and passes the automated checks, but has not yet been c
   button, settings in a side menu, a single Devices page for pairing and permissions with one-click presets, and
   an app editor that folds rarely used options away.
 - **Installs next to another streaming host**, on its own port.
+- **Releases you can download without a GitHub account**, published from every passing build of `master`, with a
+  branded installer.
+- **See who is playing.** The home page lists each streaming device and what its controllers are presented to
+  games as.
+- **Translations** of TunaStream's own screens in German, Spanish, French, Italian, Brazilian Portuguese, Russian,
+  Japanese, Chinese and Korean.
 
 ## Next
 
-- **Clear fallback when the virtual display fails**: visible error in the web UI, useful logs, and falling back
-  to a physical display instead of a black stream.
+- **Clear fallback when the virtual display fails.** Started: TunaStream retries once, falls back to the PC's own
+  screen, and the home page says so. Still to do: reconnecting to a driver that hangs after sleep without a
+  restart.
 - **HDR on the wrong display.** Reports of HDR being applied to the physical display or not detected.
-- **Our own documentation**, especially for the virtual display, permissions and troubleshooting.
+- **More documentation.** A troubleshooting guide for rumble, the connection and stop/start exists; the virtual
+  display and permissions still need their own pages.
 
 ## Later (needs testing on real hardware for each change)
 

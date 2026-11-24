@@ -617,3 +617,129 @@ html[data-bs-theme=dark] body .btn-outline-secondary {
 .home-controller i {
     color: var(--ts-accent);
 }
+
+/* ---------- Main navigation as a sidebar on wide screens ----------
+   Below 992px it stays a top bar with a menu button, as before. */
+@media (min-width: 992px) {
+    body {
+        padding-left: 14rem;
+    }
+
+    .navbar.header.navbar-background {
+        position: fixed;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        z-index: 1030;
+        width: 14rem;
+        align-items: stretch;
+        padding: 1.25rem 0.75rem 1rem;
+        border-bottom: 0;
+        border-right: 2px solid var(--ts-accent);
+        overflow-y: auto;
+    }
+
+    .navbar.header > .container {
+        flex-direction: column;
+        align-items: stretch;
+        justify-content: flex-start;
+        height: 100%;
+        max-width: none;
+        padding: 0;
+    }
+
+    .navbar.header .navbar-brand {
+        margin: 0 0 1.5rem;
+        padding: 0 0.4rem;
+        font-size: 1.2rem;
+    }
+
+    .navbar.header .navbar-collapse {
+        flex-direction: column;
+        align-items: stretch;
+        flex-grow: 1;
+    }
+
+    .navbar.header .navbar-nav {
+        flex-direction: column;
+        width: 100%;
+        height: 100%;
+        gap: 0.15rem;
+        margin: 0 !important;
+    }
+
+    .navbar.header .nav-link {
+        padding: 0.55rem 0.75rem !important;
+        font-size: 1rem;
+    }
+
+    .navbar.header .nav-link .fa-fw {
+        margin-right: 0.35rem;
+    }
+
+    /* Theme switcher sits at the bottom of the sidebar and opens upward */
+    .navbar.header .nav-item-theme {
+        margin-top: auto;
+        padding-top: 0.75rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .navbar.header .dropup-lg .dropdown-menu {
+        top: auto !important;
+        bottom: 100% !important;
+        left: 0 !important;
+        right: auto !important;
+        transform: none !important;
+        margin-bottom: 0.25rem;
+    }
+
+    /* Settings page: its section menu sits just under the top of the page */
+    .settings-menu {
+        top: 1.5rem;
+    }
+}
+
+/* Menus use the accent for the chosen item, not Bootstrap's default blue */
+body .dropdown-menu {
+    --bs-dropdown-link-active-bg: var(--ts-accent);
+    --bs-dropdown-link-active-color: var(--ts-navy);
+}
+
+/* ---------- Update offer ---------- */
+.update-offer {
+    padding: 1rem 1.25rem;
+    border: 1px solid var(--ts-surface-border);
+    border-left: 4px solid var(--ts-accent);
+    border-radius: 0.6rem;
+}
+
+.update-title {
+    font-family: var(--ts-display);
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--bs-emphasis-color);
+    margin-bottom: 0.25rem;
+}
+
+.update-desc {
+    color: var(--bs-secondary-color);
+}
+
+.update-progress {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.9rem;
+}
+
+.update-error {
+    flex-basis: 100%;
+    color: var(--bs-danger-text-emphasis);
+}
+
+.update-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
