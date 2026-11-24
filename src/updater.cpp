@@ -196,6 +196,12 @@ namespace updater {
       auto folder = std::filesystem::path {platf::appdata()} / "updates";
       std::error_code ec;
       std::filesystem::create_directories(folder, ec);
+      // Installers from earlier updates are no longer needed
+      for (const auto &old : std::filesystem::directory_iterator {folder, ec}) {
+        if (old.path().extension() == ".exe") {
+          std::filesystem::remove(old.path(), ec);
+        }
+      }
       auto installer = folder / name;
       {
         std::ofstream out {installer, std::ios::binary | std::ios::trunc};
