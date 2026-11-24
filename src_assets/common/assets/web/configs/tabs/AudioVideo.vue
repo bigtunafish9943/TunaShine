@@ -161,6 +161,15 @@ const validateFallbackMode = (event) => {
               v-if="platform === 'windows'"
     ></Checkbox>
 
+    <!-- Virtual display becomes the main display -->
+    <Checkbox class="mb-3"
+              id="virtual_display_primary"
+              locale-prefix="config"
+              v-model="config.virtual_display_primary"
+              default="true"
+              v-if="platform === 'windows'"
+    ></Checkbox>
+
     <!-- Isolated Virtual Display -->
     <Checkbox class="mb-3"
               id="isolated_virtual_display_option"
