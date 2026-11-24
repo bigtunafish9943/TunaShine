@@ -423,6 +423,10 @@ namespace stream {
     safe::signal_t controlEnd;
 
     std::atomic<session::state_e> state;
+
+    // Set when the session is stopped because the client went silent, as opposed to
+    // the client disconnecting on purpose.
+    std::atomic_bool connection_lost {false};
   };
 
   /**
@@ -586,7 +590,11 @@ namespace stream {
         return;
       }
 
-      session->pingTimeout = std::chrono::steady_clock::now() + config::stream.ping_timeout;
+      // pingTimeout is pushed forward every time the client is heard from, so it also
+      // tells how long the client had been silent before this event.
+      const auto now = std::chrono::steady_clock::now();
+      const auto silent_for = now - (session->pingTimeout - config::stream.ping_timeout);
+      session->pingTimeout = now + config::stream.ping_timeout;
 
       switch (event.type) {
         case ENET_EVENT_TYPE_RECEIVE:
@@ -603,7 +611,15 @@ namespace stream {
           BOOST_LOG(info) << "CLIENT CONNECTED"sv;
           break;
         case ENET_EVENT_TYPE_DISCONNECT:
-          BOOST_LOG(info) << "CLIENT DISCONNECTED"sv;
+          // ENet reports its own timeout with the same event as a disconnect the client asked
+          // for. A client that leaves on purpose was sending packets right up to that moment;
+          // one whose connection dropped had been silent for seconds first.
+          if (silent_for > 2s) {
+            BOOST_LOG(info) << "CLIENT DISCONNECTED (connection lost)"sv;
+            session->connection_lost = true;
+          } else {
+            BOOST_LOG(info) << "CLIENT DISCONNECTED"sv;
+          }
           // No more clients to send video data to ^_^
           if (session->state == session::state_e::RUNNING) {
             session::stop(*session);
@@ -1145,6 +1161,7 @@ namespace stream {
           if (now > session->pingTimeout) {
             auto address = session->control.peer ? platf::from_sockaddr((sockaddr *) &session->control.peer->address.address) : session->control.expected_peer_address;
             BOOST_LOG(info) << address << ": Ping Timeout"sv;
+            session->connection_lost = true;
             session::stop(*session);
           }
 
@@ -1947,6 +1964,50 @@ namespace stream {
   namespace session {
     std::atomic_uint running_sessions;
 
+    /**
+     * @brief Queue the same rumble for the first four controllers of every connected client.
+     * @return Number of connected clients it was queued for.
+     */
+    static int raise_rumble_all(std::uint16_t lowfreq, std::uint16_t highfreq) {
+      // Don't touch the broadcast context when nothing is streaming: taking a
+      // reference would start it.
+      if (running_sessions == 0) {
+        return 0;
+      }
+
+      auto ref = broadcast.ref();
+      if (!ref) {
+        return 0;
+      }
+
+      int clients = 0;
+      auto lg = ref->control_server._sessions.lock();
+      for (auto *session : *ref->control_server._sessions) {
+        if (!session->control.peer || !session->control.feedback_queue) {
+          continue;
+        }
+
+        for (std::uint16_t id = 0; id < 4; ++id) {
+          session->control.feedback_queue->raise(platf::gamepad_feedback_msg_t::make_rumble(id, lowfreq, highfreq));
+        }
+        ++clients;
+      }
+
+      return clients;
+    }
+
+    int test_rumble() {
+      auto clients = raise_rumble_all(0xC000, 0xC000);
+      if (clients > 0) {
+        BOOST_LOG(info) << "Rumble test sent to "sv << clients << " client(s)"sv;
+        task_pool.pushDelayed([]() {
+          raise_rumble_all(0, 0);
+        }, 700ms);
+      }
+
+      return clients;
+    }
+
     state_e state(session_t &session) {
       return session.state.load(std::memory_order_relaxed);
     }
@@ -2073,7 +2134,7 @@ namespace stream {
       if (--running_sessions == 0) {
         bool revert_display_config {config::video.dd.config_revert_on_disconnect};
         if (proc::proc.running()) {
-          proc::proc.pause();
+          proc::proc.pause(session.connection_lost);
         } else {
           // We have no app running and also no clients anymore.
           revert_display_config = true;

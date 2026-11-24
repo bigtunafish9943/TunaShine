@@ -33,8 +33,12 @@ TunaShine runs on your gaming PC and streams it to another device over your netw
 - **Streams on a virtual monitor by default.** Every stream gets its own virtual display sized to the device, so
   you don't need a spare monitor or a dummy plug, and your real monitor keeps its own picture. In Apollo this is
   off unless the client or the app asks for it.
-- **Faster controller rumble.** Rumble reaches the client within about 20 ms instead of up to 150 ms, and a
-  reconnected controller no longer loses its first rumble.
+- **Faster controller rumble, and a way to test it.** Rumble reaches the client within about 20 ms instead of up
+  to 150 ms, and a reconnected controller no longer loses its first rumble. *Test controller rumble* on the
+  Troubleshooting page buzzes the controller directly, so you can tell a game problem from a client problem.
+- **Dropped connections don't quit your game.** When a session is set to end on disconnect, that only happens
+  right away if you closed the client on purpose. If the connection dropped, the game keeps running for two
+  minutes so you can reconnect.
 - **Builds on current tools.** Fixes so the project compiles with today's MSYS2 packages, including OpenSSL 4.
 
 Everything else works as it does in Apollo, including:

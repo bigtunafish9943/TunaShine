@@ -37,6 +37,7 @@
 #include "nvhttp.h"
 #include "platform/common.h"
 #include "process.h"
+#include "stream.h"
 #include "utility.h"
 #include "uuid.h"
 
@@ -680,6 +681,26 @@ namespace confighttp {
     proc::proc.terminate();
     nlohmann::json output_tree;
     output_tree["status"] = true;
+    send_response(response, output_tree);
+  }
+
+  /**
+   * @brief Rumble the controllers of every connected client for a moment.
+   * @param response The HTTP response object.
+   * @param request The HTTP request object.
+   *
+   * @api_examples{/api/rumble-test| POST| null}
+   */
+  void rumbleTest(resp_https_t response, req_https_t request) {
+    if (!validateContentType(response, request, "application/json") || !authenticate(response, request)) {
+      return;
+    }
+
+    print_req(request);
+
+    nlohmann::json output_tree;
+    output_tree["status"] = true;
+    output_tree["clients"] = stream::session::test_rumble();
     send_response(response, output_tree);
   }
 
@@ -1539,6 +1560,7 @@ namespace confighttp {
     server.resource["^/api/apps/delete$"]["POST"] = deleteApp;
     server.resource["^/api/apps/launch$"]["POST"] = launchApp;
     server.resource["^/api/apps/close$"]["POST"] = closeApp;
+    server.resource["^/api/rumble-test$"]["POST"] = rumbleTest;
     server.resource["^/api/logs$"]["GET"] = getLogs;
     server.resource["^/api/config$"]["GET"] = getConfig;
     server.resource["^/api/config$"]["POST"] = saveConfig;

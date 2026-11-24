@@ -137,8 +137,16 @@ namespace proc {
     std::string get_running_app_uuid();
     boost::process::v1::environment get_env();
     void resume();
-    void pause();
+    /**
+     * @brief Called when the last client is gone.
+     * @param connection_lost True if the client went silent rather than disconnecting on purpose.
+     */
+    void pause(bool connection_lost = false);
     void terminate(bool immediate = false, bool needs_refresh = true);
+
+    /// How long an app is kept running after its last client's connection drops,
+    /// when it would otherwise be ended on disconnect.
+    static constexpr std::chrono::seconds reconnect_grace_period {120};
 
   private:
     int _app_id = 0;

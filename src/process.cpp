@@ -8,6 +8,7 @@
  #define BOOST_PROCESS_VERSION 1
 #endif
 // standard includes
+#include <atomic>
 #include <filesystem>
 #include <string>
 #include <thread>
@@ -28,6 +29,7 @@
 #include "crypto.h"
 #include "display_device.h"
 #include "file_handler.h"
+#include "globals.h"
 #include "logging.h"
 #include "platform/common.h"
 #include "process.h"
@@ -53,6 +55,10 @@ namespace proc {
   namespace pt = boost::property_tree;
 
   proc_t proc;
+
+  // Bumped whenever the session resumes, ends or is replaced, so a pending
+  // "end the session if nobody reconnects" task can tell it is out of date.
+  static std::atomic_uint64_t session_generation {0};
 
   int input_only_app_id = -1;
   std::string input_only_app_id_str;
@@ -613,6 +619,7 @@ namespace proc {
   }
 
   void proc_t::resume() {
+    ++session_generation;
     BOOST_LOG(info) << "Session resuming for app [" << _app_name << "].";
 
     if (!_app.state_cmds.empty()) {
@@ -656,7 +663,7 @@ namespace proc {
     }
   }
 
-  void proc_t::pause() {
+  void proc_t::pause(bool connection_lost) {
     if (!running()) {
       BOOST_LOG(info) << "Session already stopped, do not run pause commands.";
       return;
@@ -664,9 +671,33 @@ namespace proc {
 
     // Either the app asks for this, or the global "end session on disconnect" setting does
     if (_app.terminate_on_pause || config::sunshine.end_session_on_disconnect) {
-      BOOST_LOG(info) << "Terminating app [" << _app_name << "] when all clients are disconnected. Pause commands are skipped.";
-      terminate();
-      return;
+      if (!connection_lost) {
+        BOOST_LOG(info) << "Terminating app [" << _app_name << "] when all clients are disconnected. Pause commands are skipped.";
+        terminate();
+        return;
+      }
+
+      // The client did not leave on purpose: its connection dropped. Keep the app running
+      // for a while so a Wi-Fi hiccup or a sleeping device does not quit a game in progress.
+      // The session is ended later only if nobody has come back by then.
+      BOOST_LOG(info) << "Connection to the last client was lost. Keeping app [" << _app_name << "] running for "
+                      << reconnect_grace_period.count() << " seconds so it can reconnect.";
+
+      task_pool.pushDelayed([generation = session_generation.load()]() {
+        if (generation != session_generation.load()) {
+          // A client reconnected, or the session was ended or replaced in the meantime
+          return;
+        }
+        if (rtsp_stream::session_count() > 0 || !proc.running()) {
+          return;
+        }
+
+        BOOST_LOG(info) << "No client reconnected in time. Terminating app [" << proc.get_last_run_app_name() << "].";
+        // Terminating can wait on the app to exit, so keep it off the shared task pool
+        std::thread([]() {
+          proc.terminate();
+        }).detach();
+      }, reconnect_grace_period);
     }
 
     BOOST_LOG(info) << "Session pausing for app [" << _app_name << "].";
@@ -716,6 +747,7 @@ namespace proc {
   }
 
   void proc_t::terminate(bool immediate, bool needs_refresh) {
+    ++session_generation;
     std::error_code ec;
     placebo = false;
 
