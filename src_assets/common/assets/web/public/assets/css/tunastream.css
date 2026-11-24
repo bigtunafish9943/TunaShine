@@ -891,3 +891,105 @@ body .dropdown-menu {
     color: var(--bs-warning-text-emphasis);
     margin-top: 0.5rem !important;
 }
+
+/* ---------- Apps: add from this PC ---------- */
+.app-picker {
+    padding: 1.25rem 1.5rem 0;
+    background-color: var(--ts-surface);
+    border: 1px solid var(--ts-surface-border);
+    border-radius: 0.75rem;
+}
+
+.app-picker-lead {
+    color: var(--bs-secondary-color);
+    max-width: 46rem;
+}
+
+.app-picker-warning {
+    padding: 0.6rem 0.9rem;
+    border-radius: 0.5rem;
+    background-color: var(--bs-warning-bg-subtle);
+    color: var(--bs-warning-text-emphasis);
+}
+
+.app-picker-search {
+    max-width: 22rem;
+    margin-bottom: 1rem;
+}
+
+.app-picker-group {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 1.25rem 0 0.5rem;
+}
+
+.app-picker-group span {
+    font-weight: 400;
+    color: var(--bs-secondary-color);
+    margin-left: 0.35rem;
+}
+
+.app-picker-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+    gap: 0.4rem;
+}
+
+.app-picker-item {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--ts-surface-border);
+    border-radius: 0.5rem;
+    cursor: pointer;
+}
+
+.app-picker-item:hover {
+    border-color: var(--ts-accent-soft);
+}
+
+.app-picker-item .form-check-input {
+    margin: 0;
+    flex-shrink: 0;
+}
+
+.app-picker-chosen {
+    border-color: var(--ts-accent);
+}
+
+.app-picker-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.app-picker-added {
+    cursor: default;
+    opacity: 0.65;
+}
+
+.app-picker-badge {
+    margin-left: auto;
+    font-size: 0.8rem;
+    color: var(--bs-secondary-color);
+    white-space: nowrap;
+}
+
+/* Kept in view while scrolling a long list */
+.app-picker-actions {
+    position: sticky;
+    bottom: 0;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    margin: 1.25rem -1.5rem 0;
+    padding: 0.9rem 1.5rem;
+    background-color: var(--ts-surface);
+    border-top: 1px solid var(--ts-surface-border);
+    border-radius: 0 0 0.75rem 0.75rem;
+}

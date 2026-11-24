@@ -151,7 +151,10 @@ expect "setup done is read back" "$(get /api/config | json setup_complete)" "ena
 
 expect "status reports virtual screen repair state" "$(get /api/status | json vdisplayRepairing)" "False"
 expect "play-here refuses with nothing paused" "$(post /api/apps/continue-here '{}' | json status)" "False"
+expect "installed games and programs can be listed" "$(get /api/apps/discover | json status)" "True"
 expect "end session answers with nothing running" "$(post /api/apps/close '{}' | json status)" "True"
+expect "picked apps can be added" "$(post /api/apps/add-many '{"apps":[{"name":"Smoke Test App","cmd":"cmd.exe /c exit","detached":"","workingDir":""}]}' | json added)" "1"
+expect "added app is in the app list" "$(get /api/apps)" "Smoke Test App"
 
 # The updater: this build is newer than any published release, so a real check against GitHub must
 # find the latest release, read it and decide there is nothing to install.
