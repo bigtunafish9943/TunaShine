@@ -704,3 +704,42 @@ body .dropdown-menu {
     --bs-dropdown-link-active-bg: var(--ts-accent);
     --bs-dropdown-link-active-color: var(--ts-navy);
 }
+
+/* ---------- Update offer ---------- */
+.update-offer {
+    padding: 1rem 1.25rem;
+    border: 1px solid var(--ts-surface-border);
+    border-left: 4px solid var(--ts-accent);
+    border-radius: 0.6rem;
+}
+
+.update-title {
+    font-family: var(--ts-display);
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--bs-emphasis-color);
+    margin-bottom: 0.25rem;
+}
+
+.update-desc {
+    color: var(--bs-secondary-color);
+}
+
+.update-progress {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.9rem;
+}
+
+.update-error {
+    flex-basis: 100%;
+    color: var(--bs-danger-text-emphasis);
+}
+
+.update-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
