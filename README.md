@@ -12,8 +12,9 @@ It is a fork of [Apollo](https://github.com/ClassicOldSong/Apollo), which is its
 [Sunshine](https://github.com/LizardByte/Sunshine).
 
 > [!NOTE]
-> TunaShine is at an early stage. Today it behaves the same as the Apollo version it was forked from, and many
-> screens and file names still say "Apollo". The goals below describe where it is heading, not what is finished.
+> TunaShine is at an early stage and its builds are untested. So far it differs from the Apollo version it was
+> forked from in name, icon and two small rumble changes. The goals below describe where it is heading, not what
+> is finished; see the [roadmap](ROADMAP.md).
 
 ## Goals
 
