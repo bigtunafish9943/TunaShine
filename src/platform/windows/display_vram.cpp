@@ -3,6 +3,7 @@
  * @brief Definitions for handling video ram.
  */
 // standard includes
+#include <atomic>
 #include <cmath>
 
 // platform includes
@@ -34,6 +35,15 @@ extern "C" {
 #endif
 namespace platf {
   using namespace std::literals;
+
+  namespace {
+    std::atomic<std::uint64_t> captured_new_frames {0};
+    std::atomic<std::uint64_t> captured_skipped_frames {0};
+  }  // namespace
+
+  capture_counters_t capture_counters() {
+    return {captured_new_frames.load(std::memory_order_relaxed), captured_skipped_frames.load(std::memory_order_relaxed)};
+  }
 }
 
 static void free_frame(AVFrame *frame) {
@@ -1165,6 +1175,15 @@ namespace platf::dxgi {
 
     if (!update_flag) {
       return capture_e::timeout;
+    }
+
+    // Count how well the game's frames fit the capture rate. More than one accumulated frame
+    // means the game presented frames that were replaced before they could be captured.
+    if (frame_update_flag) {
+      captured_new_frames.fetch_add(1, std::memory_order_relaxed);
+      if (frame_info.AccumulatedFrames > 1) {
+        captured_skipped_frames.fetch_add(frame_info.AccumulatedFrames - 1, std::memory_order_relaxed);
+      }
     }
 
     std::optional<std::chrono::steady_clock::time_point> frame_timestamp;

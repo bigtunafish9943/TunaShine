@@ -64,6 +64,28 @@
             <i class="fas fa-gamepad"></i>
             {{ $t('index.controller_n', { n: c.controller + 1 }) }}: {{ c.emulated || $t('index.controller_unknown') }}
           </span>
+          <!-- How smoothly the stream is running, and what to do about it -->
+          <div class="home-health" v-if="player.health">
+            <template v-for="v in [healthVerdict(player.health)]">
+              <p class="home-health-verdict" :class="'home-health-' + v.level">
+                <i class="fas" :class="v.level === 'ok' ? 'fa-circle-check' : (v.level === 'wait' ? 'fa-hourglass-half' : 'fa-triangle-exclamation')" aria-hidden="true"></i>
+                <span>
+                  <b>{{ v.title }}</b>
+                  <span v-for="line in v.lines" class="d-block">{{ line }}</span>
+                </span>
+              </p>
+            </template>
+            <p class="home-health-figures" v-if="player.health.windowS >= 3">
+              {{ $t('index.health_figures', {
+                fps: player.health.fps.toFixed(1),
+                target: player.health.targetFps,
+                pc: player.health.pcMsAvg.toFixed(1),
+                pcMax: player.health.pcMsMax.toFixed(1),
+                send: player.health.sendMsAvg.toFixed(1),
+                rate: player.health.sendRateMbps
+              }) }}
+            </p>
+          </div>
         </li>
       </ul>
     </div>
@@ -280,6 +302,31 @@
         this.ending = false;
       },
       /** Load what the status row shows. Each part is optional, so failures only leave a blank. */
+      /** Turn a stream's measured timings into a plain verdict and advice. */
+      healthVerdict(h) {
+        const t = this.$t;
+        if (!h || h.windowS < 3) {
+          return { level: 'wait', title: t('index.health_measuring'), lines: [] };
+        }
+        const interval = 1000 / Math.max(1, h.targetFps);
+        const lines = [];
+        if (h.skippedPerSec > 1) {
+          lines.push(t('index.health_skipped', { n: Math.round(h.skippedPerSec), target: h.targetFps }));
+        }
+        if (h.fps < h.targetFps * 0.9 && h.gaps > 2) {
+          lines.push(t('index.health_game_slow', { fps: Math.round(h.fps), target: h.targetFps }));
+        }
+        if (h.pcMsAvg > interval || h.pcMsMax > interval * 3) {
+          lines.push(t('index.health_pc_slow', { avg: h.pcMsAvg.toFixed(1), max: h.pcMsMax.toFixed(1) }));
+        }
+        if (h.recoveries > 0) {
+          lines.push(t('index.health_network', { n: h.recoveries }));
+        }
+        if (lines.length === 0) {
+          return { level: 'ok', title: t('index.health_ok'), lines: [t('index.health_ok_desc')] };
+        }
+        return { level: 'bad', title: t('index.health_bad'), lines };
+      },
       async loadStatus() {
         try {
           const apps = await fetch("./api/apps").then((r) => r.json());
@@ -303,9 +350,11 @@
           this.vdisplayFailed = !!(status && status.vdisplayFailed);
           // One entry per connected device, with the controllers it brought
           const names = [...new Set([...connected, ...controllers.map((c) => c.device)])];
+          const streams = (status && status.streams) || [];
           this.players = names.map((device) => ({
             device,
             controllers: controllers.filter((c) => c.device === device),
+            health: streams.find((s) => s.device === device) || null,
           }));
         } catch (e) {
           console.error(e);

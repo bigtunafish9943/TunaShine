@@ -172,6 +172,9 @@ namespace config {
 
     int fec_percentage;
 
+    // Peak rate video packets are sent at, in Mbps; 0 picks one from the stream's bitrate
+    int video_send_rate;
+
     // Video encryption settings for LAN and WAN streams
     int lan_encryption_mode;
     int wan_encryption_mode;

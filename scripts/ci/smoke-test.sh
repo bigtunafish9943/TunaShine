@@ -138,6 +138,7 @@ expect "rumble test answers, with nobody streaming" "$(post /api/rumble-test '{}
 expect "app list is served" "$(get /api/apps)" "Desktop"
 status=$(get /api/status)
 expect "status answers" "$(json status <<< "$status")" "True"
+expect "status lists no stream health with nobody streaming" "$(python -c "import json,sys; print(len(json.load(sys.stdin)['streams']))" <<< "$status" 2>/dev/null)" "0"
 expect "status lists no controllers with nobody streaming" "$(python -c "import json,sys; print(len(json.load(sys.stdin)['controllers']))" <<< "$status" 2>/dev/null)" "0"
 
 expect "setup is not yet done on a fresh install" "$(get /api/config | json setup_complete)" "None"
@@ -161,6 +162,16 @@ for _ in $(seq 1 30); do
   sleep 2
 done
 expect "updater finds no newer release than this build" "$stage $(get /api/update | json error)" "up_to_date"
+
+# Download the latest published installer and check it against GitHub's checksum, without installing it.
+# This is the path a real update takes, so a broken download or checksum check fails the build.
+expect "updater starts a download check" "$(post /api/update '{"verifyOnly":true}' | json started)" "True"
+stage=checking
+for _ in $(seq 1 90); do
+  stage=$(get /api/update | json stage)
+  case "$stage" in checking|downloading) sleep 2 ;; *) break ;; esac
+done
+expect "latest installer downloads and matches its published checksum" "$stage $(get /api/update | json error)" "verified"
 
 # The program must still be alive after all that
 if tasklist //FI "IMAGENAME eq tunastream.exe" 2>/dev/null | grep -qi "tunastream.exe"; then pass "program is still running"; else fail "program is still running"; fi

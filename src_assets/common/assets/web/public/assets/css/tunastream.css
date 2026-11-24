@@ -815,3 +815,44 @@ body .dropdown-menu {
     margin-bottom: 1.5rem;
     max-width: 46rem;
 }
+
+/* Stream health under each player on the home page */
+.home-health {
+    flex-basis: 100%;
+    margin-top: 0.5rem;
+}
+
+.home-health-verdict {
+    display: flex;
+    gap: 0.6rem;
+    align-items: flex-start;
+    margin-bottom: 0.25rem;
+}
+
+.home-health-verdict i {
+    margin-top: 0.2rem;
+}
+
+.home-health-ok i {
+    color: var(--bs-success);
+}
+
+.home-health-bad i {
+    color: var(--bs-warning);
+}
+
+.home-health-wait i {
+    color: var(--bs-secondary-color);
+}
+
+.home-health-verdict span.d-block {
+    color: var(--bs-secondary-color);
+    font-size: 0.92rem;
+    margin-top: 0.15rem;
+}
+
+.home-health-figures {
+    margin: 0 0 0 1.6rem;
+    font-size: 0.85rem;
+    color: var(--bs-secondary-color);
+}
