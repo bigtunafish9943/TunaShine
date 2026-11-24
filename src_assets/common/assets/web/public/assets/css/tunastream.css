@@ -103,6 +103,20 @@ h2 {
     letter-spacing: -0.01em;
 }
 
+/* Name with the installed version under it */
+.navbar.header .navbar-brand .brand-stack {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.1;
+}
+
+.navbar.header .navbar-brand .brand-version {
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: var(--ts-accent-soft, #8be6fc);
+    opacity: 0.85;
+}
+
 .navbar.header .navbar-brand .brand-word b {
     font-weight: 600;
     color: var(--ts-accent);

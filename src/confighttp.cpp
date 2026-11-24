@@ -482,6 +482,26 @@ namespace confighttp {
   }
 
   /**
+   * @brief Get the help page.
+   * @param response The HTTP response object.
+   * @param request The HTTP request object.
+   */
+  void getHelpPage(resp_https_t response, req_https_t request) {
+    if (!authenticate(response, request, true)) {
+      return;
+    }
+
+    print_req(request);
+
+    std::string content = file_handler::read_file(WEB_DIR "help.html");
+    SimpleWeb::CaseInsensitiveMultimap headers;
+    headers.emplace("Content-Type", "text/html; charset=utf-8");
+    headers.emplace("X-Frame-Options", "DENY");
+    headers.emplace("Content-Security-Policy", "frame-ancestors 'none';");
+    response->write(content, headers);
+  }
+
+  /**
    * @brief Get the troubleshooting page.
    * @param response The HTTP response object.
    * @param request The HTTP request object.
@@ -1871,6 +1891,7 @@ namespace confighttp {
     server.resource["^/login/?$"]["GET"] = getLoginPage;
     server.resource["^/troubleshooting/?$"]["GET"] = getTroubleshootingPage;
     server.resource["^/setup/?$"]["GET"] = getSetupPage;
+    server.resource["^/help/?$"]["GET"] = getHelpPage;
     server.resource["^/api/login"]["POST"] = login;
     server.resource["^/api/pin$"]["POST"] = savePin;
     server.resource["^/api/otp$"]["POST"] = getOTP;
