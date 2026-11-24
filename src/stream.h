@@ -57,6 +57,14 @@ namespace stream {
      * @return The bitrate actually asked for, in kbps.
      */
     int set_bitrate(session_t &session, int kbps);
+
+    /**
+     * @brief Ask the stream's encoder for a smaller or the full picture size, mid-stream.
+     * @details The game keeps drawing at the full size; only what is sent changes. The device
+     *          stretches it back to the screen. Costs one key frame and a brief pause.
+     * @return The percentage actually used: 100, 75, 67 or 50.
+     */
+    int set_picture_scale(session_t &session, int percent);
     bool uuid_match(const session_t& session, const std::string_view& uuid);
     bool update_device_info(session_t& session, const std::string& name, const crypto::PERM& newPerm);
     int start(session_t &session, const std::string &addr_string);
@@ -86,6 +94,7 @@ namespace stream {
       int recoveries;  ///< Times the client asked for lost video to be resent or repaired
       int bitrate_kbps;  ///< Bitrate the video is being sent at right now
       int fec_percent;  ///< Error correction being added to each frame right now
+      int picture_scale;  ///< Picture size in percent of what the device asked for
       int send_rate_mbps;  ///< Rate packets are paced at
       double window_s;  ///< Seconds the figures cover
     };

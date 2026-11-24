@@ -1712,7 +1712,8 @@ namespace nvhttp {
 
   /**
    * Picture quality that adjusts itself: GET /tuna/bitrate?kbps=N asks the encoder of this
-   * device's own stream for a new bitrate. JSON {"applied", "kbps"}.
+   * device's own stream for a new bitrate. JSON {"applied", "kbps"}. With &scale=P (percent) it
+   * also asks for a smaller or the full picture size, and the answer carries the "scale" used.
    */
   void tunaBitrate(resp_https_t response, req_https_t request) {
     print_req<TunaStreamHTTPS>(request);
@@ -1726,10 +1727,21 @@ namespace nvhttp {
     } catch (...) {
       kbps = 0;
     }
+    int scale = 0;
+    try {
+      scale = std::stoi(get_arg(args, "scale", "0"));
+    } catch (...) {
+      scale = 0;
+    }
     auto session = rtsp_stream::find_session(named_cert_p->uuid);
     if (session && kbps > 0) {
       out["kbps"] = stream::session::set_bitrate(*session, kbps);
       out["applied"] = true;
+    }
+    // Picture size, in percent of what the device asked for. Devices that don't send it get no
+    // "scale" back, and a device that does can tell from the answer that this PC supports it.
+    if (session && scale > 0) {
+      out["scale"] = stream::session::set_picture_scale(*session, scale);
     }
     SimpleWeb::CaseInsensitiveMultimap headers;
     headers.emplace("Content-Type", "application/json");
