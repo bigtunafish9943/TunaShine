@@ -47,6 +47,15 @@ namespace proc {
   extern VDISPLAY::DRIVER_STATUS vDisplayDriverStatus;
   /// True when the last stream could not create its virtual display and showed the PC's own screen
   extern std::atomic_bool vdisplay_failed;
+
+  /**
+   * @brief Reinstall the virtual display driver and reconnect to it, in the background.
+   * @return False if a repair is already running.
+   */
+  bool start_vdisplay_repair();
+
+  /// True while start_vdisplay_repair() is working.
+  bool vdisplay_repair_running();
 #endif
 
   typedef config::prep_cmd_t cmd_t;

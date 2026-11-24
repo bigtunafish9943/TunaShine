@@ -44,7 +44,7 @@
       <div class="home-status-item" v-if="platform === 'windows'" :class="{ 'home-status-bad': vdisplayStatus !== 0 }">
         <dt>{{ $t('index.status_vdisplay') }}</dt>
         <dd>{{ vdisplayStatus === 0 ? $t('index.vdisplay_ok') : $t('index.vdisplay_problem') }}</dd>
-        <a href="./config">{{ $t('index.vdisplay_settings') }}</a>
+        <a :href="vdisplayStatus === 0 ? './config' : './troubleshooting#vdisplay'">{{ vdisplayStatus === 0 ? $t('index.vdisplay_settings') : $t('index.vdisplay_repair') }}</a>
       </div>
     </dl>
 
@@ -348,6 +348,9 @@
           const status = await fetch("./api/status").then((r) => r.ok ? r.json() : null);
           const controllers = (status && status.controllers) || [];
           this.vdisplayFailed = !!(status && status.vdisplayFailed);
+          if (status && status.vdisplayStatus !== undefined) {
+            this.vdisplayStatus = status.vdisplayStatus;
+          }
           // One entry per connected device, with the controllers it brought
           const names = [...new Set([...connected, ...controllers.map((c) => c.device)])];
           const streams = (status && status.streams) || [];
