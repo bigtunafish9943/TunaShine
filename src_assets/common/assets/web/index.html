@@ -9,10 +9,8 @@
   <Navbar></Navbar>
   <div id="content" class="container">
     <h1 class="my-4">{{ needsAttention ? $t('index.status_attention') : $t('index.status_ready') }}</h1>
-    <p class="home-lead" v-if="version">
-      <template v-if="hostName">{{ $t('index.running_on', { host: hostName }) }}</template>
-      {{ $t('index.version_is', { version: version.version }) }}
-    </p>
+    <!-- The version is under the name in the menu, so this only says which PC this is -->
+    <p class="home-lead" v-if="hostName">{{ $t('index.running_on', { host: hostName }) }}</p>
     <div class="alert alert-info" v-if="customPort">
       {{ $t('index.custom_port', { port: customPort }) }}
     </div>
