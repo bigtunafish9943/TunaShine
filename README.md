@@ -99,6 +99,9 @@ grant more, so if a new device says `Permission Denied`, or its mouse and keyboa
   enable *Headless mode*, then restart.
 - **HDR** needs Windows 11 23H2 or later, and how good it looks depends mostly on the device you stream to.
 
+Something not working? See [troubleshooting](docs/troubleshooting_tunashine.md) for rumble, connection and
+stop/start problems.
+
 ## Requirements
 
 | | Minimum |

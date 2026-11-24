@@ -615,7 +615,7 @@
     "logs_find": "Find...",
     "rumble_test": "Test controller rumble",
     "rumble_test_button": "Rumble now",
-    "rumble_test_desc": "Rumbles the controllers on every device that is streaming right now, for under a second. It skips the game and the virtual gamepad, so it shows whether rumble can reach the controller at all. If this works but a game does not rumble, look at the game, Steam Input or the emulated gamepad type. If this does nothing, look at the client app and how the controller is connected to it.",
+    "rumble_test_desc": "Rumbles the controllers on every device that is streaming right now, for under a second. It skips the game and the virtual gamepad, so it shows whether rumble can reach the controller at all. If this works but a game does not rumble, set Emulated Gamepad Type to X360 under Configuration > Input and reconnect: most PC games only rumble an Xbox controller, and controllers with motion sensors are emulated as a PlayStation one by default. If this does nothing, look at the client app and how the controller is connected to the device.",
     "rumble_test_none": "No device is streaming. Start a stream with a controller connected, then try again.",
     "rumble_test_sent": "Rumble sent to {count} streaming device(s). The controller should have buzzed.",
     "restart_apollo": "Restart TunaShine",
