@@ -69,7 +69,16 @@ cmake_path(CONVERT "${TUNASTREAM_SOURCE_ASSETS_DIR}/windows/assets/shaders"
 cmake_path(CONVERT "${CMAKE_BINARY_DIR}/assets/shaders" TO_NATIVE_PATH_LIST shaders_in_build_dest_native)
 execute_process(COMMAND cmd.exe /c mklink /J "${shaders_in_build_dest_native}" "${shaders_in_build_src_native}")
 
-set(CPACK_PACKAGE_ICON "${CMAKE_SOURCE_DIR}\\\\tunastream.ico")
+# Installer artwork. NSIS uses CPACK_PACKAGE_ICON as the header bitmap, which must be a .bmp.
+set(TUNASTREAM_INSTALLER_ART "${TUNASTREAM_SOURCE_ASSETS_DIR}/windows/installer")
+file(TO_NATIVE_PATH "${TUNASTREAM_INSTALLER_ART}/header.bmp" TUNASTREAM_NSIS_HEADER)
+file(TO_NATIVE_PATH "${TUNASTREAM_INSTALLER_ART}/welcome.bmp" TUNASTREAM_NSIS_WELCOME)
+file(TO_NATIVE_PATH "${CMAKE_SOURCE_DIR}/tunastream.ico" TUNASTREAM_NSIS_ICON)
+string(REPLACE "\\" "\\\\" CPACK_PACKAGE_ICON "${TUNASTREAM_NSIS_HEADER}")
+string(REPLACE "\\" "\\\\" CPACK_NSIS_MUI_WELCOMEFINISHPAGE_BITMAP "${TUNASTREAM_NSIS_WELCOME}")
+set(CPACK_NSIS_MUI_UNWELCOMEFINISHPAGE_BITMAP "${CPACK_NSIS_MUI_WELCOMEFINISHPAGE_BITMAP}")
+set(CPACK_NSIS_MUI_ICON "${TUNASTREAM_NSIS_ICON}")
+set(CPACK_NSIS_MUI_UNIICON "${TUNASTREAM_NSIS_ICON}")
 
 # The name of the directory that will be created in C:/Program files/
 set(CPACK_PACKAGE_INSTALL_DIRECTORY "${CPACK_PACKAGE_NAME}")
