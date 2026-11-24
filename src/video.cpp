@@ -1911,6 +1911,32 @@ namespace video {
     return nullptr;
   }
 
+  /**
+   * @brief The size to encode at for a picture scale the client asked for.
+   * @details Only a few sizes are used (full, three quarters, two thirds, half), so a 4K stream
+   *          steps through 2880x1620, 2560x1440 and 1920x1080 and never something odd.
+   */
+  static void scaled_picture_size(const config_t &config, int percent, int &width, int &height) {
+    int num = 1;
+    int den = 1;
+    if (percent <= 55) {
+      den = 2;
+    } else if (percent <= 70) {
+      num = 2;
+      den = 3;
+    } else if (percent <= 87) {
+      num = 3;
+      den = 4;
+    }
+    width = (config.width * num / den) & ~1;
+    height = (config.height * num / den) & ~1;
+    // Too small to be worth it: leave the picture alone
+    if (width < 960 || height < 540) {
+      width = config.width;
+      height = config.height;
+    }
+  }
+
   void encode_run(
     int &frame_nr,  // Store progress of the frame number
     safe::mail_t mail,
@@ -1920,10 +1946,16 @@ namespace video {
     std::unique_ptr<platf::encode_device_t> encode_device,
     safe::signal_t &reinit_event,
     const encoder_t &encoder,
-    void *channel_data
+    void *channel_data,
+    int &bitrate_kbps,  // The bitrate last asked for mid-stream, kept for the next encoder; 0 if none
+    int &picture_scale  // Picture size in percent of what the client asked for; changed here when the client asks
   ) {
     auto session = make_encode_session(disp.get(), encoder, config, disp->width, disp->height, std::move(encode_device));
     if (!session) {
+      if (picture_scale != 100) {
+        BOOST_LOG(warning) << "Couldn't encode at "sv << config.width << 'x' << config.height << "; going back to the full picture size"sv;
+        picture_scale = 100;
+      }
       return;
     }
 
@@ -1958,6 +1990,7 @@ namespace video {
     auto idr_events = mail->event<bool>(mail::idr);
     auto invalidate_ref_frames_events = mail->event<std::pair<int64_t, int64_t>>(mail::invalidate_ref_frames);
     auto bitrate_events = mail->event<int>(mail::bitrate);
+    auto picture_scale_events = mail->event<int>(mail::picture_scale);
     bool bitrate_change_unsupported_logged = false;
 
     {
@@ -2020,9 +2053,23 @@ namespace video {
       // The client asked for a different bitrate (its network struggling, or recovered)
       if (bitrate_events->peek()) {
         if (auto kbps = bitrate_events->pop(0ms)) {
-          if (!session->set_bitrate(*kbps) && !bitrate_change_unsupported_logged) {
+          if (session->set_bitrate(*kbps)) {
+            bitrate_kbps = *kbps;
+          } else if (!bitrate_change_unsupported_logged) {
             BOOST_LOG(info) << "This encoder can't change bitrate mid-stream; keeping "sv << config.bitrate << " kbps"sv;
             bitrate_change_unsupported_logged = true;
+          }
+        }
+      }
+
+      // The client asked for a smaller or larger picture. That needs a new encoder: leave, and
+      // the caller makes one at the new size. The stream itself carries on, starting from a key frame.
+      if (picture_scale_events->peek()) {
+        if (auto percent = picture_scale_events->pop(0ms)) {
+          if (*percent != picture_scale) {
+            picture_scale = *percent;
+            idr_events->raise(true);
+            break;
           }
         }
       }
@@ -2405,6 +2452,11 @@ namespace video {
 
     int frame_nr = 1;
 
+    // What the client has asked for since the stream started. Both outlive any one encoder, so a
+    // new encoder (a changed picture size, or the display coming back) starts where the last one was.
+    int bitrate_kbps = 0;
+    int picture_scale = 100;
+
     auto touch_port_event = mail->event<input::touch_port_t>(mail::touch_port);
     auto hdr_event = mail->event<hdr_info_t>(mail::hdr);
 
@@ -2430,8 +2482,23 @@ namespace video {
 
       auto &encoder = *chosen_encoder;
 
-      auto encode_device = make_encode_device(*display, encoder, config);
+      // The size and bitrate to encode at right now. The client's own request stays in config:
+      // the mouse and touch mapping below must keep using the size the client thinks it has.
+      config_t active = config;
+      if (bitrate_kbps > 0) {
+        active.bitrate = bitrate_kbps;
+      }
+      scaled_picture_size(config, picture_scale, active.width, active.height);
+      if (active.width != config.width || active.height != config.height) {
+        BOOST_LOG(info) << "Encoding at "sv << active.width << 'x' << active.height << " ("sv << picture_scale << "% of "sv << config.width << 'x' << config.height << ") while the connection is struggling"sv;
+      }
+
+      auto encode_device = make_encode_device(*display, encoder, active);
       if (!encode_device) {
+        if (picture_scale != 100) {
+          picture_scale = 100;
+          continue;
+        }
         return;
       }
 
@@ -2453,12 +2520,14 @@ namespace video {
         frame_nr,
         mail,
         images,
-        config,
+        active,
         display,
         std::move(encode_device),
         ref->reinit_event,
         *ref->encoder_p,
-        channel_data
+        channel_data,
+        bitrate_kbps,
+        picture_scale
       );
     }
   }
