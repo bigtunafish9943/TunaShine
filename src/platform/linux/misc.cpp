@@ -371,6 +371,10 @@ std::string get_local_ip_for_gateway() {
     return nullptr;
   }
 
+  network_link_t network_link() {
+    return {};
+  }
+
   capture_counters_t capture_counters() {
     return {};
   }

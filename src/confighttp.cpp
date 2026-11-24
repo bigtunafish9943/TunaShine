@@ -7,9 +7,11 @@
 #define BOOST_BIND_GLOBAL_PLACEHOLDERS
 
 // standard includes
+#include <chrono>
 #include <filesystem>
 #include <format>
 #include <fstream>
+#include <mutex>
 #include <set>
 #include <sstream>
 #include <thread>
@@ -895,10 +897,33 @@ namespace confighttp {
         {"recoveries", h.recoveries},
         {"bitrateKbps", h.bitrate_kbps},
         {"sendRateMbps", h.send_rate_mbps},
+        {"fecPercent", h.fec_percent},
         {"windowS", h.window_s},
       });
     }
     output_tree["streams"] = streams;
+
+    // How this PC reaches the network. Asking Windows is slow enough to be worth remembering for a while.
+    {
+      static std::mutex network_lock;
+      static platf::network_link_t network;
+      static std::chrono::steady_clock::time_point network_checked;
+      std::lock_guard lg {network_lock};
+      const auto now = std::chrono::steady_clock::now();
+      if (network_checked == std::chrono::steady_clock::time_point {} || now - network_checked > std::chrono::seconds(30)) {
+        network = platf::network_link();
+        network_checked = now;
+      }
+      if (network.known) {
+        output_tree["network"] = {
+          {"wifi", network.wifi},
+          {"name", network.name},
+          {"mbps", network.mbps},
+          {"signal", network.signal},
+          {"channel", network.channel},
+        };
+      }
+    }
 
     nlohmann::json hosts = nlohmann::json::array();
     for (const auto &host : other_hosts::installed()) {
