@@ -61,6 +61,12 @@ Still to come:
 - Frame pacing and micro-stutter with virtual displays.
 - Gradual cleanup of the capture, display and input layers as each area is touched.
 
+- **Playing away from home over Tailscale.** A TV at someone else's house can already reach the PC when both run
+  Tailscale and the PC is added by its Tailscale address. To make that easy: show the PC's Tailscale address on the
+  home page, treat it as a trusted address for pairing, pick a picture that fits the home's upload speed, and say
+  when the connection is being relayed instead of going direct.
+- **Picture size that adjusts itself.** The bitrate and packet-loss protection already follow the connection; the
+  picture size (4K down to 1440p and back) could follow it too.
 - **Two people using one PC independently.** Today a stream shares the mouse, keyboard and window focus with
   whoever is at the PC. Fully separate use means a separate Windows session for each person, which is what Duo
   does by patching Remote Desktop. That is a large project with licensing questions, not a setting.
