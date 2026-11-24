@@ -42,7 +42,7 @@ set up and pleasant to use.
 ## Install
 
 1. **Download the installer.** There are no tagged releases yet. Open the
-   [Actions](https://github.com/bigtunafish9943/TunaShine/actions) page while signed in to GitHub, pick the newest run
+   [Actions](https://github.com/bigtunafish9943/TunaStream/actions) page while signed in to GitHub, pick the newest run
    with a green tick, and download `windows-installer` under **Artifacts**.
 2. **Run `TunaStream.exe`** from the zip. Windows will warn about an unknown publisher because the installer is not
    code-signed; choose **More info**, then **Run anyway**. The installer also sets up the virtual display and
@@ -102,7 +102,7 @@ problems.
 ## Where it's going
 
 See the [roadmap](ROADMAP.md). Found a bug or have an idea?
-[Open an issue](https://github.com/bigtunafish9943/TunaShine/issues).
+[Open an issue](https://github.com/bigtunafish9943/TunaStream/issues).
 
 ## Building
 

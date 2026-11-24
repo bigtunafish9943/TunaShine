@@ -24,7 +24,7 @@ pacman -S git \
 ## Get the source
 
 ```bash
-git clone https://github.com/bigtunafish9943/TunaShine.git tunastream
+git clone https://github.com/bigtunafish9943/TunaStream.git
 cd tunastream
 git submodule update --init --recursive --depth 1 \
   third-party/build-deps third-party/libdisplaydevice third-party/moonlight-common-c \

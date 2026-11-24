@@ -24,7 +24,7 @@ BEGIN
             VALUE "InternalName",     TOSTRING(PROJECT_NAME)
             VALUE "ProductName",      TOSTRING(PROJECT_NAME)
             VALUE "ProductVersion",   TOSTRING(PROJECT_VERSION)
-            VALUE "LegalCopyright",   "https://github.com/bigtunafish9943/TunaShine/blob/master/LICENSE"
+            VALUE "LegalCopyright",   "https://github.com/bigtunafish9943/TunaStream/blob/master/LICENSE"
         END
     END
 

@@ -1,9 +1,9 @@
 # Publisher Metadata
 set(TUNASTREAM_PUBLISHER_NAME "TunaStream"
         CACHE STRING "The name of the publisher (or fork developer) of the application.")
-set(TUNASTREAM_PUBLISHER_WEBSITE "https://github.com/bigtunafish9943/TunaShine"
+set(TUNASTREAM_PUBLISHER_WEBSITE "https://github.com/bigtunafish9943/TunaStream"
         CACHE STRING "The URL of the publisher's website.")
-set(TUNASTREAM_PUBLISHER_ISSUE_URL "https://github.com/bigtunafish9943/TunaShine/issues"
+set(TUNASTREAM_PUBLISHER_ISSUE_URL "https://github.com/bigtunafish9943/TunaStream/issues"
         CACHE STRING "The URL of the publisher's support site or issue tracker.
         If you provide a modified version of TunaStream, we kindly request that you use your own url.")
 
