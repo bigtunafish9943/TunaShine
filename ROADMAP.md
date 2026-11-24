@@ -9,7 +9,9 @@ What TunaShine is working toward, roughly in order. Nothing here is a promise or
   this fixes rumble over Wi-Fi is not yet confirmed on real hardware.
 - **Returning to the PC when the client disconnects.** Restoring the physical display, resolution and window
   positions when a stream ends is unreliable. Needs investigation in the display restore code.
-- **Easier setup and a better web UI.**
+- **Easier setup and a better web UI.** Done so far: new theme, status home page with first-device steps, settings
+  in a side menu, a single Devices page for pairing and permissions. Still to do: the Applications page, the app
+  editor, and a guided first run.
 
 ## Next
 

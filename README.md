@@ -23,9 +23,10 @@ TunaShine runs on your gaming PC and streams it to another device over your netw
 
 ## What's different from Apollo
 
-- **A redesigned web interface.** A status page that tells you what is streaming, which devices are paired and
-  whether the virtual display is working; settings in a side menu instead of two rows of tabs; a Save button that
-  stays on screen; light and dark themes.
+- **A redesigned web interface.** A home page that tells you what is streaming, which devices are paired and
+  whether the virtual display is working, and walks you through pairing your first device. Settings sit in a side
+  menu instead of two rows of tabs, with a Save button that stays on screen. Pairing and device permissions live
+  together on one **Devices** page. Light and dark themes throughout.
 - **Get your screen back when you stop playing.** With *End session when the last client disconnects* turned on,
   closing the client quits the app, removes the virtual display and returns the picture to your monitor. Apollo only
   offers this per app.
@@ -55,20 +56,20 @@ Everything else works as it does in Apollo, including:
 3. **Run `TunaShine.exe`** from the zip. Windows will warn about an unknown publisher because the installer is not
    code-signed; choose **More info**, then **Run anyway**. The installer also sets up the virtual display and
    virtual gamepad drivers.
-4. **Open TunaShine** from the Start menu or its tray icon, and choose a username and password for the web
-   interface.
+4. **Open TunaShine** from the Start menu or its tray icon, and create the username and password you will use
+   for the web interface. The home page then shows the steps to pair your first device.
 
 ## Pair a device
 
 1. Install [Moonlight](https://moonlight-stream.org) on the device you want to play on. On Android,
    [Artemis](https://github.com/ClassicOldSong/moonlight-android) adds control over the virtual display.
 2. Add your PC in the client. It shows a PIN.
-3. In TunaShine, open **PIN**, enter that PIN and give the device a name.
+3. In TunaShine, open **Devices**, enter that PIN and give the device a name.
 4. Pick **Desktop** or a game in the client.
 
 The first device you pair gets every permission. Devices paired later can only view streams and list apps until you
-grant more, so if a new device says `Permission Denied`, or its mouse and keyboard do nothing, open it under
-**PIN** and turn on *Launch Apps*, *Mouse Input* or *Keyboard Input*.
+grant more, so if a new device says `Permission Denied`, or its mouse and keyboard do nothing, edit it under
+**Devices** and turn on *Launch Apps*, *Mouse Input* or *Keyboard Input*.
 
 ## Good to know
 

@@ -7,7 +7,7 @@
   <script type="text/javascript" src="/assets/js/qrcode.min.js"></script>
   <style scoped type="text/css">
     .content-container {
-      padding-top: 2em;
+      padding-top: 1.5em;
     }
 
     .pin-tab-bar {
@@ -19,17 +19,19 @@
 <body id="app" v-cloak>
   <Navbar></Navbar>
   <div id="content" class="container content-container d-flex flex-column align-items-center">
+    <h1 class="align-self-start mb-2">{{ $t('pin.page_title') }}</h1>
+    <p class="align-self-start mb-4">{{ $t('pin.page_desc') }}</p>
     <ul class="nav nav-pills pin-tab-bar justify-content-center">
       <li class="nav-item">
-        <a class="nav-link" :class="{active: currentTab !== '#PIN'}" href="#OTP" @click.prevent="switchTab('OTP')">{{ $t('pin.otp_pairing') }}</a>
+        <a class="nav-link" :class="{active: currentTab === '#PIN'}" href="#PIN" @click.prevent="switchTab('PIN')">{{ $t('pin.pin_pairing') }}</a>
       </li>
       <li class="nav-item">
-        <a class="nav-link" :class="{active: currentTab === '#PIN'}" href="#PIN" @click.prevent="switchTab('PIN')">{{ $t('pin.pin_pairing') }}</a>
+        <a class="nav-link" :class="{active: currentTab !== '#PIN'}" href="#OTP" @click.prevent="switchTab('OTP')">{{ $t('pin.otp_pairing') }}</a>
       </li>
     </ul>
     <form v-if="currentTab === '#PIN'" class="form d-flex flex-column align-items-center" id="form" @submit.prevent="registerDevice">
       <div class="card flex-column d-flex p-4 mb-4">
-        <input type="text" pattern="\d*" :placeholder="`${$t('navbar.pin')}`" autofocus id="pin-input" class="form-control mt-2" required />
+        <input type="text" pattern="\d*" :placeholder="`${$t('pin.pin_placeholder')}`" autofocus id="pin-input" class="form-control mt-2" required />
         <input type="text" :placeholder="`${$t('pin.device_name')}`" id="name-input" class="form-control my-4" />
         <button class="btn btn-primary">{{ $t('pin.send') }}</button>
       </div>
@@ -357,7 +359,7 @@
     return {
       platform: '',
       editingHost: false,
-      currentTab: location.hash || '#OTP',
+      currentTab: location.hash || '#PIN',
       otp: '',
       passphrase: '',
       otpMessage: '',
