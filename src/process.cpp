@@ -294,6 +294,11 @@ namespace proc {
           target_fps *= 2;
         }
 
+        // Note which display is primary before the virtual display exists. Windows remembers
+        // display arrangements, so a virtual display that was primary last time can come back
+        // as primary the moment it is created, and by then it is too late to ask.
+        const std::wstring primary_before_vdisplay = VDISPLAY::getPrimaryDisplay();
+
         std::wstring vdisplayName = VDISPLAY::createVirtualDisplay(
           device_uuid_str.c_str(),
           device_name.c_str(),
@@ -327,14 +332,16 @@ namespace proc {
           // Windows picks its usual primary again once the virtual display is removed.
           if (config::video.virtual_display_primary) {
             // Remember what was primary so it can be handed back while nobody is streaming
-            auto previous_primary = VDISPLAY::getPrimaryDisplay();
-            if (previous_primary != vdisplayName) {
-              this->previous_primary_display = platf::to_utf8(previous_primary);
-              if (VDISPLAY::setPrimaryDisplay(vdisplayName.c_str())) {
-                BOOST_LOG(info) << "Virtual Display set as the primary display";
-              } else {
-                BOOST_LOG(warning) << "Couldn't set the Virtual Display as the primary display";
-              }
+            if (!primary_before_vdisplay.empty() && primary_before_vdisplay != vdisplayName) {
+              this->previous_primary_display = platf::to_utf8(primary_before_vdisplay);
+            }
+
+            if (VDISPLAY::getPrimaryDisplay() == vdisplayName) {
+              BOOST_LOG(info) << "Virtual Display is already the primary display";
+            } else if (VDISPLAY::setPrimaryDisplay(vdisplayName.c_str())) {
+              BOOST_LOG(info) << "Virtual Display set as the primary display";
+            } else {
+              BOOST_LOG(warning) << "Couldn't set the Virtual Display as the primary display";
             }
           }
 
@@ -623,10 +630,7 @@ namespace proc {
     return 0;
   }
 
-  void proc_t::resume() {
-    ++session_generation;
-    BOOST_LOG(info) << "Session resuming for app [" << _app_name << "].";
-
+  void proc_t::reclaim_primary_display() {
 #ifdef _WIN32
     // The primary display is handed back to the PC while nobody is streaming (see pause()).
     // Make the virtual display primary again now that a client is back.
@@ -645,6 +649,14 @@ namespace proc {
       }
     }
 #endif
+  }
+
+  void proc_t::resume() {
+    ++session_generation;
+    BOOST_LOG(info) << "Session resuming for app [" << _app_name << "].";
+
+    // Normally already done by the resume request, before capture starts
+    reclaim_primary_display();
 
     if (!_app.state_cmds.empty()) {
       auto exec_thread = std::thread([cmd_list = _app.state_cmds, app_working_dir = _app.working_dir, _env = _env]() mutable {
