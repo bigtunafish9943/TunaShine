@@ -90,7 +90,8 @@ jobs:
         run: |
           set -o pipefail
           export PATH="$PATH:$(cygpath -u "$NODE_DIR")"
-          ninja -C build 2>&1 | tee build.log
+          # -k 0 keeps going after a failure so one run reports every error
+          ninja -C build -k 0 2>&1 | tee build.log
 
       - name: Package
         shell: msys2 {0}
@@ -112,10 +113,10 @@ jobs:
           done
           if [ -z "${log:-}" ]; then echo "::error::Failed before any log was written"; exit 0; fi
           {
-            grep -n -i -E "error|FAILED|undefined reference|No such file|not found" "$log" | head -n 40
+            grep -n -E "error:|error |FAILED:|undefined reference|No such file|CMake Error" "$log" | head -n 60
             echo "--- last lines of $log ---"
             tail -n 40 "$log"
-          } | cut -c1-300 > excerpt.txt
+          } | cut -c1-260 > excerpt.txt
           msg=$(sed -e 's/%/%25/g' excerpt.txt | tr -d '\r' | awk '{printf "%s%%0A", $0}')
           echo "::error title=$log::$msg"
 
