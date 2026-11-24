@@ -291,6 +291,15 @@ body .list-group-item-light {
     font-weight: 600;
 }
 
+/* Separates everyday sections from the ones most people never need */
+.settings-menu-heading {
+    margin: 0.75rem 0.75rem 0.25rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--ts-surface-border);
+    font-size: 0.8rem;
+    color: var(--bs-secondary-color);
+}
+
 .settings-content .config-page {
     background-color: var(--ts-surface);
     border: 1px solid var(--ts-surface-border);
@@ -324,6 +333,10 @@ body .list-group-item-light {
 
     .settings-menu .nav-link {
         white-space: nowrap;
+    }
+
+    .settings-menu-heading {
+        display: none;
     }
 }
 
@@ -772,4 +785,14 @@ body .dropdown-menu {
 
 .screen-status-bad {
     color: var(--bs-warning-text-emphasis);
+}
+
+/* Shown above sections most people never need to change */
+.experts-note {
+    margin: 0 0 1rem;
+    padding: 0.75rem 1rem;
+    border-left: 3px solid var(--ts-accent);
+    background-color: var(--ts-surface);
+    border-radius: 0 0.5rem 0.5rem 0;
+    color: var(--bs-secondary-color);
 }

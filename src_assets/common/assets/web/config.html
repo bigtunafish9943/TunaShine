@@ -22,15 +22,23 @@
       <!-- Settings menu -->
       <nav class="settings-menu" aria-label="Settings sections">
         <ul class="nav nav-pills flex-column">
-          <li class="nav-item" v-for="tab in tabs" :key="tab.id">
-            <a class="nav-link" :class="{'active': tab.id === currentTab}" href="#"
-              :aria-current="tab.id === currentTab ? 'page' : null"
-              @click.prevent="currentTab = tab.id">{{tab.name}}</a>
-          </li>
+          <template v-for="tab in tabs" :key="tab.id">
+            <li class="settings-menu-heading" v-if="tab.id === 'files'">{{ $t('config.menu_experts') }}</li>
+            <li class="nav-item">
+              <a class="nav-link" :class="{'active': tab.id === currentTab}" href="#"
+                :aria-current="tab.id === currentTab ? 'page' : null"
+                @click.prevent="currentTab = tab.id">{{ $t('config.tab_' + tab.id) }}</a>
+            </li>
+          </template>
         </ul>
       </nav>
 
       <div class="settings-content">
+
+      <!-- Sections most people never need -->
+      <p class="experts-note" v-if="!['general', 'input', 'av', 'network'].includes(currentTab)">
+        {{ $t('config.experts_note') }}
+      </p>
 
       <!-- General Tab -->
       <general
