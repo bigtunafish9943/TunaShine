@@ -69,6 +69,14 @@ namespace nvenc {
      */
     bool invalidate_ref_frames(uint64_t first_frame, uint64_t last_frame);
 
+    /**
+     * @brief Change the stream's bitrate without restarting the encoder or sending a key frame.
+     *        Used to ease off when the client's network struggles, and to recover after.
+     * @param kbps New average bitrate in kilobits per second.
+     * @return `true` on success, `false` if the encoder couldn't be reconfigured.
+     */
+    bool set_bitrate(uint32_t kbps);
+
   protected:
     /**
      * @brief Required. Used for loading NvEnc library and setting `nvenc` variable with `NvEncodeAPICreateInstance()`.
@@ -141,6 +149,13 @@ namespace nvenc {
                                          ///< Can be set in constructor or `init_library()`, must override `wait_for_async_event()`.
 
   private:
+    // Kept from create_encoder() so set_bitrate() can reconfigure the same encoder
+    NV_ENC_INITIALIZE_PARAMS saved_init_params = {};
+    NV_ENC_CONFIG saved_enc_config = {};
+    uint32_t saved_framerate = 0;
+    int saved_vbv_percentage_increase = 0;
+    bool reconfigure_ready = false;
+
     NV_ENC_OUTPUT_PTR output_bitstream = nullptr;
     uint32_t minimum_api_version = 0;
 

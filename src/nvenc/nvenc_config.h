@@ -17,7 +17,7 @@ namespace nvenc {
    */
   struct nvenc_config {
     // Quality preset from 1 to 7, higher is slower
-    int quality_preset = 1;
+    int quality_preset = 0;  // 0: automatic, chosen from what the graphics card can do
 
     // Use optional preliminary pass for better motion vectors, bitrate distribution and stricter VBV(HRD), uses CUDA cores
     nvenc_two_pass two_pass = nvenc_two_pass::quarter_resolution;
@@ -29,7 +29,7 @@ namespace nvenc {
     bool weighted_prediction = false;
 
     // Allocate more bitrate to flat regions since they're visually more perceptible, uses CUDA cores
-    bool adaptive_quantization = false;
+    bool adaptive_quantization = true;  // spends bits where the eye notices: dark scenes, skies, gradients
 
     // Don't use QP below certain value, limits peak image quality to save bitrate
     bool enable_min_qp = false;

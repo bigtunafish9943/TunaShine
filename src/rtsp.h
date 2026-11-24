@@ -47,6 +47,7 @@ namespace rtsp_stream {
     int surround_info;
     std::string surround_params;
     bool enable_hdr;
+    bool sdr_10bit;  ///< TunaReceive asked for 10-bit video without HDR
     bool enable_sops;
     bool virtual_display;
     uint32_t scale_factor;

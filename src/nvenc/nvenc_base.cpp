@@ -213,7 +213,18 @@ namespace nvenc {
 
     encoder_params.rfi = get_encoder_cap(NV_ENC_CAPS_SUPPORT_REF_PIC_INVALIDATION);
 
-    init_params.presetGUID = quality_preset_guid_from_number(config.quality_preset);
+    // Automatic quality: cards that also encode AV1 (RTX 40 and 50 series) have the headroom
+    // for a slower, cleaner preset at the same latency budget; older cards keep the fastest
+    int quality_preset = config.quality_preset;
+    if (quality_preset <= 0) {
+      const bool newer_card = std::find_if(encode_guids.begin(), encode_guids.end(), [](const GUID &guid) {
+                                return equal_guids(guid, NV_ENC_CODEC_AV1_GUID);
+                              }) != encode_guids.end();
+      const bool above_1440p = (std::uint64_t) encoder_params.width * encoder_params.height > 2560ull * 1440ull;
+      quality_preset = newer_card ? (above_1440p ? 4 : 5) : 1;
+      BOOST_LOG(info) << "NvEnc: automatic quality preset P" << quality_preset;
+    }
+    init_params.presetGUID = quality_preset_guid_from_number(quality_preset);
     init_params.tuningInfo = NV_ENC_TUNING_INFO_ULTRA_LOW_LATENCY;
     init_params.enablePTD = 1;
     init_params.enableEncodeAsync = async_event_handle ? 1 : 0;
@@ -385,6 +396,14 @@ namespace nvenc {
       BOOST_LOG(error) << "NvEnc: NvEncInitializeEncoder() failed: " << last_nvenc_error_string;
       return false;
     }
+
+    // Remember how the encoder was set up, so its bitrate can be changed mid-stream
+    saved_enc_config = enc_config;
+    saved_init_params = init_params;
+    saved_init_params.encodeConfig = &saved_enc_config;
+    saved_framerate = client_config.framerate > 0 ? client_config.framerate : 60;
+    saved_vbv_percentage_increase = config.vbv_percentage_increase;
+    reconfigure_ready = true;
 
     if (async_event_handle) {
       NV_ENC_EVENT_PARAMS event_params = {min_struct_version(NV_ENC_EVENT_PARAMS_VER)};
@@ -569,6 +588,35 @@ namespace nvenc {
     encoder_state.frame_size_logger.collect_and_log(encoded_frame.data.size() / 1000.);
 
     return encoded_frame;
+  }
+
+  bool nvenc_base::set_bitrate(uint32_t kbps) {
+    if (!encoder || !reconfigure_ready || kbps == 0) {
+      return false;
+    }
+
+    saved_enc_config.rcParams.averageBitRate = kbps * 1000;
+    if (saved_enc_config.rcParams.vbvBufferSize > 0) {
+      // Same one-frame buffer as at the start, for the new rate
+      uint32_t vbv = kbps * 1000 / saved_framerate;
+      if (saved_vbv_percentage_increase > 0) {
+        vbv += vbv * saved_vbv_percentage_increase / 100;
+      }
+      saved_enc_config.rcParams.vbvBufferSize = vbv;
+    }
+
+    NV_ENC_RECONFIGURE_PARAMS params = {min_struct_version(NV_ENC_RECONFIGURE_PARAMS_VER)};
+    params.reInitEncodeParams = saved_init_params;
+    params.reInitEncodeParams.encodeConfig = &saved_enc_config;
+    params.resetEncoder = 0;
+    params.forceIDR = 0;
+
+    if (nvenc_failed(nvenc->nvEncReconfigureEncoder(encoder, &params))) {
+      BOOST_LOG(warning) << "NvEnc: couldn't change the bitrate to " << kbps << " kbps: " << last_nvenc_error_string;
+      return false;
+    }
+    BOOST_LOG(info) << "NvEnc: bitrate now " << kbps << " kbps";
+    return true;
   }
 
   bool nvenc_base::invalidate_ref_frames(uint64_t first_frame, uint64_t last_frame) {
