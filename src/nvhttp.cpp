@@ -466,6 +466,7 @@ namespace nvhttp {
     launch_session->surround_params = (get_arg(args, "surroundParams", ""));
     launch_session->gcmap = util::from_view(get_arg(args, "gcmap", "0"));
     launch_session->enable_hdr = util::from_view(get_arg(args, "hdrMode", "0"));
+    launch_session->sdr_10bit = util::from_view(get_arg(args, "tunaSdr10", "0"));
     launch_session->virtual_display = util::from_view(get_arg(args, "virtualDisplay", "0")) || named_cert_p->always_use_virtual_display;
     launch_session->scale_factor = util::from_view(get_arg(args, "scaleFactor", "100"));
 
