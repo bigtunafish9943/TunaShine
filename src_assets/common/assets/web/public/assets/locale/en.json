@@ -1382,6 +1382,7 @@
     "screen_failed": "Sharing couldn't be changed.",
     "need_link": "This device can't watch yet. Open a new watch link from the person who shares, or sign in.",
     "sign_in": "Sign in",
+    "home_screen_tip": "Tip: Add to Home Screen in the browser's menu opens Watch like an app.",
     "viewers_title": "Watching now",
     "viewers_none": "Nobody is watching.",
     "viewers_since": "since {time}",

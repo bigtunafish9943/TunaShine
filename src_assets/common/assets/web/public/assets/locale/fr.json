@@ -1382,6 +1382,7 @@
     "screen_failed": "Le partage n'a pas pu être modifié.",
     "need_link": "Cet appareil ne peut pas encore regarder. Ouvrez un nouveau lien pour regarder envoyé par la personne qui partage, ou connectez-vous.",
     "sign_in": "Se connecter",
+    "home_screen_tip": "Astuce : « Sur l'écran d'accueil » dans le menu du navigateur ouvre Regarder comme une app.",
     "viewers_title": "Regardent en ce moment",
     "viewers_none": "Personne ne regarde.",
     "viewers_since": "depuis {time}",

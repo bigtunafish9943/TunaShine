@@ -1382,6 +1382,7 @@
     "screen_failed": "No se pudo cambiar el uso compartido.",
     "need_link": "Este dispositivo aún no puede ver. Abre un nuevo enlace para ver de quien comparte, o inicia sesión.",
     "sign_in": "Iniciar sesión",
+    "home_screen_tip": "Consejo: «Añadir a pantalla de inicio» en el menú del navegador abre Ver como una app.",
     "viewers_title": "Mirando ahora",
     "viewers_none": "Nadie está mirando.",
     "viewers_since": "desde las {time}",

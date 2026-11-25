@@ -955,6 +955,32 @@ namespace confighttp {
   }
 
   /**
+   * @brief Lets a tablet or phone add the Watch page to its home screen like an app.
+   */
+  void getWatchManifest(resp_https_t response, req_https_t request) {
+    if (!checkIPOrigin(response, request)) {
+      return;
+    }
+    nlohmann::json manifest {
+      {"name", "TunaStream Watch"},
+      {"short_name", "Watch"},
+      {"start_url", "./watch"},
+      {"scope", "./"},
+      {"display", "standalone"},
+      {"orientation", "any"},
+      {"background_color", "#000000"},
+      {"theme_color", "#041431"},
+      {"icons", nlohmann::json::array({
+        {{"src", "./images/tunastream-app-180.png"}, {"sizes", "180x180"}, {"type", "image/png"}},
+        {{"src", "./images/tunastream-app-512.png"}, {"sizes", "512x512"}, {"type", "image/png"}},
+      })},
+    };
+    SimpleWeb::CaseInsensitiveMultimap headers;
+    headers.emplace("Content-Type", "application/manifest+json");
+    response->write(SimpleWeb::StatusCode::success_ok, manifest.dump(), headers);
+  }
+
+  /**
    * @brief Lets a phone add the Live page to its home screen like an app.
    */
   void getLiveManifest(resp_https_t response, req_https_t request) {
@@ -3846,6 +3872,7 @@ namespace confighttp {
     server.resource["^/images/logo-tunastream-45.png$"]["GET"] = getTunaStreamLogoImage;
     server.resource["^/images/tunastream-app-(180|512).png$"]["GET"] = getAppIcon;
     server.resource["^/live.webmanifest$"]["GET"] = getLiveManifest;
+    server.resource["^/watch.webmanifest$"]["GET"] = getWatchManifest;
     server.resource["^/live/?$"]["GET"] = getLivePage;
     server.resource["^/checklist/?$"]["GET"] = getChecklistPage;
     server.resource["^/watch/?$"]["GET"] = getWatchPage;

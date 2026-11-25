@@ -1382,6 +1382,7 @@
     "screen_failed": "Das Teilen konnte nicht geändert werden.",
     "need_link": "Dieses Gerät kann noch nicht zuschauen. Öffne einen neuen Zuschau-Link von der Person, die teilt, oder melde dich an.",
     "sign_in": "Anmelden",
+    "home_screen_tip": "Tipp: „Zum Home-Bildschirm“ im Browsermenü öffnet „Zuschauen“ wie eine App.",
     "viewers_title": "Schauen gerade zu",
     "viewers_none": "Niemand schaut zu.",
     "viewers_since": "seit {time}",

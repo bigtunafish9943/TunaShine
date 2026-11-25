@@ -3,6 +3,11 @@
 
 <head>
   <%- header %>
+  <link rel="manifest" href="./watch.webmanifest">
+  <link rel="apple-touch-icon" href="./images/tunastream-app-180.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Watch">
   <meta name="theme-color" content="#041431">
   <style>
     body {
@@ -175,6 +180,7 @@
       </button>
       <span class="small" role="status" v-if="shareStatus">{{ shareStatus }}</span>
       <span class="watch-note">{{ audioSupported ? $t('watch.note') : $t('watch.no_sound_here') }}</span>
+      <span class="watch-note" v-if="token && !standalone">{{ $t('watch.home_screen_tip') }}</span>
     </div>
 
     <!-- Share my screen: only with the password, never from a watch link -->
@@ -283,6 +289,7 @@
           passwordBusy: false,
           passwordError: '',
           viewerList: [],
+          standalone: window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true,
           sharper: false,
           newPasswordName: '',
           newPassword: '',
