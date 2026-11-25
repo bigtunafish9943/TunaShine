@@ -1896,6 +1896,23 @@ namespace nvhttp {
   }
 
   /**
+   * Troubleshooting: POST /tuna/log with TunaReceive's recent log as plain text. Kept on this PC
+   * for the web page's Troubleshooting > Logs from TVs. Answers {"saved", "name"}.
+   */
+  void tunaLog(resp_https_t response, req_https_t request) {
+    print_req<TunaStreamHTTPS>(request);
+    auto named_cert_p = get_verified_cert(request);
+    auto name = settings_backup::keep_receiver_log(named_cert_p->name, request->content.string());
+    nlohmann::json out;
+    out["saved"] = !name.empty();
+    out["name"] = name;
+    SimpleWeb::CaseInsensitiveMultimap headers;
+    headers.emplace("Content-Type", "application/json");
+    response->write(name.empty() ? SimpleWeb::StatusCode::client_error_bad_request : SimpleWeb::StatusCode::success_ok, out.dump(), headers);
+    response->close_connection_after_response = true;
+  }
+
+  /**
    * Instant replay: GET /tuna/replay saves the last 30 seconds of this device's stream as a clip in
    * the signed-in user's Videos\TunaStream folder. Answers {"saved", "name"} or {"saved": false, "reason"}.
    */
@@ -2270,6 +2287,7 @@ namespace nvhttp {
     https_server.resource["^/tuna/sound$"]["GET"] = tunaSound;
     https_server.resource["^/tuna/recap$"]["GET"] = tunaRecap;
     https_server.resource["^/tuna/screenshot$"]["POST"] = tunaScreenshot;
+    https_server.resource["^/tuna/log$"]["POST"] = tunaLog;
     https_server.resource["^/tuna/replay$"]["GET"] = tunaReplay;
     https_server.resource["^/tuna/settings$"]["POST"] = tunaSettings;
     https_server.resource["^/tuna/backup$"]["POST"] = tunaBackupSave;

@@ -1005,7 +1005,12 @@
     "vdisplay_status_unknown": "Not checked yet",
     "vdisplay_status_version": "Wrong driver version",
     "vdisplay_status_watchdog": "The driver stopped responding",
-    "vdisplay_title": "Virtual screen"
+    "vdisplay_title": "Virtual screen",
+    "tv_logs_title": "Logs from TVs",
+    "tv_logs_desc": "When something goes wrong on a TV, open TunaReceive, pick this PC, then PC tools > Send logs to PC. The log appears here, so it can be read or shared without connecting anything to the TV.",
+    "tv_logs_none": "No logs sent yet.",
+    "tv_logs_show": "Show",
+    "tv_logs_gone": "That log isn't on this PC any more."
   },
   "welcome": {
     "confirm_password": "Confirm password",

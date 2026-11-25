@@ -2434,6 +2434,51 @@ namespace confighttp {
   }
 
   /**
+   * @brief Logs sent from TVs (TunaReceive > PC tools > Send logs to PC):
+   *        {"logs": [{"name", "device", "made", "size"}]}.
+   */
+  void getReceiverLogs(resp_https_t response, req_https_t request) {
+    if (!authenticate(response, request)) {
+      return;
+    }
+
+    nlohmann::json list = nlohmann::json::array();
+    for (const auto &l : settings_backup::receiver_logs()) {
+      list.push_back({{"name", l.name}, {"device", l.device}, {"made", l.made}, {"size", l.size}});
+    }
+    nlohmann::json output_tree;
+    output_tree["status"] = true;
+    output_tree["logs"] = list;
+    send_response(response, output_tree);
+  }
+
+  /**
+   * @brief One log from a TV as text: GET /api/receiver-log?name=...&download=1 to save it.
+   */
+  void getReceiverLog(resp_https_t response, req_https_t request) {
+    if (!authenticate(response, request)) {
+      return;
+    }
+
+    auto args = request->parse_query_string();
+    const auto name = args.find("name") != args.end() ? args.find("name")->second : std::string {};
+    const bool download = args.find("download") != args.end() && args.find("download")->second == "1";
+    const auto text = settings_backup::receiver_log(name);
+    if (text.empty()) {
+      bad_request(response, request, "That log isn't on this PC any more.");
+      return;
+    }
+    SimpleWeb::CaseInsensitiveMultimap headers;
+    headers.emplace("Content-Type", "text/plain; charset=utf-8");
+    headers.emplace("Cache-Control", "no-store");
+    headers.emplace("X-Content-Type-Options", "nosniff");
+    if (download) {
+      headers.emplace("Content-Disposition", "attachment; filename=\"TunaReceive log "s + name + "\"");
+    }
+    response->write(SimpleWeb::StatusCode::success_ok, text, headers);
+  }
+
+  /**
    * @brief TunaReceive's settings on each TV that has shared them: {"tvs": [...]}.
    */
   void getReceiverSettings(resp_https_t response, req_https_t request) {
@@ -2706,6 +2751,8 @@ namespace confighttp {
     server.resource["^/api/backup$"]["GET"] = getBackup;
     server.resource["^/api/restore$"]["POST"] = postRestore;
     server.resource["^/api/receiver-backups$"]["GET"] = getReceiverBackups;
+    server.resource["^/api/receiver-logs$"]["GET"] = getReceiverLogs;
+    server.resource["^/api/receiver-log$"]["GET"] = getReceiverLog;
     server.resource["^/api/receiver-settings$"]["GET"] = getReceiverSettings;
     server.resource["^/api/receiver-settings$"]["POST"] = postReceiverSettings;
     server.resource["^/api/quit$"]["POST"] = quit;
