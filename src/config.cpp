@@ -542,7 +542,7 @@ namespace config {
 
     true,  // instant_replay
 
-    false,  // shared_pc
+    true,  // shared_pc
 
     0,  // video_send_rate (automatic)
 

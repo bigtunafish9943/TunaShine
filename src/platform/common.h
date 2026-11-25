@@ -977,6 +977,9 @@ namespace platf {
   /// The sound device the stream captures in shared PC mode (Windows endpoint id), or empty.
   void set_stream_audio_device(const std::wstring &device_id);
 
+  /// A streaming device's controller was used just now (shared PC mode gives the game focus back).
+  void note_controller_input();
+
   std::string
   get_clipboard();
 

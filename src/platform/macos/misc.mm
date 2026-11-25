@@ -230,6 +230,9 @@ namespace platf {
   void set_stream_audio_device(const std::wstring &) {
   }
 
+  void note_controller_input() {
+  }
+
   std::unique_ptr<window_herder_t> herd_new_windows(const std::string &, bool) {
     return nullptr;
   }
