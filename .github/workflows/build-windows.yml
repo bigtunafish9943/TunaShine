@@ -253,6 +253,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           {
+            # What's new: the description of the merge that made this build, without its trailer lines
+            echo "### What's new"
+            curl -s -H "Authorization: Bearer ${GH_TOKEN}" \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}" \
+              | python3 -c "import json,sys; m=json.load(sys.stdin)['commit']['message']; print(chr(10).join(l for l in m.split(chr(10)) if not l.startswith(('Co-Authored-By:','Claude-Session:'))).strip().removeprefix('Merge: '))" || true
+            echo
             echo "Automatic build from ${GITHUB_REF_NAME}, commit ${GITHUB_SHA::7}."
             echo
             echo "**Download** \`TunaStream-${VERSION}-setup.exe\` and run it. Windows warns about an unknown"

@@ -189,6 +189,8 @@ namespace config {
     bool shared_pc_borderless;
     // Turn on Windows' Do not disturb while a stream runs
     bool quiet_notifications;
+    // Privacy mode: the PC's own monitors are off while someone streams (not in Shared PC mode)
+    bool privacy_mode;
 
     // Peak rate video packets are sent at, in Mbps; 0 picks one from the stream's bitrate
     int video_send_rate;

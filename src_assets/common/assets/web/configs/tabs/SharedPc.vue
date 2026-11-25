@@ -35,5 +35,14 @@ const config = ref(props.config)
               default="true"
               v-if="config.shared_pc !== 'disabled'"
     ></Checkbox>
+
+    <!-- Privacy mode, for when nobody uses the PC during a stream -->
+    <Checkbox class="mb-3"
+              id="privacy_mode"
+              locale-prefix="config"
+              v-model="config.privacy_mode"
+              default="false"
+              v-if="config.shared_pc === 'disabled'"
+    ></Checkbox>
   </div>
 </template>

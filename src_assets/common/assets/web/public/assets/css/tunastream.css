@@ -2019,3 +2019,7 @@ html[data-ts-theme=summer][data-bs-theme=dark] {
   .ts-tvset-row { flex-direction: column; gap: 0.5rem; }
   .ts-tvset-control { flex-basis: auto; width: 100%; justify-content: flex-start; }
 }
+
+/* Home > What's new after an update */
+.home-whatsnew-item { margin-bottom: 1rem; }
+.home-whatsnew-text { white-space: pre-line; margin: 0; max-width: 80ch; }
