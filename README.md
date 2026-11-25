@@ -98,6 +98,9 @@ and every step was tightened:
   *Settings > Shared PC*.
 - **Do not disturb during streams** (on by default). Windows' notifications wait in the notification centre
   instead of popping up over the game.
+- **Privacy mode** (off unless turned on, with Shared PC off). The PC's own monitors go dark while a TV streams,
+  so nobody in the room sees what's being played, and come back as they were when the stream ends or pauses.
+  If TunaStream stops unexpectedly, they come back the next time it starts.
 
 ## Everything else
 
@@ -124,9 +127,14 @@ and every step was tightened:
   PC's theme by default, and so do TunaStream's own Desktop, Steam and Virtual Desktop tiles. *Settings >
   General*.
 - **Updates itself.** When a new version is out, a banner offers *Update now*; TunaStream downloads it, checks it
-  against GitHub's published checksum and installs it, keeping your settings and paired devices.
-- **Troubleshooting that helps.** The log, ready to save and attach to a bug report; a rumble test; and a Wi-Fi
-  check that lists the networks nearby and says which channel is quietest.
+  against GitHub's published checksum and installs it, keeping your settings and paired devices. Afterwards the
+  home page shows what's new since the version you last saw.
+- **Troubleshooting that helps.** The log, ready to save and attach to a bug report; logs sent from TVs
+  (TunaReceive's *PC tools > Send logs to PC*); a rumble test; and a Wi-Fi check that lists the networks nearby
+  and says which channel is quietest.
+- **A test checklist** (*/checklist*, linked from Troubleshooting) of features to try on your own PC, TV and
+  controllers, with how to tell each one works. Mark each *Works* or *Problem*; the marks are kept on the PC.
+- **English, Spanish, French and German**, under *Settings > General > Language*.
 - **Backup and restore.** One file with your settings, apps, sounds and play history, and your pairings if you
   tick them. TunaReceive can keep its own backup on the PC and get it back on a new TV.
 - **Permissions for each device**, with one-click presets such as *Controller only*.
