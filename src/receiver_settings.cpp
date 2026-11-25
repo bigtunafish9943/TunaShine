@@ -113,20 +113,27 @@ namespace receiver_settings {
       return answer;
     }
     auto state = load(path);
+    const auto before = state.dump();
+    const auto last_seen = state.value("seen", (std::int64_t) 0);
     const std::int64_t revision = state.value("revision", std::int64_t {0});
     const std::int64_t applied = body.value("applied", std::int64_t {0});
     if (applied >= revision) {
       state["pending"] = nlohmann::json::object();
     }
+    // The TV checks in every 15 seconds while its games are on screen: only write when something
+    // changed, or once a minute to keep "last checked in" fresh
     state["device"] = device;
-    state["seen"] = now_s();
     if (body.contains("settings") && body["settings"].is_array()) {
       state["settings"] = body["settings"];
     }
     state["profile"] = body.value("profile", "");
     state["version"] = body.value("version", "");
     state["revision"] = revision;
-    save(path, state);
+    const bool changed = state.dump() != before;
+    if (changed || now_s() - last_seen >= 60) {
+      state["seen"] = now_s();
+      save(path, state);
+    }
 
     if (applied < revision) {
       answer["revision"] = revision;

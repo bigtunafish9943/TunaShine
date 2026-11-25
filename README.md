@@ -15,7 +15,7 @@ TunaStream runs on your gaming PC and streams it to another device over your net
 set up, pleasant to use, and smooth on ordinary home Wi-Fi.
 
 > [!NOTE]
-> TunaStream is young. It is played on every day with one setup (an RTX 5080 PC streaming over Wi-Fi to an NVIDIA
+> This is TunaStream 1.0, the first complete version. It is played on every day with one setup (an RTX 5080 PC streaming over Wi-Fi to an NVIDIA
 > Shield TV Pro running [TunaReceive](https://github.com/bigtunafish9943/TunaReceive)), and every release passes
 > automated checks, but it has had little testing on other hardware. Expect rough edges.
 
