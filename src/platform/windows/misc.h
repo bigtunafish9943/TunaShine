@@ -33,4 +33,13 @@ namespace platf {
    * @return The converted UTF-8 string.
    */
   std::string to_utf8(const std::wstring_view &string);
+
+  /// Whether TunaStream runs as SYSTEM (as it does under its service).
+  bool is_running_as_system();
+
+  /// The signed-in user's token (elevated when asked and allowed), or nullptr. Close it after use.
+  HANDLE retrieve_users_token(bool elevated);
+
+  /// "tunastream.exe --wgc-helper ...": the screen capture helper started in the user's session.
+  int wgc_helper_main(int argc, char *argv[]);
 }  // namespace platf

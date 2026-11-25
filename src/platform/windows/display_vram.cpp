@@ -1668,8 +1668,14 @@ namespace platf::dxgi {
   capture_e display_wgc_vram_t::snapshot(const pull_free_image_cb_t &pull_free_image_cb, std::shared_ptr<platf::img_t> &img_out, std::chrono::milliseconds timeout, bool cursor_visible) {
     texture2d_t src;
     uint64_t frame_qpc;
-    dup.set_cursor_visible(cursor_visible);
-    auto capture_status = dup.next_frame(timeout, &src, frame_qpc);
+    capture_e capture_status;
+    if (remote) {
+      wgc_remote_set_cursor_visible(*remote, cursor_visible);
+      capture_status = wgc_remote_next_frame(*remote, timeout, &src, frame_qpc);
+    } else {
+      dup.set_cursor_visible(cursor_visible);
+      capture_status = dup.next_frame(timeout, &src, frame_qpc);
+    }
     if (capture_status != capture_e::ok) {
       return capture_status;
     }
@@ -1719,11 +1725,20 @@ namespace platf::dxgi {
   }
 
   capture_e display_wgc_vram_t::release_snapshot() {
-    return dup.release_frame();
+    return remote ? wgc_remote_release_frame(*remote) : dup.release_frame();
   }
 
   int display_wgc_vram_t::init(const ::video::config_t &config, const std::string &display_name) {
-    if (display_base_t::init(config, display_name) || dup.init(this, config)) {
+    if (display_base_t::init(config, display_name)) {
+      return -1;
+    }
+    // TunaStream runs as SYSTEM, where WGC isn't available: capture through a helper as the user
+    if (platf::is_running_as_system()) {
+      remote = make_wgc_remote(this, config);
+      if (!remote) {
+        return -1;
+      }
+    } else if (dup.init(this, config)) {
       return -1;
     }
 

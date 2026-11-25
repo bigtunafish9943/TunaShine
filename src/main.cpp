@@ -148,6 +148,11 @@ int main(int argc, char *argv[]) {
   // by placing a user-writable directory in the system-wide PATH variable.
   SetDefaultDllDirectories(LOAD_LIBRARY_SEARCH_APPLICATION_DIR | LOAD_LIBRARY_SEARCH_SYSTEM32);
 
+  // The screen capture helper TunaStream starts in the user's session (WGC under the service)
+  if (argc > 1 && std::string_view {argv[1]} == "--wgc-helper") {
+    return platf::wgc_helper_main(argc, argv);
+  }
+
   setlocale(LC_ALL, "C");
 #endif
 

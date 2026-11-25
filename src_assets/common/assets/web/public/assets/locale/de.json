@@ -356,6 +356,7 @@
     "back_button_timeout_desc": "Für Controller ohne Guide-Taste (Xbox/PS): Zurück/Select so viele Millisekunden halten drückt sie. -1 schaltet das aus.",
     "capture": "Methode der Bildschirmaufnahme",
     "capture_desc": "„Automatisch“ nutzt die erste Methode, die funktioniert.",
+    "capture_wgc_desc": "Windows.Graphics.Capture kann bei Spielen mit Frame-Generierung oder im Fenstermodus flüssiger sein und braucht etwas mehr Grafikleistung. TunaStream nimmt über einen kleinen Helfer in deiner angemeldeten Sitzung auf und wechselt von selbst zu Desktop Duplication, wenn niemand angemeldet ist, bei UAC-Abfragen und auf dem Sperrbildschirm. Stell wieder auf „Automatisch“, wenn etwas nicht stimmt.",
     "cert_desc": "Schützt diese Seite und das Koppeln. TunaStream erstellt es für dich; es sollte einen RSA-2048-Schlüssel nutzen.",
     "controller": "Controller",
     "controller_desc": "Geräten erlauben, einen Controller an diesem PC zu nutzen.",

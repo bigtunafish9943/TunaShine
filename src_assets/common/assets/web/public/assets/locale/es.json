@@ -358,6 +358,7 @@
     "back_button_timeout_desc": "Para mandos sin botón Guía (Xbox/PS): mantener Atrás/Select estos milisegundos lo pulsa. -1 lo desactiva.",
     "capture": "Método de captura de pantalla",
     "capture_desc": "«Automático» usa el primer método que funcione.",
+    "capture_wgc_desc": "Windows.Graphics.Capture puede ser más fluido con juegos que usan generación de fotogramas o se ejecutan en ventana, y usa un poco más de potencia gráfica. TunaStream captura mediante un pequeño ayudante en tu sesión iniciada, y cambia solo a Desktop Duplication cuando nadie ha iniciado sesión, durante los avisos de UAC y en la pantalla de bloqueo. Vuelve a «Automático» si algo no se ve bien.",
     "cert_desc": "Sirve para proteger esta página y la vinculación. TunaStream lo crea por ti; debe usar una clave RSA-2048.",
     "controller": "Mandos",
     "controller_desc": "Permite que los dispositivos usen un mando en este PC.",

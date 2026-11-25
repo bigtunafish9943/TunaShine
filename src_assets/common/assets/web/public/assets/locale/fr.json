@@ -356,6 +356,7 @@
     "back_button_timeout_desc": "Pour les manettes sans bouton Guide (Xbox/PS) : maintenir Retour/Select pendant ce nombre de millisecondes l'actionne. -1 désactive cette fonction.",
     "capture": "Méthode de capture d'écran",
     "capture_desc": "« Automatique » utilise la première méthode qui fonctionne.",
+    "capture_wgc_desc": "Windows.Graphics.Capture peut être plus fluide avec les jeux qui utilisent la génération d'images ou tournent en fenêtre, et demande un peu plus de puissance graphique. TunaStream capture via un petit assistant dans votre session ouverte, et passe tout seul à Desktop Duplication quand personne n'est connecté, pendant les invites UAC et sur l'écran de verrouillage. Revenez à « Automatique » si quelque chose ne va pas.",
     "cert_desc": "Sert à sécuriser cette page et l'association. TunaStream le crée pour vous ; il doit utiliser une clé RSA-2048.",
     "controller": "Manettes",
     "controller_desc": "Permettre aux appareils d'utiliser une manette sur ce PC.",

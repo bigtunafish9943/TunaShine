@@ -227,6 +227,7 @@
     "back_button_timeout_desc": "For controllers without a Guide (Xbox/PS) button: holding Back/Select this many milliseconds presses it. -1 turns this off.",
     "capture": "Screen capture method",
     "capture_desc": "Automatic uses the first method that works.",
+    "capture_wgc_desc": "Windows.Graphics.Capture can be smoother with games that use frame generation or run in windows, and costs a little more graphics power. TunaStream captures through a small helper in your signed-in session, and switches to Desktop Duplication by itself when nobody is signed in, during UAC prompts and on the lock screen. Go back to Automatic if anything looks wrong.",
     "cert": "Certificate",
     "cert_desc": "Used to secure this page and pairing. TunaStream makes one for you; it should use an RSA-2048 key.",
     "channels": "Maximum Connected Clients",

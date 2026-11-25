@@ -362,10 +362,27 @@ namespace platf::dxgi {
   };
 
   /**
+   * Windows.Graphics.Capture through a helper in the signed-in user's session. TunaStream runs as
+   * SYSTEM, where WGC isn't available, so a copy of TunaStream started as the user captures and
+   * hands each frame over in shared graphics memory (see display_wgc.cpp).
+   */
+  class wgc_remote_t;
+
+  /// Start capturing this display through the helper; nullptr when it can't (fall back to DDX).
+  std::shared_ptr<wgc_remote_t> make_wgc_remote(display_base_t *display, const ::video::config_t &config);
+  capture_e wgc_remote_next_frame(wgc_remote_t &remote, std::chrono::milliseconds timeout, ID3D11Texture2D **out, uint64_t &out_time);
+  capture_e wgc_remote_release_frame(wgc_remote_t &remote);
+  void wgc_remote_set_cursor_visible(wgc_remote_t &remote, bool visible);
+
+  /// Whether the secure desktop (UAC prompt, sign-in or lock screen) is showing, which WGC can't see.
+  bool secure_desktop_active();
+
+  /**
    * Display backend that uses Windows.Graphics.Capture with a software encoder.
    */
   class display_wgc_ram_t: public display_ram_t {
     wgc_capture_t dup;
+    std::shared_ptr<wgc_remote_t> remote;
 
   public:
     int init(const ::video::config_t &config, const std::string &display_name);
@@ -378,6 +395,7 @@ namespace platf::dxgi {
    */
   class display_wgc_vram_t: public display_vram_t {
     wgc_capture_t dup;
+    std::shared_ptr<wgc_remote_t> remote;
 
   public:
     int init(const ::video::config_t &config, const std::string &display_name);

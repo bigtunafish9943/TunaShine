@@ -124,6 +124,7 @@ const config = ref(props.config)
         </PlatformLayout>
       </select>
       <div class="form-text">{{ $t('config.capture_desc') }}</div>
+      <div class="form-text" v-if="platform === 'windows' && config.capture === 'wgc'">{{ $t('config.capture_wgc_desc') }}</div>
     </div>
 
     <!-- Encoder -->
