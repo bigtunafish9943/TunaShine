@@ -70,6 +70,9 @@ namespace stream {
      * @return The percentage actually used: 100, 75, 67 or 50.
      */
     int set_picture_scale(session_t &session, int percent);
+
+    /// Keep what the device reports it sees of its stream, for the health readout.
+    void set_device_view(session_t &session, const device_view_t &view);
     bool uuid_match(const session_t& session, const std::string_view& uuid);
     bool update_device_info(session_t& session, const std::string& name, const crypto::PERM& newPerm);
     int start(session_t &session, const std::string &addr_string);
@@ -84,6 +87,18 @@ namespace stream {
      * @return Number of connected clients the rumble was sent to.
      */
     int test_rumble();
+
+    /// What the device sees of its stream, as TunaReceive reports it.
+    struct device_view_t {
+      bool known = false;  ///< False until a report arrives, or when the last one is old
+      double loss_pct = 0;  ///< Share of frames that never arrived
+      double slow_pct = 0;  ///< Share of frames that took most of a frame interval to arrive
+      double fps = 0;  ///< Frames received per second
+      double decode_ms = 0;  ///< Average time to decode a frame
+      int latency_ms = 0;  ///< Average delay on the device from receiving a frame to showing it
+      int kbps = 0;  ///< Bitrate the device is asking for, in the units of its own setting
+      int setting_kbps = 0;  ///< The device's bitrate setting
+    };
 
     /// How smoothly one client's stream is running, measured over the last few seconds.
     struct health_t {
@@ -100,6 +115,7 @@ namespace stream {
       int bitrate_kbps;  ///< Bitrate the video is being sent at right now
       int fec_percent;  ///< Error correction being added to each frame right now
       int picture_scale;  ///< Picture size in percent of what the device asked for
+      device_view_t view;  ///< What the device sees, when it reports it
       int send_rate_mbps;  ///< Rate packets are paced at
       double window_s;  ///< Seconds the figures cover
     };
