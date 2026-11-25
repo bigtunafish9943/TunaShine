@@ -169,7 +169,8 @@ namespace play_history {
     try {
       auto totals = nlohmann::json::parse(in);
       std::vector<std::pair<std::int64_t, std::string>> list;
-      for (const auto &[id, at] : totals.value("reached", nlohmann::json::object()).items()) {
+      const auto reached = totals.value("reached", nlohmann::json::object());
+      for (const auto &[id, at] : reached.items()) {
         list.emplace_back(at.get<std::int64_t>(), id);
       }
       std::sort(list.rbegin(), list.rend());

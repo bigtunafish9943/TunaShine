@@ -214,7 +214,8 @@ namespace play_limits {
     }
     std::lock_guard lg {lock};
     load_locked();
-    for (const auto &[name, limits] : data.value("devices", nlohmann::json::object()).items()) {
+    const auto all_limits = data.value("devices", nlohmann::json::object());
+    for (const auto &[name, limits] : all_limits.items()) {
       names.insert(name);
     }
     for (const auto &name : names) {
