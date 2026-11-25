@@ -209,6 +209,14 @@
           <button type="button" class="btn btn-sm btn-primary" @click="setSharing(true)" :disabled="sharingBusy">{{ $t('watch.screen_start') }}</button>
         </div>
       </template>
+      <div class="d-flex flex-wrap gap-2 align-items-center mt-2" v-if="soundApps.length">
+        <label for="share-sound" class="mb-0">{{ $t('watch.sound_label') }}</label>
+        <select id="share-sound" class="form-select form-select-sm w-auto" v-model="leaveOut" @change="setLeaveOut">
+          <option value="">{{ $t('watch.sound_everything') }}</option>
+          <option v-for="a in soundApps" :key="a.key" :value="a.key">{{ $t('watch.sound_without', { app: a.name }) }}{{ a.running ? '' : ' ' + $t('watch.sound_not_running') }}</option>
+        </select>
+      </div>
+      <p class="small text-muted mt-1 mb-0" v-if="leaveOut">{{ $t('watch.sound_desc') }}</p>
       <p class="small text-danger mt-2 mb-0" v-if="sharingError" role="alert">{{ sharingError }}</p>
     </section>
 
@@ -300,6 +308,8 @@
           shareMinutes: 120,
           showingScreen: false,
           monitors: [],
+          soundApps: [],
+          leaveOut: '',
           shareMonitor: '',
         }
       },
@@ -511,11 +521,23 @@
             const r = await fetch('./api/watch/share', { credentials: 'include' }).then((r) => r.ok ? r.json() : null)
             if (!r) return
             this.monitors = r.monitors || []
+            this.soundApps = r.soundApps || []
+            const left = this.soundApps.find((a) => a.leftOut)
+            this.leaveOut = left ? left.key : ''
+
             if (!this.shareMonitor) {
               const main = this.monitors.find((m) => m.main)
               this.shareMonitor = r.monitor || (main ? main.id : '')
             }
           } catch (e) { /* only the main screen then */ }
+        },
+        async setLeaveOut() {
+          try {
+            await fetch('./api/watch/share', {
+              credentials: 'include', method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ leaveOut: this.leaveOut }),
+            })
+          } catch (e) { /* shown again on the next load */ }
         },
         async setSharing(on) {
           this.sharingBusy = true

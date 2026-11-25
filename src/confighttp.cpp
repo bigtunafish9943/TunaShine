@@ -1503,6 +1503,7 @@ namespace confighttp {
     }
     auto out = watch::sharing();
     out["monitors"] = watch::monitors();
+    out["soundApps"] = watch::sound_apps();
     out["status"] = true;
     send_response(response, out);
   }
@@ -1587,7 +1588,12 @@ namespace confighttp {
         bad_request(response, request, "This PC's video encoder can't make a second picture at the same time. Sharing needs a graphics card encoder.");
         return;
       }
-      watch::share_screen(on, input.value("minutes", 120), input.value("monitor", std::string {}));
+      if (input.contains("leaveOut")) {
+        watch::set_leave_out(input.value("leaveOut", std::string {}));
+      }
+      if (input.contains("on")) {
+        watch::share_screen(on, input.value("minutes", 120), input.value("monitor", std::string {}));
+      }
       auto out = watch::sharing();
       out["status"] = true;
       send_response(response, out);

@@ -32,6 +32,7 @@
 
 // lib includes
 #include <nlohmann/json.hpp>
+#include <opus/opus.h>
 
 // local includes
 #include "audio.h"
@@ -45,6 +46,7 @@
 #include "watch.h"
 
 #ifdef _WIN32
+  #include "platform/windows/app_sound.h"
   #include "platform/windows/misc.h"
   #include "platform/windows/virtual_display.h"
 #endif
@@ -77,6 +79,28 @@ namespace watch {
     std::string shared_monitor;
     // 1080p instead of 720p. With state_lock.
     bool sharper = false;
+    // Share my screen: a program whose sound viewers don't hear (voice chat), by key. With state_lock.
+    std::string leave_out;
+
+    struct sound_app_t {
+      const char *key;
+      const char *name;
+      std::vector<std::string> exes;
+    };
+
+    const std::vector<sound_app_t> &sound_apps_list() {
+      static const std::vector<sound_app_t> apps {
+        {"discord", "Discord", {"Discord.exe", "DiscordPTB.exe", "DiscordCanary.exe"}},
+        {"teamspeak", "TeamSpeak", {"ts3client_win64.exe", "ts3client_win32.exe", "TeamSpeak.exe"}},
+        {"teams", "Microsoft Teams", {"ms-teams.exe", "Teams.exe"}},
+        {"zoom", "Zoom", {"Zoom.exe"}},
+        {"mumble", "Mumble", {"mumble.exe"}},
+        {"slack", "Slack", {"slack.exe"}},
+        {"guilded", "Guilded", {"Guilded.exe"}},
+        {"spotify", "Spotify", {"Spotify.exe"}},
+      };
+      return apps;
+    }
     bool settings_loaded = false;
 
     // The Watch page's choices, kept across restarts: watch.json next to the settings
@@ -97,13 +121,14 @@ namespace watch {
         auto j = nlohmann::json::parse(in);
         sharper = j.value("sharper", false);
         shared_monitor = j.value("monitor", std::string {});
+        leave_out = j.value("leaveOut", std::string {});
       } catch (const std::exception &) {
       }
     }
 
     void save_settings_locked() {
       std::ofstream out {settings_file(), std::ios::trunc};
-      out << nlohmann::json {{"sharper", sharper}, {"monitor", shared_monitor}}.dump(2);
+      out << nlohmann::json {{"sharper", sharper}, {"monitor", shared_monitor}, {"leaveOut", leave_out}}.dump(2);
     }
 
     std::int64_t now_us() {
@@ -276,6 +301,35 @@ namespace watch {
       viewer_list.clear();
     }
 
+#ifdef _WIN32
+    /// The PC's sound minus one program's, as Opus for viewers, until stopping. false if it can't.
+    bool sound_without_encoded(std::uint32_t pid, const std::atomic_bool &stopping) {
+      int err = 0;
+      OpusEncoder *enc = opus_encoder_create(48000, 2, OPUS_APPLICATION_AUDIO, &err);
+      if (!enc || err != OPUS_OK) {
+        return false;
+      }
+      opus_encoder_ctl(enc, OPUS_SET_BITRATE(128000));
+      constexpr int FRAME = 480;  // 10 ms, as the usual watch sound
+      std::vector<float> pending;
+      std::vector<unsigned char> packet(4000);
+      auto started = platf::sound_without(pid, [&](const float *samples, std::size_t frames) {
+        pending.insert(pending.end(), samples, samples + frames * 2);
+        std::size_t used = 0;
+        while (pending.size() - used >= (std::size_t) FRAME * 2) {
+          const int bytes = opus_encode_float(enc, pending.data() + used, FRAME, packet.data(), (opus_int32) packet.size());
+          used += (std::size_t) FRAME * 2;
+          if (bytes > 0) {
+            on_audio(std::string_view {(const char *) packet.data(), (std::size_t) bytes});
+          }
+        }
+        pending.erase(pending.begin(), pending.begin() + (std::ptrdiff_t) used);
+      }, stopping);
+      opus_encoder_destroy(enc);
+      return started;
+    }
+#endif
+
     bool start_locked(std::string &error) {
       if (running) {
         return true;
@@ -342,7 +396,25 @@ namespace watch {
       run->video_thread = std::thread {[mail, config]() {
         video::capture(mail, config, channel());
       }};
-      run->audio_thread = std::thread {[mail, audio_config]() {
+
+      // Share my screen without a voice chat's sound: the PC's sound minus that program's
+      std::uint32_t leave_out_pid = 0;
+#ifdef _WIN32
+      if (desktop && !leave_out.empty()) {
+        for (const auto &app : sound_apps_list()) {
+          if (app.key == leave_out) {
+            leave_out_pid = platf::find_program(app.exes);
+          }
+        }
+      }
+#endif
+      auto stopping = &run->stopping;
+      run->audio_thread = std::thread {[mail, audio_config, leave_out_pid, stopping]() {
+#ifdef _WIN32
+        if (leave_out_pid && sound_without_encoded(leave_out_pid, *stopping)) {
+          return;
+        }
+#endif
         audio::capture(mail, audio_config, channel());
       }};
       run->pump_thread = std::thread {pump, run};
@@ -505,6 +577,44 @@ namespace watch {
       return token_id;
     }
     return {};
+  }
+
+  nlohmann::json sound_apps() {
+    nlohmann::json out = nlohmann::json::array();
+    std::lock_guard lg {state_lock};
+    load_settings_locked();
+    for (const auto &app : sound_apps_list()) {
+      bool running_now = false;
+#ifdef _WIN32
+      running_now = platf::find_program(app.exes) != 0;
+#endif
+      out.push_back({{"key", app.key}, {"name", app.name}, {"running", running_now}, {"leftOut", leave_out == app.key}});
+    }
+    return out;
+  }
+
+  void set_leave_out(const std::string &key) {
+    std::shared_ptr<run_t> done;
+    {
+      std::lock_guard lg {state_lock};
+      load_settings_locked();
+      std::string valid;
+      for (const auto &app : sound_apps_list()) {
+        if (app.key == key) {
+          valid = key;
+        }
+      }
+      if (leave_out == valid) {
+        return;
+      }
+      leave_out = valid;
+      save_settings_locked();
+      if (running && running->desktop) {
+        end_viewers("Changing the sound.");
+        done = take_locked();
+      }
+    }
+    finish(std::move(done));
   }
 
   bool sharper_picture() {

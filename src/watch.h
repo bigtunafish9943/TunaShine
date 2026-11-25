@@ -69,6 +69,13 @@ namespace watch {
   /// Stop one viewer now. Returns the id of the watch key or token it used (empty if signed in).
   std::string remove_viewer(const std::string &id);
 
+  /// Voice chat and music programs whose sound Share my screen can leave out:
+  /// [{"key", "name", "running", "leftOut"}].
+  nlohmann::json sound_apps();
+
+  /// Share my screen leaves this program's sound out (a key from sound_apps(); empty for none).
+  void set_leave_out(const std::string &key);
+
   /// The Watch page's picture: 1080p when true, 720p when false. Kept across restarts.
   bool sharper_picture();
   void set_sharper_picture(bool on);
