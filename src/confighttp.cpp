@@ -307,6 +307,9 @@ namespace confighttp {
           }
         }
       } else if (method == "POST") {
+        if (path == "/api/watch/cheer") {
+          return "watch";
+        }
         if (path == "/api/watch/redeem") {
           return "redeem";  // only an unused watch link
         }
@@ -1520,6 +1523,7 @@ namespace confighttp {
     out["status"] = true;
     out["viewers"] = watch::watching_now();
     out["sharper"] = watch::sharper_picture();
+    out["cheers"] = watch::cheers_allowed();
     send_response(response, out);
   }
 
@@ -1543,6 +1547,52 @@ namespace confighttp {
       nlohmann::json out;
       out["status"] = true;
       out["viewers"] = watch::watching_now();
+      send_response(response, out);
+    } catch (std::exception &e) {
+      bad_request(response, request, e.what());
+    }
+  }
+
+  /**
+   * @brief POST /api/watch/cheer {"cheer": "fire"}: a viewer's reaction, for the person playing.
+   */
+  void postWatchCheer(resp_https_t response, req_https_t request) {
+    if (!validateContentType(response, request, "application/json") || !authenticate(response, request)) {
+      return;
+    }
+    try {
+      std::stringstream ss;
+      ss << request->content.rdbuf();
+      auto input = nlohmann::json::parse(ss.str());
+      const auto [token_id, token_name] = api_tokens::who(api_tokens::from_request(request));
+      std::string name = token_id.empty() ? std::string {"You"} : token_name;
+      const auto why = watch::cheer(name, input.value("cheer", std::string {}));
+      if (!why.empty()) {
+        bad_request(response, request, why.c_str());
+        return;
+      }
+      nlohmann::json out;
+      out["status"] = true;
+      send_response(response, out);
+    } catch (std::exception &e) {
+      bad_request(response, request, e.what());
+    }
+  }
+
+  /**
+   * @brief POST /api/watch/cheers {"on": false}: whether viewers may send cheers. Only with the password.
+   */
+  void postWatchCheersAllowed(resp_https_t response, req_https_t request) {
+    if (!validateContentType(response, request, "application/json") || !authenticate_owner(response, request)) {
+      return;
+    }
+    try {
+      std::stringstream ss;
+      ss << request->content.rdbuf();
+      watch::allow_cheers(nlohmann::json::parse(ss.str()).value("on", true));
+      nlohmann::json out;
+      out["status"] = true;
+      out["cheers"] = watch::cheers_allowed();
       send_response(response, out);
     } catch (std::exception &e) {
       bad_request(response, request, e.what());
@@ -3894,6 +3944,8 @@ namespace confighttp {
     server.resource["^/api/watch/viewers$"]["GET"] = getWatchViewers;
     server.resource["^/api/watch/viewers/remove$"]["POST"] = postWatchViewerRemove;
     server.resource["^/api/watch/quality$"]["POST"] = postWatchQuality;
+    server.resource["^/api/watch/cheer$"]["POST"] = postWatchCheer;
+    server.resource["^/api/watch/cheers$"]["POST"] = postWatchCheersAllowed;
     server.resource["^/api/watch/invite$"]["POST"] = postWatchInvite;
     server.resource["^/api/watch/redeem$"]["POST"] = postWatchRedeem;
     server.resource["^/api/watch/rotate$"]["POST"] = postWatchRotate;

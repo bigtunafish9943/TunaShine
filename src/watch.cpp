@@ -27,8 +27,10 @@
 #include <filesystem>
 #include <fstream>
 #include <list>
+#include <map>
 #include <mutex>
 #include <thread>
+#include <vector>
 
 // lib includes
 #include <nlohmann/json.hpp>
@@ -42,11 +44,13 @@
 #include "process.h"
 #include "rtsp.h"
 #include "system_tray.h"
+#include "tv_messages.h"
 #include "video.h"
 #include "watch.h"
 
 #ifdef _WIN32
   #include "platform/windows/app_sound.h"
+  #include "platform/windows/cheer_overlay.h"
   #include "platform/windows/misc.h"
   #include "platform/windows/virtual_display.h"
 #endif
@@ -79,6 +83,8 @@ namespace watch {
     std::string shared_monitor;
     // 1080p instead of 720p. With state_lock.
     bool sharper = false;
+    // Viewers may send cheers. With state_lock.
+    bool cheers_on = true;
     // Share my screen: a program whose sound viewers don't hear (voice chat), by key. With state_lock.
     std::string leave_out;
 
@@ -122,13 +128,14 @@ namespace watch {
         sharper = j.value("sharper", false);
         shared_monitor = j.value("monitor", std::string {});
         leave_out = j.value("leaveOut", std::string {});
+        cheers_on = j.value("cheers", true);
       } catch (const std::exception &) {
       }
     }
 
     void save_settings_locked() {
       std::ofstream out {settings_file(), std::ios::trunc};
-      out << nlohmann::json {{"sharper", sharper}, {"monitor", shared_monitor}, {"leaveOut", leave_out}}.dump(2);
+      out << nlohmann::json {{"sharper", sharper}, {"monitor", shared_monitor}, {"leaveOut", leave_out}, {"cheers", cheers_on}}.dump(2);
     }
 
     std::int64_t now_us() {
@@ -615,6 +622,83 @@ namespace watch {
       }
     }
     finish(std::move(done));
+  }
+
+  std::string cheer(const std::string &name, const std::string &kind) {
+    static const std::vector<std::pair<std::string, std::string>> kinds {
+      {"thumbs", "\xF0\x9F\x91\x8D"},
+      {"heart", "\xE2\x9D\xA4\xEF\xB8\x8F"},
+      {"laugh", "\xF0\x9F\x98\x82"},
+      {"fire", "\xF0\x9F\x94\xA5"},
+      {"clap", "\xF0\x9F\x91\x8F"},
+      {"wow", "\xF0\x9F\x98\xAE"},
+      {"gg", "GG"},
+    };
+    std::string emoji;
+    for (const auto &[k, e] : kinds) {
+      if (k == kind) {
+        emoji = e;
+      }
+    }
+    if (emoji.empty()) {
+      return "That isn't a cheer.";
+    }
+
+    static std::map<std::string, std::int64_t> last_by_name;
+    static std::int64_t last_any = 0;
+    bool desktop = false;
+    std::string monitor;
+    {
+      std::lock_guard lg {state_lock};
+      load_settings_locked();
+      if (!cheers_on) {
+        return "Cheers are turned off.";
+      }
+      if (!running) {
+        return "Nothing is being watched right now.";
+      }
+      const auto now = now_us();
+      auto &mine = last_by_name[name];
+      if (now - mine < 2'000'000 || now - last_any < 400'000) {
+        return "Easy! One cheer every two seconds.";
+      }
+      mine = now;
+      last_any = now;
+      desktop = running->desktop;
+      monitor = proc::proc.display_name;
+      // Everyone watching sees it too
+      const auto payload = nlohmann::json {{"name", name}, {"emoji", emoji}}.dump();
+      const auto msg = message('C', false, now, payload);
+      for (auto &v : viewer_list) {
+        std::lock_guard vl {v->lock};
+        if (!v->ended) {
+          v->queue.push_back(msg);
+          v->cv.notify_one();
+        }
+      }
+    }
+    // Who it's for: the person at the PC, or the person playing on the TV
+    if (desktop) {
+#ifdef _WIN32
+      platf::show_cheer(monitor, emoji, name);
+#endif
+    } else {
+      tv_messages::post({}, emoji + "  " + name);
+    }
+    return {};
+  }
+
+  bool cheers_allowed() {
+    std::lock_guard lg {state_lock};
+    load_settings_locked();
+    return cheers_on;
+  }
+
+  void allow_cheers(bool on) {
+    std::lock_guard lg {state_lock};
+    load_settings_locked();
+    cheers_on = on;
+    save_settings_locked();
   }
 
   bool sharper_picture() {

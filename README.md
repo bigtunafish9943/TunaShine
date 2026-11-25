@@ -105,7 +105,10 @@ and every step was tightened:
   picture for small text.
 - **Share my screen.** On the Watch page, choose to share one of the PC's own screens for an hour or a few, so someone can
   watch you play at the desk on a tablet or phone. The home page and the tray say while it's on, a TV's stream takes
-  over while it plays, and it turns itself off when the time is up.
+  over while it plays, and it turns itself off when the time is up. *Sound* can leave out your voice chat (Discord,
+  TeamSpeak, Teams and others) or music, so viewers hear just the game.
+- **Cheers.** Viewers can tap a reaction (👍 ❤️ 😂 🔥 👏 😮 GG). It pops up for a few seconds in the corner of
+  your shared screen, or on the TV while it streams, and the other viewers see it too. Can be turned off.
 - **Do not disturb during streams** (on by default). Windows' notifications wait in the notification centre
   instead of popping up over the game.
 - **Privacy mode** (off unless turned on, with Shared PC off). The PC's own monitors go dark while a TV streams,

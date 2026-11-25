@@ -81,6 +81,45 @@
       max-width: 22rem;
     }
 
+    .watch-cheers {
+      position: absolute;
+      right: 1rem;
+      bottom: 1rem;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 0.4rem;
+      pointer-events: none;
+    }
+
+    .watch-cheer {
+      background: rgba(4, 20, 49, 0.85);
+      color: #fff;
+      border-radius: 999px;
+      padding: 0.3rem 0.8rem;
+      animation: watch-cheer-in 0.25s ease-out;
+    }
+
+    .watch-cheer-emoji {
+      font-size: 1.6rem;
+      vertical-align: middle;
+    }
+
+    .watch-cheer-bar {
+      display: inline-flex;
+      gap: 0.25rem;
+      flex-wrap: wrap;
+    }
+
+    @keyframes watch-cheer-in {
+      from { transform: translateY(0.75rem); opacity: 0; }
+      to { transform: none; opacity: 1; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .watch-cheer { animation: none; }
+    }
+
     .watch-share {
       margin-top: 1rem;
       padding: 0.75rem 1rem;
@@ -151,6 +190,11 @@
     <div class="watch-stage" ref="stage">
       <canvas ref="canvas" width="1280" height="720" :aria-label="$t('watch.picture')" role="img"></canvas>
       <span class="watch-live" v-if="state === 'playing'">{{ $t('watch.live') }}</span>
+      <div class="watch-cheers" aria-live="polite">
+        <div class="watch-cheer" v-for="c in floating" :key="c.id">
+          <span class="watch-cheer-emoji">{{ c.emoji }}</span> <span class="watch-cheer-name">{{ c.name }}</span>
+        </div>
+      </div>
       <div class="watch-status" v-if="state !== 'playing'" role="status">
         <div class="spinner-border" v-if="state === 'connecting'" aria-hidden="true"></div>
         <p>{{ statusText }}</p>
@@ -179,6 +223,11 @@
         <i class="fas fa-link" aria-hidden="true"></i> {{ $t('watch.share') }}
       </button>
       <span class="small" role="status" v-if="shareStatus">{{ shareStatus }}</span>
+      <span class="watch-cheer-bar" v-if="state === 'playing'" role="group" :aria-label="$t('watch.cheer_label')">
+        <button v-for="c in cheerKinds" :key="c.key" type="button" class="btn btn-sm btn-outline-secondary"
+                :disabled="cheerWait" @click="sendCheer(c.key)" :aria-label="$t('watch.cheer_' + c.key)" :title="$t('watch.cheer_' + c.key)">{{ c.emoji }}</button>
+      </span>
+      <span class="small" role="status" v-if="cheerStatus">{{ cheerStatus }}</span>
       <span class="watch-note">{{ audioSupported ? $t('watch.note') : $t('watch.no_sound_here') }}</span>
       <span class="watch-note" v-if="token && !standalone">{{ $t('watch.home_screen_tip') }}</span>
     </div>
@@ -231,8 +280,12 @@
         </li>
       </ul>
       <p class="small text-muted mb-3" v-if="viewerList.some((v) => !v.signedIn)">{{ $t('watch.viewers_remove_desc') }}</p>
+      <div class="form-check mb-2">
+        <input class="form-check-input" type="checkbox" id="watch-cheers" :checked="cheersAllowed" @change="setCheers($event.target.checked)">
+        <label class="form-check-label" for="watch-cheers">{{ $t('watch.cheers_allow') }}</label>
+      </div>
       <div class="d-flex flex-wrap gap-2 align-items-center">
-        <label for="watch-picture" class="mb-0">{{ $t('watch.picture') }}</label>
+        <label for="watch-picture" class="mb-0">{{ $t('watch.picture_label') }}</label>
         <select id="watch-picture" class="form-select form-select-sm w-auto" :value="sharper ? 'sharper' : 'standard'" @change="setPicture($event.target.value === 'sharper')">
           <option value="standard">{{ $t('watch.picture_standard') }}</option>
           <option value="sharper">{{ $t('watch.picture_sharper') }}</option>
@@ -265,7 +318,11 @@
     loadAutoTheme()
 
     const HEADER = 14
-    const TYPE_INFO = 73, TYPE_VIDEO = 86, TYPE_AUDIO = 65, TYPE_END = 69
+    const TYPE_INFO = 73, TYPE_VIDEO = 86, TYPE_AUDIO = 65, TYPE_END = 69, TYPE_CHEER = 67
+    const CHEERS = [
+      { key: 'thumbs', emoji: '👍' }, { key: 'heart', emoji: '❤️' }, { key: 'laugh', emoji: '😂' },
+      { key: 'fire', emoji: '🔥' }, { key: 'clap', emoji: '👏' }, { key: 'wow', emoji: '😮' }, { key: 'gg', emoji: 'GG' },
+    ]
 
     // The H.264 codec string WebCodecs needs, from the sequence parameter set in a key frame
     function codecFromKeyFrame(data) {
@@ -297,6 +354,11 @@
           passwordBusy: false,
           passwordError: '',
           viewerList: [],
+          cheerKinds: CHEERS,
+          floating: [],
+          cheerWait: false,
+          cheerStatus: '',
+          cheersAllowed: true,
           standalone: window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true,
           sharper: false,
           newPasswordName: '',
@@ -391,6 +453,37 @@
           }
           this.keyTimer = setInterval(() => this.rotateKey(false), 3600 * 1000)
         },
+        onCheer(payload) {
+          try {
+            const c = JSON.parse(new TextDecoder().decode(payload))
+            const id = Math.random()
+            this.floating.push({ id, emoji: c.emoji, name: c.name })
+            if (this.floating.length > 6) this.floating.shift()
+            setTimeout(() => { this.floating = this.floating.filter((f) => f.id !== id) }, 4000)
+          } catch (e) { /* not for us */ }
+        },
+        async sendCheer(kind) {
+          this.cheerWait = true
+          this.cheerStatus = ''
+          try {
+            const r = await fetch('./api/watch/cheer', {
+              credentials: 'include', method: 'POST',
+              headers: Object.assign({ 'Content-Type': 'application/json' }, this.authHeaders()),
+              body: JSON.stringify({ cheer: kind }),
+            }).then((r) => r.json())
+            if (!r.status) this.cheerStatus = r.error || ''
+          } catch (e) { this.cheerStatus = this.$t('watch.cheer_failed') }
+          setTimeout(() => { this.cheerWait = false; this.cheerStatus = '' }, 2000)
+        },
+        async setCheers(on) {
+          try {
+            const r = await fetch('./api/watch/cheers', {
+              credentials: 'include', method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ on }),
+            }).then((r) => r.json())
+            this.cheersAllowed = r.cheers !== false
+          } catch (e) { this.loadViewers() }
+        },
         async loadViewers() {
           if (this.token || !this.signedIn) return
           try {
@@ -398,6 +491,7 @@
             if (!r) return
             this.viewerList = r.viewers || []
             this.sharper = !!r.sharper
+            this.cheersAllowed = r.cheers !== false
           } catch (e) { /* tried again shortly */ }
         },
         async removeViewer(v) {
@@ -612,6 +706,7 @@
                 if (type === TYPE_VIDEO) this.onVideo(payload, key, timestamp)
                 else if (type === TYPE_AUDIO) this.onAudio(payload, timestamp)
                 else if (type === TYPE_END) { ended = true }
+                else if (type === TYPE_CHEER) this.onCheer(payload)
               }
               buffer = buffer.slice(offset)
               if (ended) break
@@ -632,7 +727,13 @@
           }
           this.decoder = new VideoDecoder({
             output: (frame) => {
-              this.ctx2d.drawImage(frame, 0, 0, this.$refs.canvas.width, this.$refs.canvas.height)
+              const canvas = this.$refs.canvas
+              if (canvas.width !== frame.displayWidth || canvas.height !== frame.displayHeight) {
+                // 720p or 1080p (Sharper): draw at the picture's own size
+                canvas.width = frame.displayWidth
+                canvas.height = frame.displayHeight
+              }
+              this.ctx2d.drawImage(frame, 0, 0, canvas.width, canvas.height)
               frame.close()
               if (this.state !== 'playing') this.state = 'playing'
             },

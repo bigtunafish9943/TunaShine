@@ -76,6 +76,17 @@ namespace watch {
   /// Share my screen leaves this program's sound out (a key from sound_apps(); empty for none).
   void set_leave_out(const std::string &key);
 
+  /**
+   * @brief A viewer's cheer ("fire", "clap"...): shown to the other viewers, and on the PC's
+   *        screen while sharing it or on the TV while a TV streams.
+   * @return Empty when sent, otherwise why not, in a sentence for the page.
+   */
+  std::string cheer(const std::string &name, const std::string &kind);
+
+  /// Whether viewers may send cheers (on unless turned off on the Watch page). Kept across restarts.
+  bool cheers_allowed();
+  void allow_cheers(bool on);
+
   /// The Watch page's picture: 1080p when true, 720p when false. Kept across restarts.
   bool sharper_picture();
   void set_sharper_picture(bool on);

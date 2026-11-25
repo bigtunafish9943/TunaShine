@@ -1312,10 +1312,20 @@
         "how": "Während jemand über Zuschau-Link oder -Passwort zuschaut, öffne am PC angemeldet „Zuschauen“. Stell „Bild“ auf „Schärfer“ und wähle dann „Zugriff entfernen“ für diese Person.",
         "expect": "Die Liste zeigt Name und Gerät. Ihr Bild kommt nach ein paar Sekunden schärfer zurück. Nach „Zugriff entfernen“ stoppt ihr Gerät und fragt nach einem neuen Link oder Passwort."
       },
+      "cheers": {
+        "title": "Anfeuern",
+        "how": "Während jemand deinem geteilten Bildschirm zuschaut, tippt er auf der Seite „Zuschauen“ auf 🔥. Dann dasselbe, während ein Fernseher streamt. Schalte zum Schluss das Anfeuern aus.",
+        "expect": "Das Anfeuern erscheint ein paar Sekunden in der Ecke deines geteilten Bildschirms (und in seinem Bild), beim Fernseher-Stream als Nachricht auf dem Fernseher. Andere Zuschauer sehen es auch. Ausgeschaltet melden die Knöpfe, dass es aus ist."
+      },
       "sharescreen": {
         "title": "Meinen Bildschirm teilen",
         "how": "Öffne, während kein Fernseher streamt, am PC „Zuschauen“, teile deinen Bildschirm für 1 Stunde und öffne einen Zuschau-Link auf einem Tablet. Starte dann einen Stream am Fernseher, beende ihn und wähle zum Schluss „Teilen beenden“.",
         "expect": "Das Tablet zeigt den Hauptbildschirm des PCs mit Ton; Startseite und Infobereich zeigen, dass geteilt wird. Streamt der Fernseher, zeigt das Tablet dessen Spiel, danach wieder den PC-Bildschirm. Nach „Teilen beenden“ wartet das Tablet."
+      },
+      "gamesound": {
+        "title": "Nur Spielton",
+        "how": "Teile deinen Bildschirm mit laufendem Discord-Sprachchat, stell „Ton“ auf „Alles außer Discord“ und hör auf dem Tablet zu.",
+        "expect": "Das Tablet hört das Spiel, aber nicht den Sprachchat. Zurück auf „Alles“ ist der Sprachchat nach ein paar Sekunden wieder da."
       },
       "signin": {
         "title": "Angemeldet bleiben",
@@ -1382,6 +1392,16 @@
     "screen_failed": "Das Teilen konnte nicht geändert werden.",
     "need_link": "Dieses Gerät kann noch nicht zuschauen. Öffne einen neuen Zuschau-Link von der Person, die teilt, oder melde dich an.",
     "sign_in": "Anmelden",
+    "cheer_label": "Anfeuern",
+    "cheer_thumbs": "Daumen hoch",
+    "cheer_heart": "Super",
+    "cheer_laugh": "Lustig",
+    "cheer_fire": "Läuft",
+    "cheer_clap": "Gut gespielt",
+    "cheer_wow": "Wow",
+    "cheer_gg": "Gutes Spiel",
+    "cheer_failed": "Das hat nicht geklappt.",
+    "cheers_allow": "Zuschauer dürfen anfeuern (erscheint auf deinem Bildschirm, während du ihn teilst, oder auf dem Fernseher, während er streamt)",
     "sound_label": "Ton",
     "sound_everything": "Alles, was der PC abspielt",
     "sound_without": "Alles außer {app}",
@@ -1394,7 +1414,7 @@
     "viewers_remove": "Zugriff entfernen",
     "viewers_remove_desc": "„Zugriff entfernen“ beendet das Zuschauen auf diesem Gerät. Kam es mit einem Zuschau-Passwort herein, funktioniert dieses Passwort auch nicht mehr, auf keinem Gerät.",
     "viewers_remove_confirm": "{name} das Zuschauen beenden und den Zugriff entfernen?",
-    "picture": "Bild",
+    "picture_label": "Bild",
     "picture_standard": "Standard (720p)",
     "picture_sharper": "Schärfer (1080p), für kleine Schrift",
     "password_label": "Zuschau-Passwort",
