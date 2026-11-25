@@ -248,8 +248,8 @@ namespace watch {
       }};
       run->pump_thread = std::thread {pump, run};
 
-      nlohmann::json info {{"width", WIDTH}, {"height", HEIGHT}, {"codec", "h264"}, {"audio", "opus"}, {"sampleRate", 48000}, {"channels", 2}};
-      info_message = message('I', false, now_us(), info.dump());
+      nlohmann::json details {{"width", WIDTH}, {"height", HEIGHT}, {"codec", "h264"}, {"audio", "opus"}, {"sampleRate", 48000}, {"channels", 2}};
+      info_message = message('I', false, now_us(), details.dump());
       running = std::move(run);
       BOOST_LOG(info) << "Watching in the browser: encoding "sv << WIDTH << 'x' << HEIGHT << " H.264 for viewers"sv;
       return true;
