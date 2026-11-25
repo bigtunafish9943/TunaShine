@@ -1080,7 +1080,7 @@
     "pc_screen_ok": "Ready",
     "pc_screen_problem": "Needs a repair (see the full page)",
     "pc_other_host": "Running: two streaming hosts can conflict",
-    "captures_count": "{shots} screenshots and {clips} replays.",
+    "captures_count": "Screenshots: {shots}. Replays: {clips}.",
     "captures_latest": "Latest {when}.",
     "captures_none": "None yet. Take one from the TV with the screenshot or replay shortcut.",
     "captures_open": "See them on the full page",

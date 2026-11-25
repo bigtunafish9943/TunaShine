@@ -232,6 +232,10 @@
       padding-top: 0.05rem;
     }
 
+    [data-bs-theme="light"] .live-details dt {
+      color: var(--bs-primary-text-emphasis);
+    }
+
     .live-details dd {
       margin: 0;
       font-variant-numeric: tabular-nums;
@@ -376,6 +380,10 @@
 
     .live-list li:last-child {
       border-bottom: 0;
+    }
+
+    .live-list li > span:first-child {
+      flex-shrink: 0;
     }
 
     .live-list li > span:last-child {
@@ -857,7 +865,8 @@
         },
         minutesText(seconds) {
           const m = Math.round(seconds / 60);
-          return m >= 60 ? this.$t('index.recap_hours_minutes', { h: Math.floor(m / 60), m: m % 60 }) : this.$t('index.recap_minutes', { m });
+          if (m < 60) return this.$t('index.recap_minutes', { m });
+          return m % 60 ? this.$t('index.recap_hours_minutes', { h: Math.floor(m / 60), m: m % 60 }) : this.$t('index.recap_hours', { h: m / 60 });
         },
         ago(seconds) {
           if (!seconds) return this.$t('live.never');
