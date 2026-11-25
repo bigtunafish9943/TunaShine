@@ -19,6 +19,11 @@ const colourThemes = [
   { id: 'kelp', navy: '#03140e', accent: '#5ee89a' },
   { id: 'midnight', navy: '#07060f', accent: '#b08cff' },
   { id: 'gold', navy: '#120d04', accent: '#ffc23d' },
+  // The seasonal ones, to wear any time of year
+  { id: 'halloween', navy: '#120818', accent: '#ff8a1f' },
+  { id: 'autumn', navy: '#140b05', accent: '#ff9f43' },
+  { id: 'winter', navy: '#06121f', accent: '#bde8ff' },
+  { id: 'summer', navy: '#03222a', accent: '#ffd23f' },
 ]
 
 // The season's theme today (same dates as the PC), or '' outside the seasons
@@ -160,32 +165,6 @@ onMounted(() => {
               default="false"
     ></Checkbox>
   
-
-    <!-- Shared PC mode -->
-    <Checkbox class="mb-3"
-              id="shared_pc"
-              locale-prefix="config"
-              v-model="config.shared_pc"
-              default="true"
-    ></Checkbox>
-
-    <!-- Shared PC: which screen is the main one -->
-    <Checkbox class="mb-3"
-              id="shared_pc_tv_primary"
-              locale-prefix="config"
-              v-model="config.shared_pc_tv_primary"
-              default="false"
-              v-if="config.shared_pc !== 'disabled'"
-    ></Checkbox>
-
-    <!-- Shared PC: windowed games fill the TV -->
-    <Checkbox class="mb-3"
-              id="shared_pc_borderless"
-              locale-prefix="config"
-              v-model="config.shared_pc_borderless"
-              default="true"
-              v-if="config.shared_pc !== 'disabled'"
-    ></Checkbox>
 
     <!-- Do not disturb during streams -->
     <Checkbox class="mb-3"

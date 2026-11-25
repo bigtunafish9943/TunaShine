@@ -40,7 +40,7 @@
       <div class="settings-content">
 
       <!-- Sections most people never need -->
-      <p class="experts-note" v-if="!['general', 'input', 'av', 'network'].includes(currentTab)">
+      <p class="experts-note" v-if="!['general', 'sharedpc', 'input', 'av', 'network'].includes(currentTab)">
         {{ $t('config.experts_note') }}
       </p>
 
@@ -53,6 +53,13 @@
         :server-cmd="server_cmd"
         :platform="platform">
       </general>
+
+      <!-- Shared PC Tab -->
+      <shared-pc
+        v-if="currentTab === 'sharedpc'"
+        :config="config"
+        :platform="platform">
+      </shared-pc>
 
       <!-- Input Tab -->
       <inputs
@@ -122,6 +129,7 @@
   import General from './configs/tabs/General.vue'
   import Inputs from './configs/tabs/Inputs.vue'
   import Network from './configs/tabs/Network.vue'
+  import SharedPc from './configs/tabs/SharedPc.vue'
   import Files from './configs/tabs/Files.vue'
   import Advanced from './configs/tabs/Advanced.vue'
   import AudioVideo from './configs/tabs/AudioVideo.vue'
@@ -136,6 +144,7 @@
       General,
       Inputs,
       Network,
+      SharedPc,
       Files,
       Advanced,
       // They will be accessible via audio-video, container-encoders only.
@@ -162,9 +171,6 @@
               "locale": "en",
               "ui_theme": "deepsea",
               "instant_replay": "enabled",
-              "shared_pc": "enabled",
-              "shared_pc_tv_primary": "disabled",
-              "shared_pc_borderless": "enabled",
               "quiet_notifications": "enabled",
               "ui_theme_seasonal": "enabled",
               "tunastream_name": "",
@@ -178,6 +184,15 @@
               "end_session_on_disconnect": "disabled",
               "enable_pairing": "enabled",
               "enable_discovery": "enabled",
+            },
+          },
+          {
+            id: "sharedpc",
+            name: "Shared PC",
+            options: {
+              "shared_pc": "enabled",
+              "shared_pc_tv_primary": "disabled",
+              "shared_pc_borderless": "enabled",
             },
           },
           {

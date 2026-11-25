@@ -297,13 +297,13 @@
     "fallback_mode_error": "Invalid fallback mode. Format: [Width]x[Height]x[FPS]",
     "ui_theme_seasonal": "Seasonal themes",
     "ui_theme_seasonal_desc": "Halloween colours in October, autumn in November, winter from December to mid-January and summer in July and August, then back to your theme. TunaReceive follows when it matches the PC.",
-    "shared_pc_borderless": "Shared PC: windowed games fill the TV",
+    "shared_pc_borderless": "Windowed games fill the TV",
     "shared_pc_borderless_desc": "In many games, full screen means the PC's main monitor. Set the game to Windowed in its own settings instead: TunaStream takes off its border and stretches it over the TV's screen, so it looks full screen there while your monitors stay yours. Only the game's own window is changed, once it has kept the TV's shape (16:9) for 3 seconds; launchers and dialogs are left alone. Nothing is done inside the game. For the sharpest picture, set the game's resolution to the TV's.",
     "quiet_notifications": "Do not disturb during streams",
     "quiet_notifications_desc": "Turns on Windows' Do not disturb while a stream runs, so notifications don't pop up over the game (they still collect in the notification centre), and turns it off again afterwards. If it was already on, it is left alone. In Shared PC mode this also silences notifications for you at the PC.",
-    "shared_pc_tv_primary": "Shared PC: make the TV's screen the main one",
+    "shared_pc_tv_primary": "Make the TV's screen the main one",
     "shared_pc_tv_primary_desc": "Games then open on the TV by themselves, at the TV's resolution, which suits games that insist on full screen on the main display. New windows you open that land on the TV's screen are moved to the screen your mouse is on. Your own windows from Windows (File Explorer, Settings, Task Manager, dialogs) move too. Notifications appear on the main screen, so turn on Do not disturb during streams to keep them off the TV; the main taskbar and its clock, and the \"Do you want to allow\" (UAC) prompt, stay on the TV, because Windows draws them only on the main screen.",
-    "shared_pc": "Shared PC: keep using this PC while someone streams",
+    "shared_pc": "Keep using this PC while someone streams",
     "shared_pc_desc": "Your monitor stays the main screen, so your windows, taskbar and notifications stay with you; only the streamed game's windows go to the TV. Only the game's sound goes to the stream, and your sound stays on your speakers. Your mouse can't wander onto the TV's screen. Windows still has one keyboard focus: clicking your own windows can make some games pause or stop reading the controller. When the controller is in use and you haven't touched your mouse or keyboard for 8 seconds, the game gets focus back by itself; typing or moving your mouse always comes first.",
     "instant_replay": "Instant replay: keep the last 30 seconds of each stream",
     "instant_replay_desc": "View + L1 on the TV saves them as a clip in your Videos\\TunaStream folder, exactly as the stream looked. Uses up to 900 MB of the PC's memory while streaming, and asks for a full picture every ten seconds, which on a weak Wi-Fi connection can show as a brief hitch.",
@@ -377,7 +377,7 @@
     "limit_framerate_desc": "Capture only as many frames a second as the device asked for. Turning this off can add lag on some devices.",
     "ui_theme": "Theme",
     "ui_theme_deepsea": "Deep Sea",
-    "ui_theme_desc": "Colours for this page and for TunaReceive on your TVs, which wear this theme unless set to their own. Click one to see it; Save keeps it.",
+    "ui_theme_desc": "Colours for this page and for TunaReceive on your TVs, which wear this theme unless set to their own. The last four are the seasonal themes, yours to pick any time. Click one to see it; Save keeps it.",
     "ui_theme_gold": "Golden Hour",
     "ui_theme_kelp": "Kelp Forest",
     "ui_theme_midnight": "Midnight",
@@ -557,7 +557,10 @@
     "ui_theme_autumn": "Autumn",
     "ui_theme_winter": "Winter",
     "ui_theme_summer": "Summer",
-    "restart_slow": "TunaStream is taking longer than usual to restart. Reload this page in a moment; if it doesn't come back, check that TunaStream is running on the PC."
+    "restart_slow": "TunaStream is taking longer than usual to restart. Reload this page in a moment; if it doesn't come back, check that TunaStream is running on the PC.",
+    "tab_sharedpc": "Shared PC",
+    "sharedpc_intro": "Keep using this PC while someone streams from it: your screens, sound, mouse and keyboard stay yours, and only the game goes to the TV.",
+    "sharedpc_more": "How it works"
   },
   "index": {
     "controller_hint": "What games see this controller as. Most PC games only rumble an Xbox 360 controller; change it under Configuration > Input > Emulated Gamepad Type.",
@@ -1135,6 +1138,7 @@
     "more_tuna_shortcut_stats": "Picture size, frame rate (set, now, average and what the game draws), delay, how steady the stream is, bitrate and the TV's Wi-Fi.",
     "more_tuna_shortcut_quit": "The game keeps running on the PC, so you can pick up where you left off.",
     "more_checkbox_enable_perf_overlay": "The stream details shortcut shows more, only when you want it.",
-    "more_list_languages": "Used the next time TunaReceive opens."
+    "more_list_languages": "Used the next time TunaReceive opens.",
+    "more_tuna_checkup_before_game": "It suggests a picture size, frame rate and bitrate that suit the connection and the TV, plus turning off HDR or 10-bit where the TV can't use them; each one can be taken or left, and the game starts either way."
   }
 }
