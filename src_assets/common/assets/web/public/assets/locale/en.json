@@ -551,7 +551,12 @@
     "wan_encryption_mode_1": "Enabled for supported clients (default)",
     "wan_encryption_mode_2": "Required for all clients",
     "wan_encryption_mode_desc": "Encrypting stops others from seeing the stream as it crosses the internet. Leave it on.",
-    "nvenc_preset_auto": "Automatic (default): P5 on RTX 40 and 50 series cards (P4 above 1440p unless frames are split), P1 on older cards"
+    "nvenc_preset_auto": "Automatic (default): P5 on RTX 40 and 50 series cards (P4 above 1440p unless frames are split), P1 on older cards",
+    "ui_theme_seasonal_off": "Seasonal themes is now off, so your pick shows instead of {season}. Turn it back on below to wear the seasons again. Save keeps it.",
+    "ui_theme_halloween": "Halloween",
+    "ui_theme_autumn": "Autumn",
+    "ui_theme_winter": "Winter",
+    "ui_theme_summer": "Summer"
   },
   "index": {
     "controller_hint": "What games see this controller as. Most PC games only rumble an Xbox 360 controller; change it under Configuration > Input > Emulated Gamepad Type.",

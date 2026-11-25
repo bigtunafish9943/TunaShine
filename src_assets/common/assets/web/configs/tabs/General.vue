@@ -21,10 +21,31 @@ const colourThemes = [
   { id: 'gold', navy: '#120d04', accent: '#ffc23d' },
 ]
 
-// Shows the theme straight away; Save keeps it, and TunaReceive follows
+// The season's theme today (same dates as the PC), or '' outside the seasons
+function seasonNow() {
+  const now = new Date()
+  const month = now.getMonth() + 1
+  const day = now.getDate()
+  if (month === 10) return 'halloween'
+  if (month === 11) return 'autumn'
+  if (month === 12 || (month === 1 && day <= 15)) return 'winter'
+  if ((month === 6 && day >= 21) || month === 7 || month === 8) return 'summer'
+  return ''
+}
+
+// Set when picking a theme turned seasonal themes off, to say so under the picker
+const seasonalTurnedOff = ref('')
+
+// Shows the theme straight away; Save keeps it, and TunaReceive follows. During a season the
+// season's theme would cover the pick, so picking one turns seasonal themes off.
 function pickTheme(id) {
   config.value.ui_theme = id
   document.documentElement.setAttribute('data-ts-theme', id)
+  const season = seasonNow()
+  if (season && config.value.ui_theme_seasonal !== 'disabled') {
+    config.value.ui_theme_seasonal = 'disabled'
+    seasonalTurnedOff.value = season
+  }
 }
 const globalPrepCmd = ref(props.globalPrepCmd)
 const globalStateCmd = ref(props.globalStateCmd)
@@ -96,6 +117,9 @@ onMounted(() => {
         </button>
       </div>
       <div class="form-text">{{ $t('config.ui_theme_desc') }}</div>
+      <div class="form-text text-warning-emphasis" v-if="seasonalTurnedOff" role="status">
+        {{ $t('config.ui_theme_seasonal_off', { season: $t('config.ui_theme_' + seasonalTurnedOff) }) }}
+      </div>
     </div>
 
     <!-- Locale -->
