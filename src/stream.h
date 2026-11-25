@@ -66,13 +66,11 @@ namespace stream {
     /**
      * @brief Ask the stream's encoder for a smaller or the full picture size, mid-stream.
      * @details The game keeps drawing at the full size; only what is sent changes. The device
-     *          stretches it back to the screen. Costs one key frame and a brief pause.
+     *          stretches it back to the screen. The new size starts with a key frame, without a pause.
      * @return The percentage actually used: 100, 75, 67 or 50.
      */
     int set_picture_scale(session_t &session, int percent);
 
-    /// Keep what the device reports it sees of its stream, for the health readout.
-    void set_device_view(session_t &session, const device_view_t &view);
     bool uuid_match(const session_t& session, const std::string_view& uuid);
     bool update_device_info(session_t& session, const std::string& name, const crypto::PERM& newPerm);
     int start(session_t &session, const std::string &addr_string);
@@ -122,6 +120,9 @@ namespace stream {
 
     /// Health of every running stream.
     std::vector<health_t> health();
+
+    /// Keep what the device reports it sees of its stream, for the health readout.
+    void set_device_view(session_t &session, const device_view_t &view);
 
     state_e state(session_t &session);
     inline bool send(session_t& session, const std::string_view &payload);
