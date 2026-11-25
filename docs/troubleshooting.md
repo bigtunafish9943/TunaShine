@@ -58,6 +58,13 @@ virtual gamepad.
 - Use 5 GHz Wi-Fi or a cable for the PC. Wired on the PC end makes the biggest difference.
 - Lower the bitrate in the client before changing anything on the PC. In TunaReceive, *Fit picture quality to
   this connection* (in the PC's menu) measures the connection and suggests one.
+- With TunaReceive the stream adjusts itself: picture quality steps down when frames start arriving slowly,
+  the picture size follows if quality drops a long way (4K to 1440p or 1080p, stretched back on the TV), and
+  packet-loss protection grows on a rough connection. The log shows `Adaptive quality`, `Now encoding at` and
+  `Error correction for` lines as it happens. *How the last stream went* in the PC's menu in TunaReceive sums
+  it up afterwards.
+- The home page says when this PC is on Wi-Fi. Windows stops scanning for other Wi-Fi networks while a stream
+  runs; the log shows `won't scan for other networks while streaming`.
 - A stream that drops and comes back shows `CLIENT DISCONNECTED (connection lost)` in the log. One that the
   client ended on purpose shows `CLIENT DISCONNECTED`.
 
