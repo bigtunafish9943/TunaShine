@@ -295,6 +295,8 @@
     "fallback_mode": "Fallback Display Mode",
     "fallback_mode_desc": "TunaStream will use this mode when the client does not provide a mode or when the app is launched through the web UI. Format: [Width]x[Height]x[FPS]",
     "fallback_mode_error": "Invalid fallback mode. Format: [Width]x[Height]x[FPS]",
+    "instant_replay": "Instant replay: keep the last 30 seconds of each stream",
+    "instant_replay_desc": "View + L1 on the TV saves them as a clip in your Videos\\TunaStream folder, exactly as the stream looked. Uses up to 900 MB of the PC's memory while streaming, and asks for a full picture every ten seconds, which on a weak Wi-Fi connection can show as a brief hitch.",
     "adaptive_fec": "Fit packet-loss protection to the connection (recommended)",
     "adaptive_fec_desc": "Starts at the amount above, then sends less while the device reports a clean connection and more the moment video is lost. A clean connection carries up to a tenth less data; a rough one gets more protection. Turn off to always send exactly the amount above.",
     "fec_percentage": "Packet-loss protection (%)",

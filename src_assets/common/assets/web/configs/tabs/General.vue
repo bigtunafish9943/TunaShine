@@ -137,6 +137,14 @@ onMounted(() => {
     ></Checkbox>
   
 
+    <!-- Instant replay -->
+    <Checkbox class="mb-3"
+              id="instant_replay"
+              locale-prefix="config"
+              v-model="config.instant_replay"
+              default="true"
+    ></Checkbox>
+
     <!-- Enable Discovery -->
     <Checkbox class="mb-3"
               id="enable_discovery"
