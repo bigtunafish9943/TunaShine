@@ -1317,6 +1317,11 @@
         "how": "While someone watches your shared screen, they tap 🔥 on the Watch page. Then do the same while a TV streams. Finally turn off Let viewers send cheers.",
         "expect": "The cheer pops up in the corner of your shared screen for a few seconds (and in their picture), and on the TV as a message while it streams. Other viewers see it too. With cheers off, the buttons say they're turned off."
       },
+      "watchtv": {
+        "title": "Watch on a TV",
+        "how": "While one TV streams a game, on a second TV with TunaReceive press and hold the PC and choose Watch. Then end the stream on the first TV.",
+        "expect": "The second TV shows the game with sound within a few seconds, a little behind, and can't control anything. When the stream ends it says so and waits for the next one."
+      },
       "sharescreen": {
         "title": "Share my screen",
         "how": "With no TV streaming, open Watch on the PC, choose Share my screen for 1 hour, and open a watch link on a tablet. Then start a stream on the TV, end it, and finally choose Stop sharing.",

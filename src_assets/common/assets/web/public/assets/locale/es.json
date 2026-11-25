@@ -1317,6 +1317,11 @@
         "how": "Mientras alguien mira tu pantalla compartida, toca 🔥 en la página Ver. Luego lo mismo mientras una tele transmite. Por último, desactiva los ánimos.",
         "expect": "El ánimo aparece unos segundos en la esquina de tu pantalla compartida (y en su imagen), y en la tele como mensaje mientras transmite. Los demás también lo ven. Desactivados, los botones lo indican."
       },
+      "watchtv": {
+        "title": "Ver en una tele",
+        "how": "Mientras una tele transmite un juego, en una segunda tele con TunaReceive mantén pulsado el PC y elige Ver. Luego termina la transmisión en la primera tele.",
+        "expect": "La segunda tele muestra el juego con sonido en pocos segundos, con algo de retraso, y no puede controlar nada. Cuando termina la transmisión lo indica y espera a la siguiente."
+      },
       "sharescreen": {
         "title": "Compartir mi pantalla",
         "how": "Sin transmisión en la tele, abre Ver en el PC, comparte tu pantalla durante 1 hora y abre un enlace para ver en una tableta. Luego inicia una transmisión en la tele, termínala y elige Dejar de compartir.",

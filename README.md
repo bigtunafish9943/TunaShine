@@ -109,6 +109,8 @@ and every step was tightened:
   TeamSpeak, Teams and others) or music, so viewers hear just the game.
 - **Cheers.** Viewers can tap a reaction (👍 ❤️ 😂 🔥 👏 😮 GG). It pops up for a few seconds in the corner of
   your shared screen, or on the TV while it streams, and the other viewers see it too. Can be turned off.
+- **Watch on another TV.** In TunaReceive, press and hold the PC and choose *Watch* to see what another TV is
+  playing (or the shared PC screen), view only.
 - **Do not disturb during streams** (on by default). Windows' notifications wait in the notification centre
   instead of popping up over the game.
 - **Privacy mode** (off unless turned on, with Shared PC off). The PC's own monitors go dark while a TV streams,

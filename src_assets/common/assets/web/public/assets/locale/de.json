@@ -1317,6 +1317,11 @@
         "how": "Während jemand deinem geteilten Bildschirm zuschaut, tippt er auf der Seite „Zuschauen“ auf 🔥. Dann dasselbe, während ein Fernseher streamt. Schalte zum Schluss das Anfeuern aus.",
         "expect": "Das Anfeuern erscheint ein paar Sekunden in der Ecke deines geteilten Bildschirms (und in seinem Bild), beim Fernseher-Stream als Nachricht auf dem Fernseher. Andere Zuschauer sehen es auch. Ausgeschaltet melden die Knöpfe, dass es aus ist."
       },
+      "watchtv": {
+        "title": "Auf einem Fernseher zuschauen",
+        "how": "Während ein Fernseher ein Spiel streamt, halte auf einem zweiten Fernseher mit TunaReceive den PC gedrückt und wähle „Zuschauen“. Beende dann den Stream auf dem ersten Fernseher.",
+        "expect": "Der zweite Fernseher zeigt das Spiel nach wenigen Sekunden mit Ton, etwas verzögert, und kann nichts steuern. Endet der Stream, sagt er es und wartet auf den nächsten."
+      },
       "sharescreen": {
         "title": "Meinen Bildschirm teilen",
         "how": "Öffne, während kein Fernseher streamt, am PC „Zuschauen“, teile deinen Bildschirm für 1 Stunde und öffne einen Zuschau-Link auf einem Tablet. Starte dann einen Stream am Fernseher, beende ihn und wähle zum Schluss „Teilen beenden“.",
