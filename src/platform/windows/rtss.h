@@ -14,4 +14,8 @@ namespace platf::rtss {
 
   /// Put RTSS's own limit back, if TunaStream changed it (also after a crash).
   void restore();
+
+  /// For the self-check: whether RTSS is installed, and running now.
+  bool installed();
+  bool running();
 }  // namespace platf::rtss

@@ -211,4 +211,12 @@ namespace platf::rtss {
     std::error_code ec;
     fs::remove(undo_file(), ec);
   }
+
+  bool installed() {
+    return install_dir().has_value();
+  }
+
+  bool running() {
+    return rtss_running();
+  }
 }  // namespace platf::rtss
