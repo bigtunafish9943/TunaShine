@@ -137,6 +137,14 @@ onMounted(() => {
     ></Checkbox>
   
 
+    <!-- Seasonal themes -->
+    <Checkbox class="mb-3"
+              id="ui_theme_seasonal"
+              locale-prefix="config"
+              v-model="config.ui_theme_seasonal"
+              default="true"
+    ></Checkbox>
+
     <!-- Instant replay -->
     <Checkbox class="mb-3"
               id="instant_replay"

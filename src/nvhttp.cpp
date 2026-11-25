@@ -943,7 +943,7 @@ namespace nvhttp {
       tree.put("root.Permission", std::to_string((uint32_t)named_cert_p->perm));
 
       // TunaReceive wears the same colour theme as this PC's web page, unless told otherwise
-      tree.put("root.TunaTheme", config::tunastream.ui_theme);
+      tree.put("root.TunaTheme", config::effective_theme());
 
     #ifdef _WIN32
       tree.put("root.VirtualDisplayCapable", true);

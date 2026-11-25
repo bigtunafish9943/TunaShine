@@ -1393,6 +1393,93 @@ html[data-ts-theme=gold][data-bs-theme=dark] {
     --bs-link-hover-color-rgb: 255, 194, 61;
 }
 
+
+/* ---------- Seasonal themes (worn in their season when Seasonal themes is on) ---------- */
+html[data-ts-theme=halloween] {
+    --ts-navy: #120818;
+    --ts-deep: #2e1238;
+    --ts-accent: #ff8a1f;
+    --ts-accent-soft: #ffc48f;
+    --ts-blue: #9b5cff;
+    --ts-accent-rgb: 255, 138, 31;
+    --ts-accent-hover: #ffa552;
+    --ts-accent-active: #e6720a;
+    --ts-outline: #6b3a1a;
+}
+html[data-ts-theme=halloween][data-bs-theme=dark] {
+    --bs-body-bg: #0c0510;
+    --bs-body-color: #f6ecf8;
+    --bs-border-color: #3d1a47;
+    --bs-tertiary-bg: #241030;
+    --ts-surface: #1e0d26;
+    --ts-surface-border: #3d1a47;
+    --bs-link-color-rgb: 255, 196, 143;
+    --bs-link-hover-color-rgb: 255, 138, 31;
+}
+html[data-ts-theme=autumn] {
+    --ts-navy: #140b05;
+    --ts-deep: #3a1f0c;
+    --ts-accent: #ff9f43;
+    --ts-accent-soft: #ffd3a6;
+    --ts-blue: #c0502b;
+    --ts-accent-rgb: 255, 159, 67;
+    --ts-accent-hover: #ffb46d;
+    --ts-accent-active: #e88828;
+    --ts-outline: #6e4523;
+}
+html[data-ts-theme=autumn][data-bs-theme=dark] {
+    --bs-body-bg: #0d0703;
+    --bs-body-color: #f6ece2;
+    --bs-border-color: #4a2a14;
+    --bs-tertiary-bg: #2b180b;
+    --ts-surface: #24140a;
+    --ts-surface-border: #4a2a14;
+    --bs-link-color-rgb: 255, 211, 166;
+    --bs-link-hover-color-rgb: 255, 159, 67;
+}
+html[data-ts-theme=winter] {
+    --ts-navy: #06121f;
+    --ts-deep: #15304a;
+    --ts-accent: #bde8ff;
+    --ts-accent-soft: #e6f6ff;
+    --ts-blue: #6fb6e8;
+    --ts-accent-rgb: 189, 232, 255;
+    --ts-accent-hover: #d4f0ff;
+    --ts-accent-active: #9fd6f5;
+    --ts-outline: #3f6585;
+}
+html[data-ts-theme=winter][data-bs-theme=dark] {
+    --bs-body-bg: #040c15;
+    --bs-body-color: #eef6fc;
+    --bs-border-color: #22405e;
+    --bs-tertiary-bg: #11263b;
+    --ts-surface: #0c1e31;
+    --ts-surface-border: #22405e;
+    --bs-link-color-rgb: 230, 246, 255;
+    --bs-link-hover-color-rgb: 189, 232, 255;
+}
+html[data-ts-theme=summer] {
+    --ts-navy: #03222a;
+    --ts-deep: #0b4552;
+    --ts-accent: #ffd23f;
+    --ts-accent-soft: #ffe995;
+    --ts-blue: #ff7a59;
+    --ts-accent-rgb: 255, 210, 63;
+    --ts-accent-hover: #ffdd6e;
+    --ts-accent-active: #ebbb1f;
+    --ts-outline: #6d6326;
+}
+html[data-ts-theme=summer][data-bs-theme=dark] {
+    --bs-body-bg: #02171c;
+    --bs-body-color: #eefafb;
+    --bs-border-color: #145866;
+    --bs-tertiary-bg: #0a3a44;
+    --ts-surface: #06323c;
+    --ts-surface-border: #145866;
+    --bs-link-color-rgb: 255, 233, 149;
+    --bs-link-hover-color-rgb: 255, 210, 63;
+}
+
 /* Settings: the theme picker */
 .ts-theme-picker {
     display: flex;

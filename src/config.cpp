@@ -4,6 +4,8 @@
  */
 // standard includes
 #include <algorithm>
+#include <chrono>
+#include <ctime>
 #include <filesystem>
 #include <fstream>
 #include <functional>
@@ -594,6 +596,7 @@ namespace config {
     false, // envvar_compatibility_mode
     "en",  // locale
     "deepsea",  // ui_theme
+    true,  // ui_theme_seasonal
     2,  // min_log_level
     0,  // flags
     {},  // User file
@@ -615,6 +618,34 @@ namespace config {
     false,  // setup_complete
     true,  // game_frame_limit
   };
+
+  std::string effective_theme() {
+    if (!tunastream.ui_theme_seasonal) {
+      return tunastream.ui_theme;
+    }
+    const auto now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+    std::tm local {};
+  #ifdef _WIN32
+    localtime_s(&local, &now);
+  #else
+    localtime_r(&now, &local);
+  #endif
+    const int month = local.tm_mon + 1;
+    const int day = local.tm_mday;
+    if (month == 10) {
+      return "halloween";
+    }
+    if (month == 11) {
+      return "autumn";
+    }
+    if (month == 12 || (month == 1 && day <= 15)) {
+      return "winter";
+    }
+    if ((month == 6 && day >= 21) || month == 7 || month == 8) {
+      return "summer";
+    }
+    return tunastream.ui_theme;
+  }
 
   bool endline(char ch) {
     return ch == '\r' || ch == '\n';
@@ -1338,6 +1369,7 @@ namespace config {
     }
 
     string_restricted_f(vars, "ui_theme", config::tunastream.ui_theme, {"deepsea"sv, "reef"sv, "kelp"sv, "midnight"sv, "gold"sv});
+    bool_f(vars, "ui_theme_seasonal", config::tunastream.ui_theme_seasonal);
 
     string_restricted_f(vars, "locale", config::tunastream.locale, {
                                                                    "bg"sv,  // Bulgarian

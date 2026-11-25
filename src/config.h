@@ -274,6 +274,7 @@ namespace config {
     bool envvar_compatibility_mode;
     std::string locale;
     std::string ui_theme;  ///< Colour theme for the web page and TunaReceive: deepsea, reef, kelp, midnight or gold
+    bool ui_theme_seasonal;  ///< Wear a seasonal theme in its season (Halloween, autumn, winter, summer)
     int min_log_level;
     std::bitset<flag::FLAG_SIZE> flags;
     std::string credentials_file;
@@ -311,6 +312,12 @@ namespace config {
   extern nvhttp_t nvhttp;
   extern input_t input;
   extern tunastream_t tunastream;
+
+  /**
+   * @brief The theme to wear today: the seasonal one while its season lasts (when turned on),
+   *        otherwise the one chosen in Settings.
+   */
+  std::string effective_theme();
 
   int parse(int argc, char *argv[]);
   std::unordered_map<std::string, std::string> parse_config(const std::string_view &file_content);

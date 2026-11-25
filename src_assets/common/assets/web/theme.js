@@ -64,7 +64,8 @@ export function setupThemeToggleListener() {
     showActiveTheme(getPreferredTheme(), false)
 }
 
-const COLOUR_THEMES = ['deepsea', 'reef', 'kelp', 'midnight', 'gold']
+// The last four are seasonal: the PC wears them in their season when Seasonal themes is on
+const COLOUR_THEMES = ['deepsea', 'reef', 'kelp', 'midnight', 'gold', 'halloween', 'autumn', 'winter', 'summer']
 
 /**
  * Wears a colour theme (Deep Sea, Coral Reef, ...). The choice is saved on the PC; it is also
