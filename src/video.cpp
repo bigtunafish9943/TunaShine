@@ -6,6 +6,7 @@
 #include <atomic>
 #include <bitset>
 #include <list>
+#include <future>
 #include <thread>
 
 // lib includes
@@ -1937,6 +1938,8 @@ namespace video {
     }
   }
 
+  std::unique_ptr<platf::encode_device_t> make_encode_device(platf::display_t &disp, const encoder_t &encoder, const config_t &config);
+
   void encode_run(
     int &frame_nr,  // Store progress of the frame number
     safe::mail_t mail,
@@ -1948,7 +1951,8 @@ namespace video {
     const encoder_t &encoder,
     void *channel_data,
     int &bitrate_kbps,  // The bitrate last asked for mid-stream, kept for the next encoder; 0 if none
-    int &picture_scale  // Picture size in percent of what the client asked for; changed here when the client asks
+    int &picture_scale,  // Picture size in percent of what the client asked for; changed here when the client asks
+    const config_t &requested  // What the client asked for when the stream started; config is that at the current size and bitrate
   ) {
     auto session = make_encode_session(disp.get(), encoder, config, disp->width, disp->height, std::move(encode_device));
     if (!session) {
@@ -1992,6 +1996,29 @@ namespace video {
     auto bitrate_events = mail->event<int>(mail::bitrate);
     auto picture_scale_events = mail->event<int>(mail::picture_scale);
     bool bitrate_change_unsupported_logged = false;
+
+    // A different picture size needs a different encoder, and starting one takes a moment. So the
+    // next encoder is started on another thread while this one keeps encoding, and takes over
+    // between two frames: the device sees a key frame at the new size and no pause. Every encoder
+    // has its own graphics device, as the encoders of two devices streaming at once do, so the
+    // two don't get in each other's way.
+    std::future<std::unique_ptr<encode_session_t>> next_session;
+    int next_scale = picture_scale;
+    int next_bitrate = 0;
+    int next_width = config.width;
+    int next_height = config.height;
+    int current_width = config.width;
+    int current_height = config.height;
+
+    // Shutting an encoder down can be slow too; where the encoder allows it, that happens elsewhere
+    auto retire = [&encoder](std::unique_ptr<encode_session_t> old) {
+      if (encoder.flags & ASYNC_TEARDOWN) {
+        std::thread teardown_thread {[old = std::move(old)]() mutable {
+          old.reset();
+        }};
+        teardown_thread.detach();
+      }
+    };
 
     {
       // Load a dummy image into the AVFrame to ensure we have something to encode
@@ -2062,14 +2089,30 @@ namespace video {
         }
       }
 
-      // The client asked for a smaller or larger picture. That needs a new encoder: leave, and
-      // the caller makes one at the new size. The stream itself carries on, starting from a key frame.
-      if (picture_scale_events->peek()) {
+      // The client asked for a smaller or larger picture: start the encoder for it in the
+      // background. A request that arrives while one is being started waits its turn.
+      if (!next_session.valid() && picture_scale_events->peek()) {
         if (auto percent = picture_scale_events->pop(0ms)) {
-          if (*percent != picture_scale) {
+          config_t next_config = config;
+          scaled_picture_size(requested, *percent, next_config.width, next_config.height);
+          if (bitrate_kbps > 0) {
+            next_config.bitrate = bitrate_kbps;
+          }
+          if (next_config.width == current_width && next_config.height == current_height) {
             picture_scale = *percent;
-            idr_events->raise(true);
-            break;
+          } else {
+            next_scale = *percent;
+            next_bitrate = next_config.bitrate;
+            next_width = next_config.width;
+            next_height = next_config.height;
+            BOOST_LOG(info) << "Preparing to encode at "sv << next_width << 'x' << next_height << " ("sv << next_scale << "% of "sv << requested.width << 'x' << requested.height << ')';
+            next_session = std::async(std::launch::async, [disp, &encoder, next_config]() -> std::unique_ptr<encode_session_t> {
+              auto next_device = make_encode_device(*disp, encoder, next_config);
+              if (!next_device) {
+                return nullptr;
+              }
+              return make_encode_session(disp.get(), encoder, next_config, disp->width, disp->height, std::move(next_device));
+            });
           }
         }
       }
@@ -2098,6 +2141,25 @@ namespace video {
           // If new frame comes in way too fast, just drop
           if (time_diff < -frame_variation_threshold) {
             continue;
+          }
+
+          // The encoder for a new picture size is ready: it takes over with this frame. Switching
+          // here, with a new frame in hand, means its first picture is a real one.
+          if (next_session.valid() && next_session.wait_for(0s) == std::future_status::ready) {
+            if (auto ready = next_session.get()) {
+              retire(std::move(session));
+              session = std::move(ready);
+              if (bitrate_kbps > 0 && bitrate_kbps != next_bitrate) {
+                session->set_bitrate(bitrate_kbps);
+              }
+              session->request_idr_frame();
+              picture_scale = next_scale;
+              current_width = next_width;
+              current_height = next_height;
+              BOOST_LOG(info) << "Now encoding at "sv << current_width << 'x' << current_height;
+            } else {
+              BOOST_LOG(warning) << "Couldn't start an encoder at "sv << next_width << 'x' << next_height << "; keeping "sv << current_width << 'x' << current_height;
+            }
           }
 
           if (session->convert(*img)) {
@@ -2527,7 +2589,8 @@ namespace video {
         *ref->encoder_p,
         channel_data,
         bitrate_kbps,
-        picture_scale
+        picture_scale,
+        config
       );
     }
   }
