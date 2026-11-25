@@ -36,6 +36,7 @@
   // standard includes
   #include <atomic>
   #include <chrono>
+  #include <cmath>
   #include <csignal>
   #include <format>
   #include <string>
@@ -53,6 +54,8 @@
   #include "logging.h"
   #include "platform/common.h"
   #include "process.h"
+  #include "input.h"
+  #include "stream.h"
   #include "network.h"
   #include "src/entry_handler.h"
 
@@ -70,6 +73,11 @@ namespace system_tray {
   void tray_open_ui_cb([[maybe_unused]] struct tray_menu *item) {
     BOOST_LOG(info) << "Opening UI from system tray"sv;
     launch_ui();
+  }
+
+  void tray_message_cb([[maybe_unused]] struct tray_menu *item) {
+    // The home page, at the message box under Playing now
+    launch_ui(std::string {"/#tv-message"});
   }
 
   void
@@ -128,6 +136,7 @@ namespace system_tray {
         //       { .text = nullptr } } },
         // { .text = "-" },
         { .text = TRAY_MSG_NO_APP_RUNNING, .cb = tray_force_stop_cb },
+        { .text = "Show a message on the TV", .cb = tray_message_cb },
   // Currently display device settings are only supported on Windows
   #ifdef _WIN32
         {.text = "Reset Display Device Config", .cb = tray_reset_display_device_config_cb},
@@ -412,6 +421,58 @@ namespace system_tray {
   }
 
   // Threading functions available on all platforms
+  /**
+   * What the tooltip says: who is playing what, how smoothly, and controller batteries. For
+   * example "Shield TV: Cyberpunk 2077, 60 fps, controller 72%". Windows shows 127 characters.
+   */
+  static std::string now_playing() {
+    std::string text;
+    const auto app = proc::proc.get_last_run_app_name();
+    const auto pads = input::gamepad_status();
+    for (const auto &h : stream::session::health()) {
+      if (!text.empty()) {
+        text += "; ";
+      }
+      text += h.device.empty() ? "A device"s : h.device;
+      text += ": "s + (app.empty() ? "Desktop"s : app);
+      if (h.window_s >= 3) {
+        text += ", "s + std::to_string((int) std::lround(h.fps)) + " fps";
+      }
+      for (const auto &pad : pads) {
+        if (pad.device == h.device && pad.battery >= 0) {
+          text += ", controller "s + std::to_string(pad.battery) + "%" + (pad.charging ? " charging" : "");
+          break;
+        }
+      }
+    }
+    if (text.empty()) {
+      return PROJECT_NAME ": nobody is streaming";
+    }
+    text = PROJECT_NAME " - " + text;
+    if (text.size() > 127) {
+      text.resize(124);
+      text += "...";
+    }
+    return text;
+  }
+
+  static void refresh_tooltip() {
+    static std::string shown;
+    static std::string tooltip;
+    auto text = now_playing();
+  #ifdef _WIN32
+    text = utf8ToAcp(text);
+  #endif
+    // Other updates set their own tooltip; put ours back after them too
+    if (text == shown && tray.tooltip == tooltip.c_str()) {
+      return;
+    }
+    shown = text;
+    tooltip = text;
+    tray.tooltip = tooltip.c_str();
+    tray_update(&tray);
+  }
+
   static void tray_thread_worker() {
     BOOST_LOG(info) << "System tray thread started"sv;
 
@@ -425,10 +486,21 @@ namespace system_tray {
     tray_thread_running = true;
 
     // Main tray event loop
+    auto next_tooltip = std::chrono::steady_clock::now();
     while (!tray_thread_should_exit) {
       if (process_tray_events() != 0) {
         BOOST_LOG(warning) << "Tray event processing failed in thread"sv;
         break;
+      }
+
+      // Now playing, in the tooltip, every few seconds
+      if (std::chrono::steady_clock::now() >= next_tooltip) {
+        next_tooltip = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+        try {
+          refresh_tooltip();
+        } catch (const std::exception &e) {
+          BOOST_LOG(debug) << "Tray tooltip: "sv << e.what();
+        }
       }
 
       // Sleep to avoid busy waiting
