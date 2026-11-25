@@ -2,9 +2,11 @@
 
 What TunaStream is working toward, roughly in order. Nothing here is a promise or a date.
 
-## Now
+## Version 1.0
 
-Everything here is built and passes the automated checks, but has not yet been confirmed on real hardware.
+TunaStream 1.0 and TunaReceive 1.0 are the first complete versions: everything below is built, passes the
+automated checks and is played on every day with one setup (an RTX 5080 PC on Wi-Fi and an NVIDIA Shield TV).
+Other hardware has had little testing yet.
 
 - **Reliable controller rumble.** Rumble reaches the client within about 20 ms instead of up to 150 ms, a
   reconnected controller no longer has its first rumble dropped, and the Troubleshooting page has a rumble test
@@ -19,8 +21,8 @@ Everything here is built and passes the automated checks, but has not yet been c
 - **Updates from inside the app.** The home page offers *Update now* when a new release is out; TunaStream
   downloads the installer, checks it against GitHub's published checksum and installs it silently.
 - **Installs next to another streaming host**, on its own port.
-- **Releases you can download without a GitHub account**, published from every passing build of `master`, with a
-  branded installer.
+- **Releases you can download without a GitHub account**, published from every passing build of the default branch
+  (`TunaStreamMain`), with a branded installer.
 - **A stream that fits itself to the connection.** With TunaReceive, the bitrate steps down when frames start
   arriving slowly (before any are lost) and back up when the connection clears; the picture size follows once the
   bitrate is too thin for it (4K to 1440p and back); and packet-loss protection uses less on a clean connection
@@ -32,13 +34,17 @@ Everything here is built and passes the automated checks, but has not yet been c
   Japanese, Chinese and Korean. Settings reworded in plain English show in English in other languages until they
   are translated again.
 
-## Just added (needs testing on real hardware)
+## Also in 1.0
 
 - **Fun and family:** messages and a sound board for the TV, daily play-time limits with warnings, a weekly
   recap with milestones, screenshots (View + R1), instant replay (View + L1) and weekly highlights, Steam covers
   for game tiles (also for games from other stores that are on Steam), seasonal themes, controller batteries.
-- **Your phone:** a Live page with a QR code on the home page, that can be added to the home screen.
-- **Shared PC mode:** keep using the PC while someone streams; only the game's windows and sound go to the TV.
+- **Your phone:** a Live page with a QR code on the home page, that can be added to the home screen, with the
+  full stream details while someone plays and an overview of the week, the TVs and the PC otherwise.
+- **Shared PC mode:** keep using the PC while someone streams; only the game's windows and sound go to the TV,
+  windowed games fill the TV, and the TV's screen can be the main one with your own windows kept on your
+  screens. Its own settings tab. Do not disturb during streams.
+- **The TV's settings from the PC:** Devices > TV settings, each setting explained.
 - **Smoother:** split-frame encoding actually engages now; the stream's screen is made primary with the display
   configuration API; a reminder when a game itself runs below full frame rate; Wi-Fi channel advice.
 - **Keeping things:** backup and restore for TunaStream, and TunaReceive backups kept on the PC.
@@ -59,7 +65,9 @@ NVIDIA Shield), phones and tablets, built on Artemis and Moonlight for Android. 
 
 Done: setup on first start, a short settings page, updates from inside the app, going straight to the PC's games
 (waking it if needed), a connection test that fits the picture quality to the Wi-Fi, the quick menu on a held Home
-button, plain-words stream stats, and TunaStream's look. Also:
+button, plain-words stream stats, and TunaStream's look. Also, in 1.0: the stream details over the game, controller
+shortcuts set by pressing any buttons, a check before each game that suggests better settings, PC tools on the
+games screen, and settings changed from the PC.
 
 - **Rumble for the 8BitDo Ultimate 2 through its 2.4G adapter** on a TV box, with menus driven by that controller.
 - **TunaStream actions from the couch**: repair the virtual screen; files sent with *Send to device* arrive in
