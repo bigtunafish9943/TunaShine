@@ -148,6 +148,14 @@
                 {{ $t('index.health_scaled', { pct: player.health.pictureScale }) }}
               </span>
             </p>
+            <!-- The game itself is drawing too few frames: the fix is in the game, not the stream -->
+            <div class="home-fps-note" v-if="player.health.slowGameMinutes >= 2" role="note">
+              <i class="fas fa-gauge-high" aria-hidden="true"></i>
+              <div>
+                <p class="home-fps-title">{{ $t('index.fps_note_title', { fps: Math.round(player.health.slowGameFps), target: player.health.targetFps }) }}</p>
+                <p class="home-fps-desc">{{ $t('index.fps_note_desc', { target: player.health.targetFps }) }}</p>
+              </div>
+            </div>
           </div>
         </li>
       </ul>
@@ -213,6 +221,14 @@
           <span class="home-recap-hours">{{ playTime(recap.seconds) }}</span>
           <span class="home-recap-sub">{{ $t(recap.streams === 1 ? 'index.recap_streams_one' : 'index.recap_streams', { n: recap.streams }) }}</span>
         </p>
+      </div>
+      <!-- Games that ran below full frame rate last time, until they run at full rate again -->
+      <div class="home-fps-note home-fps-reminder" v-for="r in (recap.fpsReminders || [])" :key="r.app" role="note">
+        <i class="fas fa-gauge-high" aria-hidden="true"></i>
+        <div>
+          <p class="home-fps-title">{{ $t(r.width >= 3800 ? 'index.fps_reminder_title_4k' : 'index.fps_reminder_title', { app: r.app || $t('index.recap_unnamed_app'), fps: Math.round(r.fps), target: r.targetFps }) }}</p>
+          <p class="home-fps-desc">{{ $t('index.fps_note_desc', { target: r.targetFps }) }}</p>
+        </div>
       </div>
       <p class="home-recap-empty" v-if="recap.seconds === 0">{{ $t('index.recap_empty') }}</p>
       <template v-else>

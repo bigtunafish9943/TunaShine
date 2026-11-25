@@ -117,6 +117,10 @@ namespace stream {
       device_view_t view;  ///< What the device sees, when it reports it
       int send_rate_mbps;  ///< Rate packets are paced at
       double window_s;  ///< Seconds the figures cover
+      int slow_game_minutes;  ///< Minutes the game itself drew fewer than 59 frames a second (see below)
+      double slow_game_fps;  ///< Average frame rate over those minutes
+      int width;  ///< Picture size the device asked for
+      int height;
     };
 
     /// Health of every running stream.

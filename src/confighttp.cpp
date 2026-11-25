@@ -1072,6 +1072,10 @@ namespace confighttp {
         {"pictureScale", h.picture_scale},
         {"splitFrames", h.split_frames},
         {"windowS", h.window_s},
+        {"slowGameMinutes", h.slow_game_minutes},
+        {"slowGameFps", h.slow_game_fps},
+        {"width", h.width},
+        {"height", h.height},
       });
       if (h.view.known) {
         streams.back()["deviceView"] = {

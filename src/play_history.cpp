@@ -72,6 +72,10 @@ namespace play_history {
       {"minutes", s.minutes},
       {"smoothMinutes", s.smooth_minutes},
       {"lostVideo", s.lost_video},
+      {"slowGameMinutes", s.slow_game_minutes},
+      {"slowGameFps", std::round(s.slow_game_fps * 10) / 10},
+      {"width", s.width},
+      {"height", s.height},
     });
 
     // Drop what is too old, and keep the file small
@@ -152,6 +156,32 @@ namespace play_history {
       }
     }
 
+    // Games whose latest stream ran below 59 fps because the game itself drew too few frames.
+    // The reminder goes away once a later stream of the game runs at full rate.
+    std::map<std::string, const nlohmann::json *> latest;
+    for (const auto &entry : data) {
+      const auto app = entry.value("app", "");
+      auto it = latest.find(app);
+      if (it == latest.end() || entry.value("started", (std::int64_t) 0) >= it->second->value("started", (std::int64_t) 0)) {
+        latest[app] = &entry;
+      }
+    }
+    nlohmann::json reminders = nlohmann::json::array();
+    for (const auto &[app, entry] : latest) {
+      const int slow = entry->value("slowGameMinutes", 0);
+      const int measured = entry->value("minutes", 0);
+      if (slow >= 2 && slow * 2 >= measured) {
+        reminders.push_back({
+          {"app", app},
+          {"fps", entry->value("slowGameFps", 0.0)},
+          {"targetFps", entry->value("targetFps", 60)},
+          {"width", entry->value("width", 0)},
+          {"height", entry->value("height", 0)},
+          {"started", entry->value("started", (std::int64_t) 0)},
+        });
+      }
+    }
+
     std::vector<std::pair<std::string, std::int64_t>> apps(per_app.begin(), per_app.end());
     std::sort(apps.begin(), apps.end(), [](const auto &a, const auto &b) {
       return a.second > b.second;
@@ -184,6 +214,7 @@ namespace play_history {
       {"lostVideo", lost},
       {"longestSeconds", longest},
       {"longestApp", longest_app},
+      {"fpsReminders", reminders},
     };
   }
 }  // namespace play_history
