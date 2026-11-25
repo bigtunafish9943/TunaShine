@@ -295,6 +295,9 @@ namespace confighttp {
         if (path == "/api/watch/viewers") {
           return "status";
         }
+        if (path == "/api/watch/now") {
+          return "watch";
+        }
         if (path == "/api/tokens/self") {
           return "any";  // what a token may do, for agents (tunastream.exe --mcp)
         }
@@ -329,7 +332,7 @@ namespace confighttp {
       return {};
     }
 
-    /// Whether this token may make this request. A watch token may also read the game's name.
+    /// Whether this token may make this request.
     bool allows(const std::string &token, const std::string &method, const std::string &path) {
       auto scope = scope_of(method, path);
       if (scope.empty() || token.size() < 20) {
@@ -359,9 +362,6 @@ namespace confighttp {
           return t.rotating && !previous;
         }
         bool ok = scope == "any" || std::find(t.scopes.begin(), t.scopes.end(), scope) != t.scopes.end();
-        if (!ok && scope == "status" && path == "/api/status") {
-          ok = std::find(t.scopes.begin(), t.scopes.end(), "watch") != t.scopes.end();
-        }
         if (ok && now - t.last_used > 60) {
           t.last_used = now;
           save();
@@ -1526,6 +1526,21 @@ namespace confighttp {
     out["monitors"] = watch::monitors();
     out["soundApps"] = watch::sound_apps();
     out["status"] = true;
+    send_response(response, out);
+  }
+
+  /**
+   * @brief GET /api/watch/now: just what a viewer's page shows, {"app", "showingScreen"}: the
+   *        game's name, and whether it's the PC's own screen. Less than /api/status tells.
+   */
+  void getWatchNow(resp_https_t response, req_https_t request) {
+    if (!authenticate(response, request)) {
+      return;
+    }
+    nlohmann::json out;
+    out["status"] = true;
+    out["showingScreen"] = watch::sharing().value("showingScreen", false);
+    out["app"] = rtsp_stream::session_count() > 0 ? proc::proc.get_last_run_app_name() : std::string {};
     send_response(response, out);
   }
 
@@ -3960,6 +3975,7 @@ namespace confighttp {
     server.resource["^/api/watch/share$"]["GET"] = getWatchShare;
     server.resource["^/api/watch/share$"]["POST"] = postWatchShare;
     server.resource["^/api/watch/viewers$"]["GET"] = getWatchViewers;
+    server.resource["^/api/watch/now$"]["GET"] = getWatchNow;
     server.resource["^/api/watch/viewers/remove$"]["POST"] = postWatchViewerRemove;
     server.resource["^/api/watch/quality$"]["POST"] = postWatchQuality;
     server.resource["^/api/watch/cheer$"]["POST"] = postWatchCheer;
