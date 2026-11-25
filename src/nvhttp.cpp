@@ -35,6 +35,7 @@
 #include "nvhttp.h"
 #include "box_art.h"
 #include "captures.h"
+#include "settings_backup.h"
 #include "sound_board.h"
 #include "tv_messages.h"
 #include "platform/common.h"
@@ -1878,6 +1879,61 @@ namespace nvhttp {
   }
 
   /**
+   * TunaReceive's backups, kept on this PC.
+   * POST /tuna/backup keeps the body (TunaReceive's backup JSON);
+   * GET /tuna/backups lists them; GET /tuna/backup?name= returns one.
+   * Only devices allowed to launch apps can read them back, as a backup may hold a device's pairing.
+   */
+  void tunaBackupSave(resp_https_t response, req_https_t request) {
+    print_req<TunaStreamHTTPS>(request);
+    auto named_cert_p = get_verified_cert(request);
+    auto name = settings_backup::keep_receiver_backup(named_cert_p->name, request->content.string());
+    nlohmann::json out;
+    out["saved"] = !name.empty();
+    out["name"] = name;
+    SimpleWeb::CaseInsensitiveMultimap headers;
+    headers.emplace("Content-Type", "application/json");
+    response->write(name.empty() ? SimpleWeb::StatusCode::client_error_bad_request : SimpleWeb::StatusCode::success_ok, out.dump(), headers);
+    response->close_connection_after_response = true;
+  }
+
+  void tunaBackupList(resp_https_t response, req_https_t request) {
+    print_req<TunaStreamHTTPS>(request);
+    auto named_cert_p = get_verified_cert(request);
+    nlohmann::json list = nlohmann::json::array();
+    if (named_cert_p->perm & PERM::_all_actions) {
+      for (const auto &b : settings_backup::receiver_backups()) {
+        list.push_back({{"name", b.name}, {"device", b.device}, {"made", b.made}, {"size", b.size}});
+      }
+    }
+    nlohmann::json out;
+    out["backups"] = list;
+    SimpleWeb::CaseInsensitiveMultimap headers;
+    headers.emplace("Content-Type", "application/json");
+    response->write(SimpleWeb::StatusCode::success_ok, out.dump(), headers);
+    response->close_connection_after_response = true;
+  }
+
+  void tunaBackupGet(resp_https_t response, req_https_t request) {
+    print_req<TunaStreamHTTPS>(request);
+    auto named_cert_p = get_verified_cert(request);
+    auto args = request->parse_query_string();
+    std::string content;
+    if (named_cert_p->perm & PERM::_all_actions) {
+      content = settings_backup::receiver_backup(get_arg(args, "name", ""));
+    }
+    if (content.empty()) {
+      response->write(SimpleWeb::StatusCode::client_error_not_found);
+      response->close_connection_after_response = true;
+      return;
+    }
+    SimpleWeb::CaseInsensitiveMultimap headers;
+    headers.emplace("Content-Type", "application/json");
+    response->write(SimpleWeb::StatusCode::success_ok, content, headers);
+    response->close_connection_after_response = true;
+  }
+
+  /**
    * A sound-board sound: GET /tuna/sound?name=. TunaReceive fetches it when the home page sends it.
    */
   void tunaSound(resp_https_t response, req_https_t request) {
@@ -2127,6 +2183,9 @@ namespace nvhttp {
     https_server.resource["^/tuna/sound$"]["GET"] = tunaSound;
     https_server.resource["^/tuna/screenshot$"]["POST"] = tunaScreenshot;
     https_server.resource["^/tuna/replay$"]["GET"] = tunaReplay;
+    https_server.resource["^/tuna/backup$"]["POST"] = tunaBackupSave;
+    https_server.resource["^/tuna/backup$"]["GET"] = tunaBackupGet;
+    https_server.resource["^/tuna/backups$"]["GET"] = tunaBackupList;
     https_server.resource["^/tuna/vdisplay$"]["GET"] = tunaVdisplay;
     https_server.resource["^/tuna/vdisplay/repair$"]["GET"] = tunaVdisplay;
     https_server.resource["^/tuna/file$"]["GET"] = tunaFile;

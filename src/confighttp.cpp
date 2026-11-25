@@ -14,6 +14,7 @@
 #include <mutex>
 #include <set>
 #include <sstream>
+#include <ctime>
 #include <thread>
 #include <numeric>
 #include <algorithm>
@@ -49,6 +50,7 @@
 #include "play_history.h"
 #include "box_art.h"
 #include "captures.h"
+#include "settings_backup.h"
 #include "sound_board.h"
 #include "tv_messages.h"
 #include "updater.h"
@@ -2163,6 +2165,88 @@ namespace confighttp {
   }
 
   /**
+   * @brief Download a backup of TunaStream's settings: GET /api/backup?pairings=1 to include pairings.
+   */
+  void getBackup(resp_https_t response, req_https_t request) {
+    if (!authenticate(response, request)) {
+      return;
+    }
+
+    print_req(request);
+
+    auto args = request->parse_query_string();
+    const bool pairings = args.find("pairings") != args.end() && args.find("pairings")->second == "1";
+    const auto backup = settings_backup::make(pairings);
+    const auto now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+    std::tm local {};
+#ifdef _WIN32
+    localtime_s(&local, &now);
+#else
+    localtime_r(&now, &local);
+#endif
+    char date[16];
+    std::strftime(date, sizeof(date), "%Y-%m-%d", &local);
+    SimpleWeb::CaseInsensitiveMultimap headers;
+    headers.emplace("Content-Type", "application/json");
+    headers.emplace("Content-Disposition", "attachment; filename=\"TunaStream backup "s + date + (pairings ? " with pairings"s : ""s) + ".json\"");
+    headers.emplace("Cache-Control", "no-store");
+    response->write(SimpleWeb::StatusCode::success_ok, backup.dump(), headers);
+  }
+
+  /**
+   * @brief Restore a backup (the body is the backup file), then restart TunaStream.
+   */
+  void postRestore(resp_https_t response, req_https_t request) {
+    if (!validateContentType(response, request, "application/json") || !authenticate(response, request)) {
+      return;
+    }
+
+    print_req(request);
+
+    nlohmann::json output_tree;
+    std::string error;
+    try {
+      std::stringstream ss;
+      ss << request->content.rdbuf();
+      error = settings_backup::restore(nlohmann::json::parse(ss.str()));
+    } catch (const std::exception &) {
+      error = "That file isn't a TunaStream backup.";
+    }
+    output_tree["status"] = error.empty();
+    if (!error.empty()) {
+      output_tree["error"] = error;
+      send_response(response, output_tree);
+      return;
+    }
+    send_response(response, output_tree);
+
+    // Restart a moment later so the answer gets back first; the restored settings load on start
+    std::thread([]() {
+      std::this_thread::sleep_for(1500ms);
+      proc::proc.terminate();
+      platf::restart();
+    }).detach();
+  }
+
+  /**
+   * @brief TunaReceive backups kept on this PC: {"backups": [{"name", "device", "made", "size"}]}.
+   */
+  void getReceiverBackups(resp_https_t response, req_https_t request) {
+    if (!authenticate(response, request)) {
+      return;
+    }
+
+    nlohmann::json list = nlohmann::json::array();
+    for (const auto &b : settings_backup::receiver_backups()) {
+      list.push_back({{"name", b.name}, {"device", b.device}, {"made", b.made}, {"size", b.size}});
+    }
+    nlohmann::json output_tree;
+    output_tree["status"] = true;
+    output_tree["backups"] = list;
+    send_response(response, output_tree);
+  }
+
+  /**
    * @brief Quit TunaStream.
    * @param response The HTTP response object.
    * @param request The HTTP request object.
@@ -2389,6 +2473,9 @@ namespace confighttp {
     server.resource["^/api/config$"]["POST"] = saveConfig;
     server.resource["^/api/configLocale$"]["GET"] = getLocale;
     server.resource["^/api/restart$"]["POST"] = restart;
+    server.resource["^/api/backup$"]["GET"] = getBackup;
+    server.resource["^/api/restore$"]["POST"] = postRestore;
+    server.resource["^/api/receiver-backups$"]["GET"] = getReceiverBackups;
     server.resource["^/api/quit$"]["POST"] = quit;
     server.resource["^/api/reset-display-device-persistence$"]["POST"] = resetDisplayDevicePersistence;
     server.resource["^/api/password$"]["POST"] = savePassword;

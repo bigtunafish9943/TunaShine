@@ -97,6 +97,37 @@
         </div>
       </div>
     </div>
+    <!-- Backup and restore -->
+    <div class="card p-2 my-4">
+      <div class="card-body">
+        <h2 id="backup">{{ $t('troubleshooting.backup_title') }}</h2>
+        <p>{{ $t('troubleshooting.backup_desc') }}</p>
+        <div class="form-check mb-2">
+          <input class="form-check-input" type="checkbox" id="backup_pairings" v-model="backupPairings">
+          <label class="form-check-label" for="backup_pairings">{{ $t('troubleshooting.backup_pairings') }}</label>
+        </div>
+        <div class="alert alert-warning" v-if="backupPairings">{{ $t('troubleshooting.backup_pairings_warning') }}</div>
+        <a class="btn btn-primary mb-3" :href="'./api/backup' + (backupPairings ? '?pairings=1' : '')">
+          <i class="fas fa-download" aria-hidden="true"></i> {{ $t('troubleshooting.backup_download') }}
+        </a>
+
+        <h3 class="h6 mt-2">{{ $t('troubleshooting.restore_title') }}</h3>
+        <p>{{ $t('troubleshooting.restore_desc') }}</p>
+        <div class="d-flex flex-wrap gap-2 align-items-center">
+          <input type="file" class="form-control w-auto" accept=".json,application/json" ref="restoreFile" :aria-label="$t('troubleshooting.restore_title')">
+          <button class="btn btn-outline-danger" :disabled="restoring" @click="restoreBackup">{{ $t('troubleshooting.restore_button') }}</button>
+        </div>
+        <div class="alert mt-2" :class="restoreError ? 'alert-danger' : 'alert-success'" v-if="restoreStatus">{{ restoreStatus }}</div>
+
+        <template v-if="receiverBackups.length">
+          <h3 class="h6 mt-4">{{ $t('troubleshooting.receiver_backups_title') }}</h3>
+          <p>{{ $t('troubleshooting.receiver_backups_desc') }}</p>
+          <ul>
+            <li v-for="b in receiverBackups" :key="b.name">{{ b.device }}, {{ new Date(b.made * 1000).toLocaleString() }}</li>
+          </ul>
+        </template>
+      </div>
+    </div>
     <!-- Wi-Fi channel advice, from the networks this PC can hear -->
     <div class="card p-2 my-4" v-if="platform === 'windows'">
       <div class="card-body">
@@ -239,6 +270,11 @@
           platform: "",
           wifi: null,
           wifiScanning: false,
+          backupPairings: false,
+          restoring: false,
+          restoreStatus: '',
+          restoreError: false,
+          receiverBackups: [],
         };
       },
       computed: {
@@ -325,11 +361,47 @@
         }, 5000);
         this.refreshLogs();
         this.refreshVdisplay();
+        this.loadReceiverBackups();
       },
       beforeDestroy() {
         clearInterval(this.logInterval);
       },
       methods: {
+        async restoreBackup() {
+          const file = this.$refs.restoreFile && this.$refs.restoreFile.files[0];
+          if (!file) {
+            this.restoreError = true;
+            this.restoreStatus = this.$t('troubleshooting.restore_pick');
+            return;
+          }
+          if (!confirm(this.$t('troubleshooting.restore_confirm'))) return;
+          this.restoring = true;
+          this.restoreStatus = '';
+          try {
+            const text = await file.text();
+            const r = await fetch('./api/restore', {
+              credentials: 'include', method: 'POST', headers: { 'Content-Type': 'application/json' }, body: text,
+            }).then((r) => r.json());
+            this.restoreError = !r.status;
+            this.restoreStatus = r.status ? this.$t('troubleshooting.restore_done') : (r.error || this.$t('troubleshooting.restore_failed'));
+            if (r.status) {
+              // TunaStream restarts with the restored settings; come back once it answers
+              setTimeout(() => location.reload(), 12000);
+            }
+          } catch (e) {
+            this.restoreError = true;
+            this.restoreStatus = this.$t('troubleshooting.restore_failed');
+          }
+          this.restoring = false;
+        },
+        async loadReceiverBackups() {
+          try {
+            const r = await fetch('./api/receiver-backups', { credentials: 'include' }).then((r) => r.json());
+            this.receiverBackups = r.backups || [];
+          } catch (e) {
+            this.receiverBackups = [];
+          }
+        },
         async scanWifi() {
           this.wifiScanning = true;
           try {
