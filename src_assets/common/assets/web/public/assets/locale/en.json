@@ -319,7 +319,7 @@
     "forward_rumble": "Rumble",
     "forward_rumble_desc": "Send vibration from games to the controller on your device. Use the test on the Troubleshooting page to check it works.",
     "game_frame_limit": "Match the game's frame rate to the stream (recommended)",
-    "game_frame_limit_desc": "While someone streams, games are capped at the frame rate their device asked for, so every frame the game draws gets sent. This removes the judder caused by the game and the stream running at different speeds. Your own frame rate limit comes back when streaming stops. NVIDIA graphics cards only; if you set a Max Frame Rate for all games yourself, it is left alone.",
+    "game_frame_limit_desc": "While someone streams, games are capped at the frame rate their device asked for, so every frame the game draws gets sent. This removes the judder caused by the game and the stream running at different speeds. If RivaTuner Statistics Server (RTSS, part of MSI Afterburner) is running, it does the capping, at the exact rate (59.94 included) and on any graphics card; otherwise NVIDIA's own limit is used, to the nearest whole number. Your own limits come back when streaming stops. If you set a Max Frame Rate for all games in NVIDIA's settings yourself, it is left alone.",
     "gamepad": "Controller type the PC sees",
     "gamepad_auto": "Automatic selection options",
     "gamepad_desc": "Xbox 360 works with the most games and has the most reliable rumble, so it is the best choice if rumble doesn't work. PlayStation 4 adds the touchpad and motion controls. Automatic picks PlayStation 4 for controllers with those, and Xbox 360 for everything else.",
@@ -562,7 +562,9 @@
     "sharedpc_intro": "Keep using this PC while someone streams from it: your screens, sound, mouse and keyboard stay yours, and only the game goes to the TV. Turn Shared PC off for privacy mode instead.",
     "sharedpc_more": "How it works",
     "privacy_mode": "Privacy mode: turn this PC's monitors off while someone streams",
-    "privacy_mode_desc": "Only the stream's own screen stays on, so nobody in the room sees what's being played on the PC. The monitors come back on, as they were arranged, when the stream ends or the TV disconnects. Not available in Shared PC mode, where you're using the monitors. If they ever stay off, press Windows + P and pick Extend."
+    "privacy_mode_desc": "Only the stream's own screen stays on, so nobody in the room sees what's being played on the PC. The monitors come back on, as they were arranged, when the stream ends or the TV disconnects. Not available in Shared PC mode, where you're using the monitors. If they ever stay off, press Windows + P and pick Extend.",
+    "game_vsync_off": "Turn Vertical Sync off in games while streaming",
+    "game_vsync_off_desc": "With the cap pacing games, waiting for the screen only adds delay: this takes away up to a frame. NVIDIA graphics cards; your own setting comes back when streaming stops. Turn off if a game shows tearing on the TV."
   },
   "index": {
     "controller_hint": "What games see this controller as. Most PC games only rumble an Xbox 360 controller; change it under Configuration > Input > Emulated Gamepad Type.",

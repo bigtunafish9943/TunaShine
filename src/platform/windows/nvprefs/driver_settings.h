@@ -41,6 +41,13 @@ namespace nvprefs {
      */
     bool set_global_frame_limit(uint32_t fps, const std::optional<undo_data_t> &current_undo, std::optional<undo_data_t> &undo_data);
 
+    /**
+     * @brief Set a DWORD setting in the global profile while streaming (Vertical Sync, for one).
+     * @param current_undo Undo data for changes already made, to keep the user's original value.
+     * @param undo_data Set to what is needed to undo the change, if a change was made.
+     */
+    bool set_global_stream_setting(uint32_t id, uint32_t value, const std::optional<undo_data_t> &current_undo, std::optional<undo_data_t> &undo_data);
+
     bool check_and_modify_application_profile(bool &modified);
 
   private:

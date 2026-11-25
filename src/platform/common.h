@@ -948,7 +948,8 @@ namespace platf {
    *          user set themselves is left alone, and theirs is put back when streaming stops.
    * @param fps Frame rate to cap at, or 0 to remove the cap.
    */
-  void set_game_frame_limit(int fps);
+  /// Cap games at this rate while streaming, in thousandths of a frame a second (59940 for 59.94); 0 removes the cap.
+  void set_game_frame_limit(int millifps);
 
   /**
    * @brief Keeps a just-launched app's new windows on the stream's display while it is watched.

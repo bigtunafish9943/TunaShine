@@ -405,7 +405,7 @@
     "forward_rumble": "Vibration",
     "forward_rumble_desc": "Envoie les vibrations des jeux à la manette de votre appareil. Utilisez le test de la page Dépannage pour vérifier que cela fonctionne.",
     "game_frame_limit": "Caler la fréquence d'images du jeu sur le stream (recommandé)",
-    "game_frame_limit_desc": "Pendant un stream, les jeux sont limités à la fréquence d'images demandée par leur appareil, pour que chaque image dessinée soit envoyée. Cela supprime les saccades dues à un jeu et un stream qui tournent à des vitesses différentes. Votre propre limite revient à la fin du stream. Cartes graphiques NVIDIA uniquement ; si vous avez fixé vous-même une fréquence maximale pour tous les jeux, elle n'est pas modifiée.",
+    "game_frame_limit_desc": "Pendant un stream, les jeux sont limités à la fréquence d'images demandée par leur appareil, pour que chaque image dessinée soit envoyée. Cela supprime les saccades dues à un jeu et un stream qui tournent à des vitesses différentes. Si RivaTuner Statistics Server (RTSS, fourni avec MSI Afterburner) fonctionne, c'est lui qui limite, à la fréquence exacte (59,94 compris) et sur toute carte graphique ; sinon, la limite de NVIDIA est utilisée, arrondie au nombre entier. Vos propres limites reviennent à la fin du stream. Si vous avez fixé vous-même une fréquence maximale pour tous les jeux dans les réglages NVIDIA, elle n'est pas modifiée.",
     "gamepad": "Type de manette vu par le PC",
     "gamepad_desc": "La Xbox 360 fonctionne avec le plus de jeux et a la vibration la plus fiable : c'est le meilleur choix si la vibration ne marche pas. La PlayStation 4 ajoute le pavé tactile et les commandes de mouvement. « Automatique » choisit PlayStation 4 pour les manettes qui en ont, et Xbox 360 pour les autres.",
     "gamepad_ds4": "PlayStation 4 (DS4)",
@@ -557,7 +557,9 @@
     "sharedpc_intro": "Continuez à utiliser ce PC pendant que quelqu'un streame depuis lui : vos écrans, votre son, votre souris et votre clavier restent à vous, seul le jeu part sur la télé. Désactivez PC partagé pour le mode confidentialité.",
     "sharedpc_more": "Comment ça marche",
     "privacy_mode": "Mode confidentialité : éteindre les écrans de ce PC pendant un stream",
-    "privacy_mode_desc": "Seul l'écran propre au stream reste allumé, pour que personne dans la pièce ne voie ce qui est joué sur le PC. Les écrans se rallument, dans leur disposition d'origine, à la fin du stream ou quand la télé se déconnecte. Indisponible en mode PC partagé, où vous utilisez les écrans. S'ils restent éteints, appuyez sur Windows + P et choisissez Étendre."
+    "privacy_mode_desc": "Seul l'écran propre au stream reste allumé, pour que personne dans la pièce ne voie ce qui est joué sur le PC. Les écrans se rallument, dans leur disposition d'origine, à la fin du stream ou quand la télé se déconnecte. Indisponible en mode PC partagé, où vous utilisez les écrans. S'ils restent éteints, appuyez sur Windows + P et choisissez Étendre.",
+    "game_vsync_off": "Désactiver la V-Sync dans les jeux pendant le stream",
+    "game_vsync_off_desc": "Comme la limite cadence les jeux, attendre l'écran n'ajoute que de la latence : cela retire jusqu'à une image. Cartes graphiques NVIDIA ; votre réglage revient à la fin du stream. Désactivez si un jeu présente du tearing sur la télé."
   },
   "index": {
     "controller_hint": "Ce que les jeux voient de cette manette. La plupart des jeux PC ne font vibrer qu'une manette Xbox 360 ; changez-le dans Réglages > Entrées > Type de manette émulée.",

@@ -623,6 +623,7 @@ namespace config {
     false,  // end_session_on_disconnect
     false,  // setup_complete
     true,  // game_frame_limit
+    true,  // game_vsync_off
   };
 
   std::string effective_theme() {
@@ -1359,6 +1360,7 @@ namespace config {
     bool_f(vars, "end_session_on_disconnect", tunastream.end_session_on_disconnect);
     bool_f(vars, "setup_complete", tunastream.setup_complete);
     bool_f(vars, "game_frame_limit", tunastream.game_frame_limit);
+    bool_f(vars, "game_vsync_off", tunastream.game_vsync_off);
     bool_f(vars, "enable_pairing", tunastream.enable_pairing);
     bool_f(vars, "enable_discovery", tunastream.enable_discovery);
     bool_f(vars, "envvar_compatibility_mode", tunastream.envvar_compatibility_mode);

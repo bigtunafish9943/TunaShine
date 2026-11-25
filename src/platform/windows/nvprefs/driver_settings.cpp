@@ -202,6 +202,90 @@ namespace nvprefs {
       }
     }
 
+    // The other settings changed while streaming: put back each one still at our value
+    for (const auto &[id, value] : undo_data.get_stream_settings()) {
+      NvDRSProfileHandle profile_handle = nullptr;
+      if (NvAPI_DRS_GetBaseProfile(session_handle, &profile_handle) != NVAPI_OK) {
+        return false;
+      }
+      NVDRS_SETTING setting = {};
+      setting.version = NVDRS_SETTING_VER;
+      auto status = NvAPI_DRS_GetSetting(session_handle, profile_handle, id, &setting);
+      if (status != NVAPI_OK || setting.settingLocation != NVDRS_CURRENT_PROFILE_LOCATION || setting.u32CurrentValue != value.our_value) {
+        continue;  // changed since by the user: theirs stays
+      }
+      if (value.undo_value) {
+        setting = {};
+        setting.version = NVDRS_SETTING_VER1;
+        setting.settingId = id;
+        setting.settingType = NVDRS_DWORD_TYPE;
+        setting.settingLocation = NVDRS_CURRENT_PROFILE_LOCATION;
+        setting.u32CurrentValue = *value.undo_value;
+        status = NvAPI_DRS_SetSetting(session_handle, profile_handle, &setting);
+      } else {
+        status = NvAPI_DRS_DeleteProfileSetting(session_handle, profile_handle, id);
+        if (status == NVAPI_SETTING_NOT_FOUND) {
+          status = NVAPI_OK;
+        }
+      }
+      if (status != NVAPI_OK) {
+        nvapi_error_message(status);
+        error_message("Couldn't restore a global profile setting changed for streaming");
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  bool driver_settings_t::set_global_stream_setting(uint32_t id, uint32_t value, const std::optional<undo_data_t> &current_undo, std::optional<undo_data_t> &undo_data) {
+    if (!session_handle) {
+      return false;
+    }
+    undo_data.reset();
+
+    NvDRSProfileHandle profile_handle = nullptr;
+    auto status = NvAPI_DRS_GetBaseProfile(session_handle, &profile_handle);
+    if (status != NVAPI_OK) {
+      nvapi_error_message(status);
+      return false;
+    }
+
+    NVDRS_SETTING setting = {};
+    setting.version = NVDRS_SETTING_VER;
+    status = NvAPI_DRS_GetSetting(session_handle, profile_handle, id, &setting);
+    if (status != NVAPI_OK && status != NVAPI_SETTING_NOT_FOUND) {
+      nvapi_error_message(status);
+      return false;
+    }
+    const bool set_here = status == NVAPI_OK && setting.settingLocation == NVDRS_CURRENT_PROFILE_LOCATION;
+    if (set_here && setting.u32CurrentValue == value) {
+      return true;
+    }
+
+    std::optional<uint32_t> undo_value;
+    const auto &previous = current_undo ? current_undo->get_stream_settings() : std::map<uint32_t, undo_data_t::data_t::opengl_swapchain_t> {};
+    if (auto it = previous.find(id); it != previous.end()) {
+      undo_value = it->second.undo_value;
+    } else if (set_here) {
+      undo_value = setting.u32CurrentValue;
+    }
+
+    undo_data = undo_data_t();
+    undo_data->set_stream_setting(id, value, undo_value);
+
+    setting = {};
+    setting.version = NVDRS_SETTING_VER1;
+    setting.settingId = id;
+    setting.settingType = NVDRS_DWORD_TYPE;
+    setting.settingLocation = NVDRS_CURRENT_PROFILE_LOCATION;
+    setting.u32CurrentValue = value;
+    status = NvAPI_DRS_SetSetting(session_handle, profile_handle, &setting);
+    if (status != NVAPI_OK) {
+      nvapi_error_message(status);
+      undo_data.reset();
+      return false;
+    }
     return true;
   }
 

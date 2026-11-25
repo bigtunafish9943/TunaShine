@@ -405,7 +405,7 @@
     "forward_rumble": "Vibration",
     "forward_rumble_desc": "Sendet Vibrationen aus Spielen an den Controller deines Geräts. Prüfe mit dem Test auf der Seite „Fehlerbehebung“, ob es funktioniert.",
     "game_frame_limit": "Bildrate des Spiels an den Stream anpassen (empfohlen)",
-    "game_frame_limit_desc": "Während jemand streamt, werden Spiele auf die Bildrate begrenzt, die das Gerät angefragt hat, sodass jedes gezeichnete Bild gesendet wird. Das beseitigt das Ruckeln, wenn Spiel und Stream unterschiedlich schnell laufen. Deine eigene Bildratenbegrenzung kommt zurück, wenn das Streamen endet. Nur NVIDIA-Grafikkarten; hast du selbst eine maximale Bildrate für alle Spiele gesetzt, bleibt sie unverändert.",
+    "game_frame_limit_desc": "Während jemand streamt, werden Spiele auf die Bildrate begrenzt, die das Gerät angefragt hat, sodass jedes gezeichnete Bild gesendet wird. Das beseitigt das Ruckeln, wenn Spiel und Stream unterschiedlich schnell laufen. Läuft RivaTuner Statistics Server (RTSS, Teil von MSI Afterburner), begrenzt er, mit exakter Rate (auch 59,94) und auf jeder Grafikkarte; sonst wird NVIDIAs eigene Begrenzung genutzt, auf die nächste ganze Zahl gerundet. Deine eigenen Begrenzungen kommen zurück, wenn das Streamen endet. Hast du selbst in NVIDIAs Einstellungen eine maximale Bildrate für alle Spiele gesetzt, bleibt sie unverändert.",
     "gamepad": "Controller-Typ, den der PC sieht",
     "gamepad_desc": "Xbox 360 funktioniert mit den meisten Spielen und hat die zuverlässigste Vibration, also die beste Wahl, wenn die Vibration nicht geht. PlayStation 4 bringt Touchpad und Bewegungssteuerung. „Automatisch“ wählt PlayStation 4 für Controller mit diesen Funktionen und Xbox 360 für alle anderen.",
     "gamepad_ds4": "PlayStation 4 (DS4)",
@@ -557,7 +557,9 @@
     "sharedpc_intro": "Nutze diesen PC weiter, während jemand von ihm streamt: Deine Bildschirme, dein Ton, Maus und Tastatur bleiben deine, nur das Spiel geht auf den Fernseher. Schalte „Geteilter PC“ für den Privatmodus aus.",
     "sharedpc_more": "So funktioniert es",
     "privacy_mode": "Privatmodus: Monitore dieses PCs ausschalten, während jemand streamt",
-    "privacy_mode_desc": "Nur der eigene Bildschirm des Streams bleibt an, sodass niemand im Raum sieht, was am PC gespielt wird. Die Monitore gehen wieder an, so angeordnet wie vorher, wenn der Stream endet oder der Fernseher die Verbindung trennt. Im Modus „Geteilter PC“ nicht verfügbar, da du die Monitore dort nutzt. Bleiben sie je aus, drücke Windows + P und wähle „Erweitern“."
+    "privacy_mode_desc": "Nur der eigene Bildschirm des Streams bleibt an, sodass niemand im Raum sieht, was am PC gespielt wird. Die Monitore gehen wieder an, so angeordnet wie vorher, wenn der Stream endet oder der Fernseher die Verbindung trennt. Im Modus „Geteilter PC“ nicht verfügbar, da du die Monitore dort nutzt. Bleiben sie je aus, drücke Windows + P und wähle „Erweitern“.",
+    "game_vsync_off": "V-Sync in Spielen während des Streamens ausschalten",
+    "game_vsync_off_desc": "Da die Begrenzung die Spiele taktet, bringt das Warten auf den Bildschirm nur Verzögerung: Das spart bis zu ein Bild. NVIDIA-Grafikkarten; deine eigene Einstellung kommt zurück, wenn das Streamen endet. Schalte es aus, wenn ein Spiel auf dem Fernseher Tearing zeigt."
   },
   "index": {
     "controller_hint": "Als was Spiele diesen Controller sehen. Die meisten PC-Spiele lassen nur einen Xbox-360-Controller vibrieren; ändere es unter Einstellungen > Eingabe > Emulierter Gamepad-Typ.",

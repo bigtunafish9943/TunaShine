@@ -317,6 +317,7 @@ namespace config {
     bool end_session_on_disconnect;  ///< End the session and restore displays when the last client disconnects
     bool setup_complete;  ///< The setup walkthrough was finished or skipped
     bool game_frame_limit;  ///< Cap games at the stream's frame rate while streaming
+    bool game_vsync_off;  ///< With that cap, turn Vertical Sync off in games while streaming (NVIDIA)
   };
 
   extern video_t video;

@@ -512,7 +512,8 @@ namespace proc {
 
     // Cap games at the stream's frame rate before the app starts, so it reads the cap when it starts
     if (config::tunastream.game_frame_limit && launch_session->fps > 0) {
-      frame_limit_fps = (launch_session->fps + 500) / 1000;
+      // In thousandths, so 59.94 stays 59.94 where the limiter can do it (RTSS)
+      frame_limit_fps = launch_session->fps;
       platf::set_game_frame_limit(frame_limit_fps);
     }
 

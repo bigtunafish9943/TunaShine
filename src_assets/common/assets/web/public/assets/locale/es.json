@@ -407,7 +407,7 @@
     "forward_rumble": "Vibración",
     "forward_rumble_desc": "Envía la vibración de los juegos al mando de tu dispositivo. Usa la prueba de la página Solución de problemas para comprobar que funciona.",
     "game_frame_limit": "Ajustar la frecuencia de imagen del juego a la transmisión (recomendado)",
-    "game_frame_limit_desc": "Mientras alguien transmite, los juegos se limitan a la frecuencia de imagen que pidió su dispositivo, para que se envíe cada imagen que dibuja el juego. Así desaparecen los tirones de que el juego y la transmisión vayan a velocidades distintas. Tu propio límite vuelve al terminar la transmisión. Solo tarjetas gráficas NVIDIA; si tú has fijado una frecuencia máxima para todos los juegos, no se toca.",
+    "game_frame_limit_desc": "Mientras alguien transmite, los juegos se limitan a la frecuencia de imagen que pidió su dispositivo, para que se envíe cada imagen que dibuja el juego. Así desaparecen los tirones de que el juego y la transmisión vayan a velocidades distintas. Si RivaTuner Statistics Server (RTSS, incluido con MSI Afterburner) está en marcha, limita él, a la frecuencia exacta (59,94 incluida) y con cualquier tarjeta gráfica; si no, se usa el límite de NVIDIA, redondeado al número entero. Tus propios límites vuelven al terminar la transmisión. Si tú has fijado una frecuencia máxima para todos los juegos en la configuración de NVIDIA, no se toca.",
     "gamepad": "Tipo de mando que ve el PC",
     "gamepad_desc": "Xbox 360 funciona con más juegos y tiene la vibración más fiable, así que es la mejor opción si la vibración no funciona. PlayStation 4 añade el panel táctil y los controles de movimiento. «Automático» elige PlayStation 4 para mandos con esas funciones y Xbox 360 para el resto.",
     "gamepad_ds4": "PlayStation 4 (DS4)",
@@ -557,7 +557,9 @@
     "sharedpc_intro": "Sigue usando este PC mientras alguien transmite desde él: tus pantallas, sonido, ratón y teclado siguen siendo tuyos y solo el juego va a la tele. Desactiva PC compartido para usar el modo privacidad.",
     "sharedpc_more": "Cómo funciona",
     "privacy_mode": "Modo privacidad: apagar los monitores de este PC mientras alguien transmite",
-    "privacy_mode_desc": "Solo la pantalla propia de la transmisión sigue encendida, para que nadie en la habitación vea lo que se juega en el PC. Los monitores se vuelven a encender, con su disposición de antes, cuando termina la transmisión o la tele se desconecta. No está disponible en modo PC compartido, donde usas los monitores. Si alguna vez se quedan apagados, pulsa Windows + P y elige Extender."
+    "privacy_mode_desc": "Solo la pantalla propia de la transmisión sigue encendida, para que nadie en la habitación vea lo que se juega en el PC. Los monitores se vuelven a encender, con su disposición de antes, cuando termina la transmisión o la tele se desconecta. No está disponible en modo PC compartido, donde usas los monitores. Si alguna vez se quedan apagados, pulsa Windows + P y elige Extender.",
+    "game_vsync_off": "Desactivar la V-Sync en los juegos durante la transmisión",
+    "game_vsync_off_desc": "Como el límite marca el ritmo de los juegos, esperar a la pantalla solo añade retraso: esto quita hasta una imagen. Tarjetas gráficas NVIDIA; tu ajuste vuelve al terminar la transmisión. Desactívalo si un juego muestra tearing en la tele."
   },
   "index": {
     "controller_hint": "Cómo ven los juegos este mando. La mayoría de juegos de PC solo hacen vibrar un mando de Xbox 360; cámbialo en Configuración > Entrada > Tipo de mando emulado.",

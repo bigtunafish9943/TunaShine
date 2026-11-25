@@ -98,6 +98,14 @@ const validateFallbackMode = (event) => {
               v-if="platform === 'windows'"
     ></Checkbox>
 
+    <Checkbox class="mb-3 ms-4"
+              id="game_vsync_off"
+              locale-prefix="config"
+              v-model="config.game_vsync_off"
+              default="true"
+              v-if="platform === 'windows' && config.game_frame_limit !== 'disabled' && config.game_frame_limit !== false"
+    ></Checkbox>
+
     <!-- Disable Audio -->
     <Checkbox class="mb-3"
               id="stream_audio"

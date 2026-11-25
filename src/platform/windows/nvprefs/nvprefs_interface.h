@@ -36,6 +36,9 @@ namespace nvprefs {
      */
     bool set_frame_limit(unsigned int fps);
 
+    /// Set a global profile DWORD setting while streaming; restore_global_profile() puts it back.
+    bool set_stream_setting(unsigned int id, unsigned int value);
+
   private:
     bool commit_global_profile_change(const undo_data_t &undo_data);
 
