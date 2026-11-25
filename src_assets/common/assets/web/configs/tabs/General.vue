@@ -142,7 +142,7 @@ onMounted(() => {
               id="shared_pc"
               locale-prefix="config"
               v-model="config.shared_pc"
-              default="false"
+              default="true"
     ></Checkbox>
 
     <!-- Seasonal themes -->

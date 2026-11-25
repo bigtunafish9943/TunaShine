@@ -1132,6 +1132,7 @@ namespace input {
     if (!config::input.controller) {
       return;
     }
+    platf::note_controller_input();
 
     if (packet->controllerNumber < 0 || packet->controllerNumber >= input->gamepads.size()) {
       BOOST_LOG(warning) << "ControllerNumber out of range ["sv << packet->controllerNumber << ']';

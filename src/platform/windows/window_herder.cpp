@@ -50,6 +50,13 @@ namespace platf {
     std::mutex stream_audio_lock;
     std::wstring stream_audio_device;  // endpoint id, as in {0.0.0.00000000}.{guid}
 
+    // When a streaming device's controller was last used (steady clock, milliseconds)
+    std::atomic<std::int64_t> last_controller_ms {0};
+
+    std::int64_t steady_ms() {
+      return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+    }
+
     std::wstring current_stream_audio_device() {
       std::lock_guard lg {stream_audio_lock};
       return stream_audio_device;
@@ -402,6 +409,9 @@ namespace platf {
             RECT target {};
             if (monitor_rect(display, target)) {
               herd_once(target);
+              if (shared) {
+                return_focus(target);
+              }
             }
             if (audio && *audio && std::chrono::steady_clock::now() >= next_audio) {
               next_audio = std::chrono::steady_clock::now() + 2s;
@@ -424,6 +434,78 @@ namespace platf {
         }
         if (com) {
           CoUninitialize();
+        }
+      }
+
+      /**
+       * Windows has one keyboard focus. When the person at the PC clicks their own windows, the
+       * game loses it, and some games pause or stop reading the controller. So when the controller
+       * is being used and the person at the PC has left their mouse and keyboard alone for a few
+       * seconds, the game gets focus back. Their own typing is never interrupted: any key press or
+       * mouse movement of theirs resets the wait.
+       */
+      void return_focus(const RECT &target) {
+        constexpr std::int64_t CONTROLLER_RECENT_MS = 3000;
+        constexpr DWORD PC_IDLE_MS = 8000;
+        const auto now = steady_ms();
+        if (now - last_controller_ms.load() > CONTROLLER_RECENT_MS || now < next_focus_try_ms) {
+          return;
+        }
+        LASTINPUTINFO idle {sizeof(LASTINPUTINFO)};
+        if (!GetLastInputInfo(&idle) || GetTickCount() - idle.dwTime < PC_IDLE_MS) {
+          return;
+        }
+
+        // Already focused on something on the stream's screen?
+        HWND foreground = GetForegroundWindow();
+        if (foreground) {
+          RECT rect {};
+          GetWindowRect(foreground, &rect);
+          POINT centre {(rect.left + rect.right) / 2, (rect.top + rect.bottom) / 2};
+          if (PtInRect(&target, centre)) {
+            return;
+          }
+        }
+
+        // The stream's biggest window that belongs to the app
+        HWND game = nullptr;
+        LONG best_area = 0;
+        for (HWND hwnd : app_windows()) {
+          RECT rect {};
+          GetWindowRect(hwnd, &rect);
+          POINT centre {(rect.left + rect.right) / 2, (rect.top + rect.bottom) / 2};
+          if (!PtInRect(&target, centre) || IsIconic(hwnd)) {
+            continue;
+          }
+          DWORD pid = 0;
+          GetWindowThreadProcessId(hwnd, &pid);
+          process_info_t proc;
+          if (!pid || !process_info(pid, proc) || !(belongs_to_stream(pid, proc) || (include_steam && is_steam(proc.exe)))) {
+            continue;
+          }
+          const LONG area = (rect.right - rect.left) * (rect.bottom - rect.top);
+          if (area > best_area) {
+            best_area = area;
+            game = hwnd;
+          }
+        }
+        next_focus_try_ms = now + 5000;
+        if (!game) {
+          return;
+        }
+
+        // A program in the background may only take focus with the help of the one that has it
+        const DWORD ours = GetCurrentThreadId();
+        const DWORD theirs = foreground ? GetWindowThreadProcessId(foreground, nullptr) : 0;
+        const bool attached = theirs && theirs != ours && AttachThreadInput(ours, theirs, TRUE);
+        const bool ok = SetForegroundWindow(game);
+        BringWindowToTop(game);
+        if (attached) {
+          AttachThreadInput(ours, theirs, FALSE);
+        }
+        if (ok && !focus_logged) {
+          focus_logged = true;
+          BOOST_LOG(info) << "Shared PC mode: gave the game focus back while the PC was idle"sv;
         }
       }
 
@@ -532,6 +614,8 @@ namespace platf {
       std::wstring display;
       bool include_steam;
       bool shared;
+      std::int64_t next_focus_try_ms = 0;
+      bool focus_logged = false;
       std::set<DWORD> routed;  // processes whose sound was sent to the stream
       std::set<DWORD> checked;  // processes looked at and left alone
       std::uint64_t launched_at = 0;
@@ -554,6 +638,10 @@ namespace platf {
       return nullptr;
     }
     return std::make_unique<window_herder_impl_t>(from_utf8(display_name), include_steam, true);
+  }
+
+  void note_controller_input() {
+    last_controller_ms.store(steady_ms(), std::memory_order_relaxed);
   }
 
   void set_stream_audio_device(const std::wstring &device_id) {

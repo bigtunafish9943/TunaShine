@@ -83,9 +83,10 @@ and every step was tightened:
   rate as it happens, controller batteries, the message and sound buttons and End session. Add it to your home
   screen to open it like an app.
 - **Now playing on the tray icon.** Hover over TunaStream's icon by the clock to see who is playing what.
-- **Shared PC mode.** Keep using the PC while someone streams: your monitor stays the main screen, only the
-  game's windows go to the TV, only the game's sound goes to the stream, and your mouse can't wander onto the
-  TV's screen. *Settings > General*.
+- **Shared PC mode** (on by default). Keep using the PC while someone streams: your monitor stays the main
+  screen, only the game's windows go to the TV, only the game's sound goes to the stream, your mouse can't
+  wander onto the TV's screen, and when you leave your mouse and keyboard alone the game gets focus back.
+  *Settings > General*.
 
 ## Everything else
 
