@@ -14,6 +14,10 @@
 #include "src/logging.h"
 #include "src/video.h"
 
+#ifndef MAKE_NVENC_VER
+  #define MAKE_NVENC_VER(major, minor) ((major) | ((minor) << 24))
+#endif
+
 /**
  * @brief Standalone NVENC encoder
  */
@@ -122,7 +126,11 @@ namespace nvenc {
      * @param v12_struct_version Optionally specifies the struct version to use with v12 SDK major versions.
      * @return A suitable struct version for the active codec.
      */
-    uint32_t min_struct_version(uint32_t version, uint32_t v11_struct_version = 0, uint32_t v12_struct_version = 0);
+    uint32_t min_struct_version(uint32_t version, uint32_t v11_struct_version = 0, uint32_t v12_struct_version = 0, bool legacy_high_bit = true);
+
+    /// Highest NVENC API version the driver supports, as MAKE_NVENC_VER(major, minor); 0 when unknown.
+    /// Set by `init_library()`.
+    uint32_t driver_api_version = 0;
 
     const NV_ENC_DEVICE_TYPE device_type;
 
@@ -149,6 +157,12 @@ namespace nvenc {
                                          ///< Can be set in constructor or `init_library()`, must override `wait_for_async_event()`.
 
   private:
+    bool create_encoder_once(const nvenc_config &config, const video::config_t &client_config, const nvenc_colorspace_t &colorspace, NV_ENC_BUFFER_FORMAT buffer_format, bool allow_split);
+
+    // Whether the last create_encoder_once() tried split frame encoding, and whether it is on
+    bool split_attempted = false;
+    bool split_active = false;
+
     // Kept from create_encoder() so set_bitrate() can reconfigure the same encoder
     NV_ENC_INITIALIZE_PARAMS saved_init_params = {};
     NV_ENC_CONFIG saved_enc_config = {};

@@ -13,16 +13,34 @@
 #include "src/logging.h"
 #include "src/utility.h"
 
-#define MAKE_NVENC_VER(major, minor) ((major) | ((minor) << 24))
+#ifndef MAKE_NVENC_VER
+  #define MAKE_NVENC_VER(major, minor) ((major) | ((minor) << 24))
+#endif
 
 // Make sure we check backwards compatibility when bumping the Video Codec SDK version
 // Things to look out for:
 // - NV_ENC_*_VER definitions where the value inside NVENCAPI_STRUCT_VERSION() was increased
 // - Incompatible struct changes in nvEncodeAPI.h (fields removed, semantics changed, etc.)
 // - Test both old and new drivers with all supported codecs
-#if NVENCAPI_VERSION != MAKE_NVENC_VER(12U, 0U)
+//
+// Checked for 12.0 -> 12.1 (by compiling both headers and comparing the offset of every named field
+// in every struct used here): only NV_ENC_LOCK_BITSTREAM changed layout (the fields from
+// intraMBCount on moved, and none of those are read here), and only NV_ENC_INITIALIZE_PARAMS and
+// NV_ENC_LOCK_BITSTREAM changed version. Sessions opened at an older API version pass those two
+// structs at their 12.0 versions; see min_struct_version(). Only split frame encoding opens a
+// session at 12.1, and only when the driver supports it.
+#if NVENCAPI_VERSION != MAKE_NVENC_VER(12U, 1U)
   #error Check and update NVENC code for backwards compatibility!
 #endif
+
+namespace {
+  /// True when an API version in MAKE_NVENC_VER form is at least major.minor.
+  bool api_at_least(uint32_t version, uint32_t major, uint32_t minor) {
+    const uint32_t have_major = version & 0xFF;
+    const uint32_t have_minor = version >> 24;
+    return have_major > major || (have_major == major && have_minor >= minor);
+  }
+}  // namespace
 
 namespace {
 
@@ -98,12 +116,36 @@ namespace nvenc {
   }
 
   bool nvenc_base::create_encoder(const nvenc_config &config, const video::config_t &client_config, const nvenc_colorspace_t &colorspace, NV_ENC_BUFFER_FORMAT buffer_format) {
+    if (create_encoder_once(config, client_config, colorspace, buffer_format, true)) {
+      return true;
+    }
+    if (split_attempted) {
+      // A driver or card that turns split frame encoding down: encode the usual way instead
+      BOOST_LOG(warning) << "NvEnc: couldn't create an encoder that splits frames; trying the usual way";
+      return create_encoder_once(config, client_config, colorspace, buffer_format, false);
+    }
+    return false;
+  }
+
+  bool nvenc_base::create_encoder_once(const nvenc_config &config, const video::config_t &client_config, const nvenc_colorspace_t &colorspace, NV_ENC_BUFFER_FORMAT buffer_format, bool allow_split) {
     // Pick the minimum NvEncode API version required to support the specified codec
     // to maximize driver compatibility. AV1 was introduced in SDK v12.0.
     minimum_api_version = (client_config.videoFormat <= 1) ? MAKE_NVENC_VER(11U, 0U) : MAKE_NVENC_VER(12U, 0U);
+    split_attempted = false;
+    split_active = false;
 
     if (!nvenc && !init_library()) {
       return false;
+    }
+
+    // Split frame encoding needs API 12.1. It is only tried where it pays: HEVC and AV1 (H.264
+    // can't split), pictures larger than 1440p, and drivers that support 12.1. It can't be combined
+    // with weighted prediction.
+    if (allow_split && config.split_frame && client_config.videoFormat >= 1 && !config.weighted_prediction &&
+        (std::uint64_t) client_config.width * client_config.height > 2560ull * 1440ull &&
+        api_at_least(driver_api_version, 12, 1)) {
+      minimum_api_version = NVENCAPI_VERSION;
+      split_attempted = true;
     }
 
     if (encoder) {
@@ -139,7 +181,7 @@ namespace nvenc {
       return false;
     }
 
-    NV_ENC_INITIALIZE_PARAMS init_params = {min_struct_version(NV_ENC_INITIALIZE_PARAMS_VER)};
+    NV_ENC_INITIALIZE_PARAMS init_params = {min_struct_version(NV_ENC_INITIALIZE_PARAMS_VER, 5, 5)};
 
     switch (client_config.videoFormat) {
       case 0:
@@ -213,15 +255,22 @@ namespace nvenc {
 
     encoder_params.rfi = get_encoder_cap(NV_ENC_CAPS_SUPPORT_REF_PIC_INVALIDATION);
 
+    // Two or more NVENC chips: each encodes half of every frame
+    if (split_attempted && get_encoder_cap(NV_ENC_CAPS_NUM_ENCODER_ENGINES) > 1) {
+      init_params.splitEncodeMode = NV_ENC_SPLIT_TWO_FORCED_MODE;
+      split_active = true;
+    }
+
     // Automatic quality: cards that also encode AV1 (RTX 40 and 50 series) have the headroom
-    // for a slower, cleaner preset at the same latency budget; older cards keep the fastest
+    // for a slower, cleaner preset at the same latency budget; older cards keep the fastest.
+    // Splitting frames nearly halves the time a 4K frame takes, which leaves room for P5 there too.
     int quality_preset = config.quality_preset;
     if (quality_preset <= 0) {
       const bool newer_card = std::find_if(encode_guids.begin(), encode_guids.end(), [](const GUID &guid) {
                                 return equal_guids(guid, NV_ENC_CODEC_AV1_GUID);
                               }) != encode_guids.end();
       const bool above_1440p = (std::uint64_t) encoder_params.width * encoder_params.height > 2560ull * 1440ull;
-      quality_preset = newer_card ? (above_1440p ? 4 : 5) : 1;
+      quality_preset = newer_card ? ((above_1440p && !split_active) ? 4 : 5) : 1;
       BOOST_LOG(info) << "NvEnc: automatic quality preset P" << quality_preset;
     }
     init_params.presetGUID = quality_preset_guid_from_number(quality_preset);
@@ -454,6 +503,9 @@ namespace nvenc {
       if (encoder_params.rfi) {
         extra += " rfi";
       }
+      if (split_active) {
+        extra += " split-frame";
+      }
       if (init_params.enableWeightedPrediction) {
         extra += " weighted-prediction";
       }
@@ -548,7 +600,7 @@ namespace nvenc {
       return {};
     }
 
-    NV_ENC_LOCK_BITSTREAM lock_bitstream = {min_struct_version(NV_ENC_LOCK_BITSTREAM_VER, 1, 2)};
+    NV_ENC_LOCK_BITSTREAM lock_bitstream = {min_struct_version(NV_ENC_LOCK_BITSTREAM_VER, 1, 2, false)};
     lock_bitstream.outputBitstream = output_bitstream;
     lock_bitstream.doNotWait = async_event_handle ? 1 : 0;
 
@@ -711,17 +763,26 @@ namespace nvenc {
     return false;
   }
 
-  uint32_t nvenc_base::min_struct_version(uint32_t version, uint32_t v11_struct_version, uint32_t v12_struct_version) {
+  uint32_t nvenc_base::min_struct_version(uint32_t version, uint32_t v11_struct_version, uint32_t v12_struct_version, bool legacy_high_bit) {
     assert(minimum_api_version);
 
     // Mask off and replace the original NVENCAPI_VERSION
     version &= ~NVENCAPI_VERSION;
     version |= minimum_api_version;
 
+    // A session at the headers' own API version uses every struct as the headers declare it
+    if (minimum_api_version == NVENCAPI_VERSION) {
+      return version;
+    }
+
     // If there's a struct version override, apply that too
     if (v11_struct_version || v12_struct_version) {
       version &= ~(0xFFu << 16);
       version |= (((minimum_api_version & 0xFF) >= 12) ? v12_struct_version : v11_struct_version) << 16;
+      // Some structs gained the top bit only in a later API version
+      if (!legacy_high_bit) {
+        version &= ~(1u << 31);
+      }
     }
 
     return version;
