@@ -47,6 +47,14 @@ const config = ref(props.config)
               default="true"
     ></Checkbox>
 
+    <!-- Split frame encoding -->
+    <Checkbox class="mb-3"
+              id="nvenc_split_frame"
+              locale-prefix="config"
+              v-model="config.nvenc_split_frame"
+              default="true"
+    ></Checkbox>
+
     <!-- Single-frame VBV/HRD percentage increase -->
     <div class="mb-3">
       <label for="nvenc_vbv_increase" class="form-label">{{ $t('config.nvenc_vbv_increase') }}</label>
