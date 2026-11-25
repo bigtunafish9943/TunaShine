@@ -44,6 +44,8 @@
 #undef NTDDI_VERSION
 #define NTDDI_VERSION NTDDI_WIN10
 #include <Shlwapi.h>
+#include <shlobj.h>
+#include <knownfolders.h>
 
 // local includes
 #include "misc.h"
@@ -1164,6 +1166,25 @@ namespace platf {
         return;
       }
     });
+  }
+
+  std::filesystem::path user_folder(user_folder_e folder) {
+    // TunaStream runs as a service, so ask for the folder of whoever is signed in at the console
+    HANDLE token = retrieve_users_token(false);
+    if (!token) {
+      return {};
+    }
+    PWSTR path = nullptr;
+    const KNOWNFOLDERID &id = folder == user_folder_e::videos ? FOLDERID_Videos : FOLDERID_Pictures;
+    std::filesystem::path result;
+    if (SUCCEEDED(SHGetKnownFolderPath(id, KF_FLAG_DEFAULT, token, &path)) && path) {
+      result = std::filesystem::path {path};
+    }
+    if (path) {
+      CoTaskMemFree(path);
+    }
+    CloseHandle(token);
+    return result;
   }
 
   network_link_t network_link() {

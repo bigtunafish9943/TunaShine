@@ -34,6 +34,7 @@
 #include "network.h"
 #include "nvhttp.h"
 #include "box_art.h"
+#include "captures.h"
 #include "sound_board.h"
 #include "tv_messages.h"
 #include "platform/common.h"
@@ -1818,6 +1819,36 @@ namespace nvhttp {
   }
 
   /**
+   * A screenshot taken on the device: POST /tuna/screenshot with the PNG or JPEG as the body.
+   * Saved in the signed-in user's Pictures\TunaStream folder, named after the game.
+   */
+  void tunaScreenshot(resp_https_t response, req_https_t request) {
+    print_req<TunaStreamHTTPS>(request);
+    auto named_cert_p = get_verified_cert(request);
+    if (!(named_cert_p->perm & PERM::_allow_view)) {
+      response->write(SimpleWeb::StatusCode::client_error_unauthorized);
+      response->close_connection_after_response = true;
+      return;
+    }
+    std::string bytes;
+    if (request->content.size() <= captures::MAX_SCREENSHOT_BYTES) {
+      bytes = request->content.string();
+    }
+    auto app = proc::proc.get_last_run_app_name();
+    auto path = captures::save_screenshot(app.empty() ? named_cert_p->name : app, bytes);
+    nlohmann::json out;
+    out["saved"] = !path.empty();
+    if (!path.empty()) {
+      auto name = path.filename().u8string();
+      out["name"] = std::string(name.begin(), name.end());
+    }
+    SimpleWeb::CaseInsensitiveMultimap headers;
+    headers.emplace("Content-Type", "application/json");
+    response->write(path.empty() ? SimpleWeb::StatusCode::client_error_bad_request : SimpleWeb::StatusCode::success_ok, out.dump(), headers);
+    response->close_connection_after_response = true;
+  }
+
+  /**
    * A sound-board sound: GET /tuna/sound?name=. TunaReceive fetches it when the home page sends it.
    */
   void tunaSound(resp_https_t response, req_https_t request) {
@@ -2065,6 +2096,7 @@ namespace nvhttp {
     https_server.resource["^/tuna/network$"]["GET"] = tunaNetwork;
     https_server.resource["^/tuna/report$"]["GET"] = tunaReport;
     https_server.resource["^/tuna/sound$"]["GET"] = tunaSound;
+    https_server.resource["^/tuna/screenshot$"]["POST"] = tunaScreenshot;
     https_server.resource["^/tuna/vdisplay$"]["GET"] = tunaVdisplay;
     https_server.resource["^/tuna/vdisplay/repair$"]["GET"] = tunaVdisplay;
     https_server.resource["^/tuna/file$"]["GET"] = tunaFile;

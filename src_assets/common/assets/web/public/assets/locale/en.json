@@ -586,6 +586,8 @@
     "fps_note_title": "The game is running at {fps} fps, below the {target} the TV asked for",
     "fps_reminder_title": "To fix: {app} ran at {fps} fps last time, below {target}",
     "fps_reminder_title_4k": "To fix: {app} ran at {fps} fps at 4K last time, below {target}",
+    "captures_title": "Screenshots and clips",
+    "captures_where": "Kept in {pictures} and {videos}. On the TV, View + R1 takes a screenshot and View + L1 saves the last 30 seconds.",
     "battery_charging": "charging, {pct}%",
     "battery_level": "battery {pct}%",
     "controller_n": "Controller {n}",

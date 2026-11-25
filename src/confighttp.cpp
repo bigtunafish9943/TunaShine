@@ -47,6 +47,7 @@
 #include "file_outbox.h"
 #include "pairing_backup.h"
 #include "play_history.h"
+#include "captures.h"
 #include "sound_board.h"
 #include "tv_messages.h"
 #include "updater.h"
@@ -945,6 +946,56 @@ namespace confighttp {
       BOOST_LOG(warning) << "TvMessage: "sv << e.what();
       bad_request(response, request, e.what());
     }
+  }
+
+  /**
+   * @brief The newest screenshots and clips: {"captures": [{"name", "kind", "modified", "size"}]}.
+   */
+  void getCaptures(resp_https_t response, req_https_t request) {
+    if (!authenticate(response, request)) {
+      return;
+    }
+
+    nlohmann::json list = nlohmann::json::array();
+    for (const auto &c : captures::recent(24)) {
+      list.push_back({{"name", c.name}, {"kind", c.kind}, {"modified", c.modified}, {"size", c.size}});
+    }
+    auto folder = [](const std::filesystem::path &p) {
+      auto u8 = p.u8string();
+      return std::string(u8.begin(), u8.end());
+    };
+    nlohmann::json output_tree;
+    output_tree["status"] = true;
+    output_tree["captures"] = list;
+    output_tree["screenshotFolder"] = folder(captures::screenshot_dir());
+    output_tree["clipFolder"] = folder(captures::clip_dir());
+    send_response(response, output_tree);
+  }
+
+  /**
+   * @brief One screenshot or clip: GET /api/captures/file?kind=screenshot|clip&name=...
+   */
+  void getCaptureFile(resp_https_t response, req_https_t request) {
+    if (!authenticate(response, request)) {
+      return;
+    }
+
+    auto args = request->parse_query_string();
+    auto kind = args.find("kind") != args.end() ? args.find("kind")->second : std::string {};
+    auto name = args.find("name") != args.end() ? args.find("name")->second : std::string {};
+    auto path = captures::file_for(kind, name);
+    if (path.empty()) {
+      response->write(SimpleWeb::StatusCode::client_error_not_found);
+      return;
+    }
+    auto ext = path.extension().string();
+    std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+    const char *type = ext == ".png" ? "image/png" : (ext == ".jpg" || ext == ".jpeg") ? "image/jpeg" : ext == ".mp4" ? "video/mp4" : "application/octet-stream";
+    std::ifstream in(path, std::ios::binary);
+    SimpleWeb::CaseInsensitiveMultimap headers;
+    headers.emplace("Content-Type", type);
+    headers.emplace("Cache-Control", "private, max-age=3600");
+    response->write(SimpleWeb::StatusCode::success_ok, in, headers);
   }
 
   /**
@@ -2208,6 +2259,8 @@ namespace confighttp {
     server.resource["^/api/tv-message$"]["POST"] = postTvMessage;
     server.resource["^/api/tv-message$"]["GET"] = getTvMessages;
     server.resource["^/api/sounds$"]["GET"] = getSounds;
+    server.resource["^/api/captures$"]["GET"] = getCaptures;
+    server.resource["^/api/captures/file$"]["GET"] = getCaptureFile;
     server.resource["^/api/sounds$"]["POST"] = addSound;
     server.resource["^/api/sounds/delete$"]["POST"] = removeSound;
     server.resource["^/api/update$"]["GET"] = getUpdate;

@@ -899,6 +899,18 @@ namespace platf {
 
   network_link_t network_link();
 
+  /// A folder of the signed-in user's, such as their Pictures folder.
+  enum class user_folder_e {
+    pictures,
+    videos,
+  };
+
+  /**
+   * @brief Where the signed-in user's Pictures or Videos folder is, for saving screenshots and clips.
+   * @return Empty when nobody is signed in or it can't be found (or on platforms other than Windows).
+   */
+  std::filesystem::path user_folder(user_folder_e folder);
+
   /**
    * @brief Cap games at the stream's frame rate, so each frame the game draws is one the stream sends.
    * @details Uses the graphics driver's own frame rate limit where available (NVIDIA). A limit the

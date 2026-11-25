@@ -267,6 +267,21 @@
       </template>
     </section>
 
+    <!-- Screenshots and clips taken from the TV -->
+    <section class="home-captures" v-if="captures.length" aria-labelledby="captures-title">
+      <h2 class="h5" id="captures-title">{{ $t('index.captures_title') }}</h2>
+      <p class="home-captures-where">{{ $t('index.captures_where', { pictures: captureFolders.screenshots, videos: captureFolders.clips }) }}</p>
+      <ul class="home-captures-grid">
+        <li v-for="c in captures.slice(0, 8)" :key="c.kind + c.name">
+          <a :href="captureUrl(c)" target="_blank" rel="noopener" :title="c.name">
+            <img v-if="c.kind === 'screenshot'" :src="captureUrl(c)" :alt="c.name" loading="lazy">
+            <span v-else class="home-capture-clip"><i class="fas fa-film" aria-hidden="true"></i></span>
+            <span class="home-capture-name">{{ c.name }}</span>
+          </a>
+        </li>
+      </ul>
+    </section>
+
     <!-- First-time setup, shown until a device is paired -->
     <div class="card p-2 my-4" v-if="clientCount === 0">
       <div class="card-body">
@@ -381,6 +396,8 @@
         statusTimer: null,
         recap: null,
         recapTimer: null,
+        captures: [],
+        captureFolders: { screenshots: '', clips: '' },
         sounds: [],
         soundMaxBytes: 2097152,
         soundForm: { open: false, name: '', file: null, saving: false, status: '', error: false },
@@ -414,8 +431,10 @@
         }, 5000);
         this.loadRecap();
         this.loadSounds();
+        this.loadCaptures();
         this.recapTimer = setInterval(() => {
           if (!document.hidden) this.loadRecap();
+          if (!document.hidden) this.loadCaptures();
         }, 60000);
         console.log("Version: ", this.version.version)
         const latest = await fetch("https://api.github.com/repos/bigtunafish9943/TunaStream/releases/latest").then((r) => r.ok ? r.json() : null);
@@ -535,6 +554,18 @@
         } catch (e) {
           this.message = { ...this.message, sending: false, error: true, status: this.$t('index.message_failed') };
         }
+      },
+      async loadCaptures() {
+        try {
+          const r = await fetch('./api/captures', { credentials: 'include' }).then((r) => r.json());
+          this.captures = r.captures || [];
+          this.captureFolders = { screenshots: r.screenshotFolder || '', clips: r.clipFolder || '' };
+        } catch (e) {
+          this.captures = [];
+        }
+      },
+      captureUrl(c) {
+        return `./api/captures/file?kind=${encodeURIComponent(c.kind)}&name=${encodeURIComponent(c.name)}`;
       },
       async loadSounds() {
         try {

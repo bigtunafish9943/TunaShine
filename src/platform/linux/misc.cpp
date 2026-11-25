@@ -371,6 +371,10 @@ std::string get_local_ip_for_gateway() {
     return nullptr;
   }
 
+  std::filesystem::path user_folder(user_folder_e) {
+    return {};
+  }
+
   network_link_t network_link() {
     return {};
   }

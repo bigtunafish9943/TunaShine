@@ -1728,3 +1728,66 @@ html[data-ts-theme=gold][data-bs-theme=dark] {
 .home-fps-reminder {
     margin: 0.8rem 0 0;
 }
+
+/* ---------- Screenshots and clips ---------- */
+.home-captures {
+    margin: 0 0 1.5rem;
+    padding: 1rem 1.4rem 1.2rem;
+    background-color: var(--ts-surface);
+    border: 1px solid var(--ts-surface-border);
+    border-radius: 0.75rem;
+}
+
+.home-captures-where {
+    color: var(--bs-secondary-color);
+    font-size: 0.92rem;
+}
+
+.home-captures-grid {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+    gap: 0.75rem;
+}
+
+.home-captures-grid a {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+}
+
+.home-captures-grid img,
+.home-capture-clip {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    border-radius: 0.5rem;
+    background-color: var(--bs-tertiary-bg);
+}
+
+.home-capture-clip {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.6rem;
+    color: var(--ts-accent);
+}
+
+.home-captures-grid a:hover img,
+.home-captures-grid a:focus-visible img {
+    outline: 2px solid var(--ts-accent);
+    outline-offset: 2px;
+}
+
+.home-capture-name {
+    display: block;
+    margin-top: 0.3rem;
+    font-size: 0.8rem;
+    color: var(--bs-secondary-color);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
