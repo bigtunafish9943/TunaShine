@@ -153,6 +153,52 @@
       </ul>
     </div>
 
+    <!-- The week's play: time per day, most-played games, and how smooth the streams were -->
+    <section class="home-recap" v-if="recap" aria-labelledby="recap-title">
+      <div class="home-recap-head">
+        <h2 class="h5" id="recap-title">{{ $t('index.recap_title') }}</h2>
+        <p class="home-recap-total" v-if="recap.seconds > 0">
+          <span class="home-recap-hours">{{ playTime(recap.seconds) }}</span>
+          <span class="home-recap-sub">{{ $t(recap.streams === 1 ? 'index.recap_streams_one' : 'index.recap_streams', { n: recap.streams }) }}</span>
+        </p>
+      </div>
+      <p class="home-recap-empty" v-if="recap.seconds === 0">{{ $t('index.recap_empty') }}</p>
+      <template v-else>
+        <div class="home-recap-days" role="img" :aria-label="recapDaysLabel">
+          <div class="home-recap-day" v-for="(d, i) in recap.byDay" :key="d.start" :class="{ 'home-recap-today': i === recap.byDay.length - 1 }">
+            <div class="home-recap-bar-track">
+              <div class="home-recap-bar" :style="{ height: recapBarHeight(d.seconds) }" :title="playTime(d.seconds)"></div>
+            </div>
+            <span class="home-recap-weekday">{{ weekday(d.start) }}</span>
+          </div>
+        </div>
+        <div class="home-recap-columns">
+          <div>
+            <h3 class="home-recap-subtitle">{{ $t('index.recap_most_played') }}</h3>
+            <ol class="home-recap-games">
+              <li v-for="g in recap.topApps" :key="g.app">
+                <span class="home-recap-game">{{ g.app || $t('index.recap_unnamed_app') }}</span>
+                <span class="home-recap-game-time">{{ playTime(g.seconds) }}</span>
+                <span class="home-recap-game-share" :style="{ width: Math.max(4, Math.round(100 * g.seconds / recap.topApps[0].seconds)) + '%' }"></span>
+              </li>
+            </ol>
+          </div>
+          <div>
+            <h3 class="home-recap-subtitle">{{ $t('index.recap_smoothness') }}</h3>
+            <p class="home-recap-smooth" v-if="recap.smoothPercent >= 0">
+              <span class="home-recap-smooth-pct" :class="'home-recap-smooth-' + smoothLevel(recap.smoothPercent)">{{ recap.smoothPercent }}%</span>
+              {{ $t('index.recap_smooth_desc') }}
+            </p>
+            <ul class="home-recap-facts">
+              <li v-if="recap.avgFps > 0">{{ $t('index.recap_avg_fps', { fps: recap.avgFps }) }}</li>
+              <li>{{ recap.lostVideo === 0 ? $t('index.recap_no_lost') : $t('index.recap_lost', { n: recap.lostVideo }) }}</li>
+              <li v-if="recap.longestSeconds >= 600">{{ $t('index.recap_longest', { time: playTime(recap.longestSeconds), app: recap.longestApp || $t('index.recap_unnamed_app') }) }}</li>
+            </ul>
+          </div>
+        </div>
+      </template>
+    </section>
+
     <!-- First-time setup, shown until a device is paired -->
     <div class="card p-2 my-4" v-if="clientCount === 0">
       <div class="card-body">
@@ -265,6 +311,8 @@
         network: null,
         wifiNoteHidden: false,
         statusTimer: null,
+        recap: null,
+        recapTimer: null,
       }
     },
     async created() {
@@ -292,6 +340,10 @@
         this.statusTimer = setInterval(() => {
           if (!document.hidden && !this.ending) this.loadStatus();
         }, 5000);
+        this.loadRecap();
+        this.recapTimer = setInterval(() => {
+          if (!document.hidden) this.loadRecap();
+        }, 60000);
         console.log("Version: ", this.version.version)
         const latest = await fetch("https://api.github.com/repos/bigtunafish9943/TunaStream/releases/latest").then((r) => r.ok ? r.json() : null);
         this.githubVersion = latest ? new TunaStreamVersion(latest, null) : null;
@@ -385,6 +437,44 @@
           if (offer) offer.scrollIntoView({ behavior: 'smooth', block: 'center' });
           this.installUpdate();
         });
+      },
+      /** This week's play, counted in the browser's own time zone. */
+      async loadRecap() {
+        try {
+          const tz = -new Date().getTimezoneOffset();
+          const r = await fetch(`./api/recap?days=7&tz=${tz}`, { credentials: 'include' });
+          if (r.ok) {
+            this.recap = await r.json();
+          }
+        } catch (e) {
+          // Keep the last recap
+        }
+      },
+      /** Play time in words: "45 min", "2 h 10 min". */
+      playTime(seconds) {
+        const minutes = Math.round(seconds / 60);
+        if (minutes < 60) {
+          return this.$t('index.recap_minutes', { m: Math.max(minutes, seconds > 0 ? 1 : 0) });
+        }
+        const h = Math.floor(minutes / 60);
+        const m = minutes % 60;
+        return m ? this.$t('index.recap_hours_minutes', { h, m }) : this.$t('index.recap_hours', { h });
+      },
+      weekday(start) {
+        const date = new Date(start * 1000);
+        const locale = this.$i18n && typeof this.$i18n.locale === 'string' ? this.$i18n.locale.replace('_', '-') : undefined;
+        try {
+          return date.toLocaleDateString(locale, { weekday: 'short' });
+        } catch (e) {
+          return date.toLocaleDateString(undefined, { weekday: 'short' });
+        }
+      },
+      recapBarHeight(seconds) {
+        const most = Math.max(...this.recap.byDay.map((d) => d.seconds), 1);
+        return seconds > 0 ? Math.max(6, Math.round(100 * seconds / most)) + '%' : '0';
+      },
+      smoothLevel(pct) {
+        return pct >= 90 ? 'good' : pct >= 70 ? 'fair' : 'poor';
       },
       /** A battery icon that matches how full it is. */
       batteryIcon(pct) {
@@ -550,6 +640,11 @@
       }
     },
     computed: {
+      /** The day chart in words, for screen readers */
+      recapDaysLabel() {
+        if (!this.recap) return '';
+        return this.recap.byDay.map((d) => this.weekday(d.start) + ' ' + this.playTime(d.seconds)).join(', ');
+      },
       updateBusy() {
         return ['checking', 'downloading', 'installing', 'restarting'].includes(this.update.stage);
       },

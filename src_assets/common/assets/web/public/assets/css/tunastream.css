@@ -1433,3 +1433,170 @@ html[data-ts-theme=gold][data-bs-theme=dark] {
 .ts-theme-dots span + span {
     margin-left: -0.45rem;
 }
+
+/* ---------- The last seven days on the home page ---------- */
+.home-recap {
+    margin: 0 0 1.5rem;
+    padding: 1rem 1.4rem 1.2rem;
+    background-color: var(--ts-surface);
+    border: 1px solid var(--ts-surface-border);
+    border-radius: 0.75rem;
+}
+
+.home-recap-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.25rem 1rem;
+}
+
+.home-recap-head h2 {
+    margin: 0;
+}
+
+.home-recap-total {
+    margin: 0;
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+}
+
+.home-recap-hours {
+    font-size: 1.75rem;
+    font-weight: 700;
+    line-height: 1.1;
+    color: var(--bs-emphasis-color);
+    font-variant-numeric: tabular-nums;
+}
+
+.home-recap-sub,
+.home-recap-empty {
+    color: var(--bs-secondary-color);
+}
+
+.home-recap-empty {
+    margin: 0.5rem 0 0;
+}
+
+.home-recap-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 0.5rem;
+    margin: 1rem 0 1.25rem;
+}
+
+.home-recap-day {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.home-recap-bar-track {
+    position: relative;
+    width: 100%;
+    max-width: 2.75rem;
+    height: 4.5rem;
+    border-radius: 0.4rem;
+    background-color: var(--bs-tertiary-bg);
+    overflow: hidden;
+}
+
+.home-recap-bar {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: 0.4rem 0.4rem 0 0;
+    background-color: rgba(var(--ts-accent-rgb), 0.5);
+}
+
+.home-recap-today .home-recap-bar {
+    background-color: var(--ts-accent);
+}
+
+.home-recap-weekday {
+    font-size: 0.8rem;
+    color: var(--bs-secondary-color);
+}
+
+.home-recap-today .home-recap-weekday {
+    color: var(--bs-emphasis-color);
+    font-weight: 600;
+}
+
+.home-recap-columns {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+    gap: 1rem 2rem;
+}
+
+.home-recap-subtitle {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin: 0 0 0.5rem;
+    color: var(--bs-emphasis-color);
+}
+
+.home-recap-games {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.home-recap-games li {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    column-gap: 0.75rem;
+    padding: 0.2rem 0 0.45rem;
+}
+
+.home-recap-game {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.home-recap-game-time {
+    color: var(--bs-secondary-color);
+    font-variant-numeric: tabular-nums;
+}
+
+.home-recap-game-share {
+    grid-column: 1 / -1;
+    justify-self: start;
+    height: 3px;
+    margin-top: 0.25rem;
+    border-radius: 2px;
+    background-color: var(--ts-accent);
+}
+
+.home-recap-smooth {
+    margin: 0 0 0.5rem;
+}
+
+.home-recap-smooth-pct {
+    font-size: 1.35rem;
+    font-weight: 700;
+    margin-right: 0.25rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.home-recap-smooth-good {
+    color: var(--bs-success-text-emphasis);
+}
+
+.home-recap-smooth-fair {
+    color: var(--bs-warning-text-emphasis);
+}
+
+.home-recap-smooth-poor {
+    color: var(--bs-danger-text-emphasis);
+}
+
+.home-recap-facts {
+    margin: 0;
+    padding-left: 1.1rem;
+    color: var(--bs-secondary-color);
+}

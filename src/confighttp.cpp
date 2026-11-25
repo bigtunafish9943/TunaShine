@@ -46,6 +46,7 @@
 #include "other_hosts.h"
 #include "file_outbox.h"
 #include "pairing_backup.h"
+#include "play_history.h"
 #include "updater.h"
 #include "utility.h"
 #include "uuid.h"
@@ -861,6 +862,36 @@ namespace confighttp {
    *
    * @api_examples{/api/status| GET| null}
    */
+  /**
+   * @brief The weekly recap: play time per day, most-played apps and how smooth the streams were.
+   * @details Query: days (default 7), tz (the viewer's offset from UTC in minutes, east positive).
+   */
+  void getRecap(resp_https_t response, req_https_t request) {
+    if (!authenticate(response, request)) {
+      return;
+    }
+
+    print_req(request);
+
+    int days = 7;
+    int tz = 0;
+    auto args = request->parse_query_string();
+    try {
+      if (auto it = args.find("days"); it != args.end()) {
+        days = std::stoi(it->second);
+      }
+      if (auto it = args.find("tz"); it != args.end()) {
+        tz = std::stoi(it->second);
+      }
+    } catch (const std::exception &) {
+      // Keep the defaults
+    }
+
+    auto output_tree = play_history::recap(days, tz);
+    output_tree["status"] = true;
+    send_response(response, output_tree);
+  }
+
   void getStatus(resp_https_t response, req_https_t request) {
     if (!authenticate(response, request)) {
       return;
@@ -2031,6 +2062,7 @@ namespace confighttp {
     server.resource["^/api/apps/close$"]["POST"] = closeApp;
     server.resource["^/api/rumble-test$"]["POST"] = rumbleTest;
     server.resource["^/api/status$"]["GET"] = getStatus;
+    server.resource["^/api/recap$"]["GET"] = getRecap;
     server.resource["^/api/update$"]["GET"] = getUpdate;
     server.resource["^/api/update$"]["POST"] = startUpdate;
     server.resource["^/api/vdisplay/repair$"]["POST"] = repairVirtualDisplay;
