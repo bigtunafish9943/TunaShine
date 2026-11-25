@@ -1921,7 +1921,7 @@ namespace nvhttp {
     print_req<TunaStreamHTTPS>(request);
     auto named_cert_p = get_verified_cert(request);
     nlohmann::json list = nlohmann::json::array();
-    if (named_cert_p->perm & PERM::_all_actions) {
+    if (!!(named_cert_p->perm & PERM::_all_actions)) {
       for (const auto &b : settings_backup::receiver_backups()) {
         list.push_back({{"name", b.name}, {"device", b.device}, {"made", b.made}, {"size", b.size}});
       }
@@ -1939,7 +1939,7 @@ namespace nvhttp {
     auto named_cert_p = get_verified_cert(request);
     auto args = request->parse_query_string();
     std::string content;
-    if (named_cert_p->perm & PERM::_all_actions) {
+    if (!!(named_cert_p->perm & PERM::_all_actions)) {
       content = settings_backup::receiver_backup(get_arg(args, "name", ""));
     }
     if (content.empty()) {
