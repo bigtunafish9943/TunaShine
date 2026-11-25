@@ -147,7 +147,17 @@
     "wait_all": "Continue streaming until all app processes exit",
     "wait_all_desc": "This will continue streaming until all processes started by the app have terminated. When unchecked, streaming will stop when the initial app process exits, even if other app processes are still running.",
     "working_dir": "Working Directory",
-    "working_dir_desc": "The working directory that should be passed to the process. For example, some applications use the working directory to search for configuration files. If not set, TunaStream will default to the parent directory of the command"
+    "working_dir_desc": "The working directory that should be passed to the process. For example, some applications use the working directory to search for configuration files. If not set, TunaStream will default to the parent directory of the command",
+    "sync_title": "Keep my games in sync",
+    "sync_days": "Recent means the last",
+    "sync_now": "Sync now",
+    "sync_desc": "Adds Steam games you've played recently and games newly installed through Epic, GOG, EA, Ubisoft, Amazon or the Microsoft Store (those launchers don't record play times), with their covers. They're removed again when uninstalled, or for Steam when not played for that long. Apps you added yourself are never touched, and a synced game you delete stays deleted. Nothing changes while someone is streaming.",
+    "sync_last": "Last synced {when}: {added} added, {removed} removed.",
+    "sync_added_list": "Added: {names}.",
+    "sync_excluded": "{n} synced games you deleted stay off the list.",
+    "sync_forget": "Let them come back",
+    "sync_badge": "Synced",
+    "sync_badge_title": "Added by Keep my games in sync"
   },
   "client_card": {
     "clients": "Clients",
@@ -217,6 +227,7 @@
     "back_button_timeout_desc": "For controllers without a Guide (Xbox/PS) button: holding Back/Select this many milliseconds presses it. -1 turns this off.",
     "capture": "Screen capture method",
     "capture_desc": "Automatic uses the first method that works.",
+    "capture_wgc_desc": "Windows.Graphics.Capture can be smoother with games that use frame generation or run in windows, and costs a little more graphics power. TunaStream captures through a small helper in your signed-in session, and switches to Desktop Duplication by itself when nobody is signed in, during UAC prompts and on the lock screen. Go back to Automatic if anything looks wrong.",
     "cert": "Certificate",
     "cert_desc": "Used to secure this page and pairing. TunaStream makes one for you; it should use an RSA-2048 key.",
     "channels": "Maximum Connected Clients",
@@ -319,7 +330,7 @@
     "forward_rumble": "Rumble",
     "forward_rumble_desc": "Send vibration from games to the controller on your device. Use the test on the Troubleshooting page to check it works.",
     "game_frame_limit": "Match the game's frame rate to the stream (recommended)",
-    "game_frame_limit_desc": "While someone streams, games are capped at the frame rate their device asked for, so every frame the game draws gets sent. This removes the judder caused by the game and the stream running at different speeds. Your own frame rate limit comes back when streaming stops. NVIDIA graphics cards only; if you set a Max Frame Rate for all games yourself, it is left alone.",
+    "game_frame_limit_desc": "While someone streams, games are capped at the frame rate their device asked for, so every frame the game draws gets sent. This removes the judder caused by the game and the stream running at different speeds. If RivaTuner Statistics Server (RTSS, part of MSI Afterburner) is running, it does the capping, at the exact rate (59.94 included) and on any graphics card; otherwise NVIDIA's own limit is used, to the nearest whole number. Your own limits come back when streaming stops. If you set a Max Frame Rate for all games in NVIDIA's settings yourself, it is left alone.",
     "gamepad": "Controller type the PC sees",
     "gamepad_auto": "Automatic selection options",
     "gamepad_desc": "Xbox 360 works with the most games and has the most reliable rumble, so it is the best choice if rumble doesn't work. PlayStation 4 adds the touchpad and motion controls. Automatic picks PlayStation 4 for controllers with those, and Xbox 360 for everything else.",
@@ -562,7 +573,22 @@
     "sharedpc_intro": "Keep using this PC while someone streams from it: your screens, sound, mouse and keyboard stay yours, and only the game goes to the TV. Turn Shared PC off for privacy mode instead.",
     "sharedpc_more": "How it works",
     "privacy_mode": "Privacy mode: turn this PC's monitors off while someone streams",
-    "privacy_mode_desc": "Only the stream's own screen stays on, so nobody in the room sees what's being played on the PC. The monitors come back on, as they were arranged, when the stream ends or the TV disconnects. Not available in Shared PC mode, where you're using the monitors. If they ever stay off, press Windows + P and pick Extend."
+    "privacy_mode_desc": "Only the stream's own screen stays on, so nobody in the room sees what's being played on the PC. The monitors come back on, as they were arranged, when the stream ends or the TV disconnects. Not available in Shared PC mode, where you're using the monitors. If they ever stay off, press Windows + P and pick Extend.",
+    "game_vsync_off": "Turn Vertical Sync off in games while streaming",
+    "game_vsync_off_desc": "With the cap pacing games, waiting for the screen only adds delay: this takes away up to a frame. NVIDIA graphics cards; your own setting comes back when streaming stops. Turn off if a game shows tearing on the TV.",
+    "tab_everyday": "Everyday",
+    "everyday_intro": "The settings people change most, in one place. Everything here is also on its own tab, with the rest.",
+    "everyday_screen": "The stream's screen",
+    "everyday_smooth": "Smoothness",
+    "everyday_games": "Games and devices",
+    "everyday_apps": "Games, and keeping them in sync",
+    "everyday_devices": "Devices and TV settings",
+    "everyday_watch": "Watch the stream in this browser",
+    "everyday_fix": "If something is wrong",
+    "everyday_repair": "Repair the virtual screen",
+    "everyday_restart": "Restart TunaStream",
+    "everyday_logs": "Logs sent from TVs",
+    "everyday_checklist": "Test checklist"
   },
   "index": {
     "controller_hint": "What games see this controller as. Most PC games only rumble an Xbox 360 controller; change it under Configuration > Input > Emulated Gamepad Type.",
@@ -723,10 +749,14 @@
     "welcome": "Hello, TunaStream!",
     "whatsnew_title": "What's new in {version}",
     "whatsnew_since": "Since {version}, the version this browser last saw:",
-    "whatsnew_ok": "Got it"
+    "whatsnew_ok": "Got it",
+    "watch": "Watch",
+    "sharing_on": "Your screen is being shared with browsers watching, for {minutes} more minutes ({viewers} watching now).",
+    "sharing_stop": "Stop sharing"
   },
   "login": {
-    "save_password": "Remember Password"
+    "save_password": "Remember Password",
+    "remember_me": "Keep me signed in"
   },
   "navbar": {
     "applications": "Apps",
@@ -1107,7 +1137,8 @@
     "never": "never",
     "just_now": "just now",
     "minutes_ago": "{n} min ago",
-    "hours_ago": "{n} h ago"
+    "hours_ago": "{n} h ago",
+    "watch": "Watch in the browser"
   },
   "tvset": {
     "title": "TV settings",
@@ -1255,7 +1286,145 @@
         "title": "What's new",
         "how": "After the next update, open TunaReceive and this page.",
         "expect": "Each shows what changed once, and not again."
+      },
+      "everyday": {
+        "title": "Everyday settings",
+        "how": "Open Settings. It should open on the Everyday tab. Change one setting there and save.",
+        "expect": "The tab shows the settings most people change, grouped, with links to games, devices and fixes. The change is kept after reloading the page."
+      },
+      "watch": {
+        "title": "Watch in a browser",
+        "how": "While the TV streams a game, open the Watch page from the dashboard on a laptop or phone on the same network and tap Sound on.",
+        "expect": "The game appears within a few seconds with sound, a little behind the TV. The TV's picture and controls aren't affected."
+      },
+      "watchlink": {
+        "title": "Watch link",
+        "how": "On the Watch page, choose Share a watch link and open the copied link on a tablet that isn't signed in. Open the same link again on a second device. The next day, open Watch on the tablet again.",
+        "expect": "The tablet watches without the password and can't open any other page. The second device is told the link was already used. The tablet keeps working the next day, and Change Password > Access tokens lists it as a watch key that changes daily; removing it stops it."
+      },
+      "watchpassword": {
+        "title": "Watch password",
+        "how": "On the Watch page, make a watch password for someone. On a tablet that isn't signed in, open the Watch page and type it. Then type a wrong one five times on another device.",
+        "expect": "The tablet watches without a link. The password keeps working on later days. After five wrong tries, that device is told to wait ten minutes. Removing the password under Access tokens stops the tablet too."
+      },
+      "sharescreen": {
+        "title": "Share my screen",
+        "how": "With no TV streaming, open Watch on the PC, choose Share my screen for 1 hour, and open a watch link on a tablet. Then start a stream on the TV, end it, and finally choose Stop sharing.",
+        "expect": "The tablet shows the PC's main screen with sound; the home page and the tray say it's being shared. When the TV streams the tablet shows the TV's game, then the PC's screen again. After Stop sharing the tablet waits."
+      },
+      "signin": {
+        "title": "Keep me signed in",
+        "how": "Sign out, then sign in with Keep me signed in turned on. Close the browser and open the dashboard again. Repeat with it turned off.",
+        "expect": "With it on you stay signed in after closing the browser; with it off you're asked for the password again."
+      },
+      "tokens": {
+        "title": "Access tokens",
+        "how": "Under Change Password > Access tokens, make a token that can only see what's playing and copy it. Remove it afterwards.",
+        "expect": "The token is shown once. Removing it makes it stop working straight away."
+      },
+      "librarysync": {
+        "title": "Keep my games in sync",
+        "how": "On Apps, turn on Keep my games in sync and choose Sync now. Then delete one of the synced games.",
+        "expect": "Games played recently appear with covers and a Synced badge. Games you added yourself aren't touched, and the deleted game doesn't come back."
+      },
+      "framecap": {
+        "title": "Exact frame cap",
+        "how": "With RivaTuner Statistics Server installed and Match the game's frame rate on, stream a game at 59.94 or 119.88 FPS and check RTSS's limit. End the stream.",
+        "expect": "RTSS shows the stream's exact rate while streaming, and its own limit is back afterwards. Without RTSS, NVIDIA's frame cap is used as before."
+      },
+      "vsync": {
+        "title": "V-Sync off while streaming",
+        "how": "On an NVIDIA PC, keep Turn Vertical Sync off in games while streaming on, stream a game that uses V-Sync, then end the stream.",
+        "expect": "The game feels as responsive as without V-Sync while streaming, and the NVIDIA setting is back to how it was afterwards."
+      },
+      "wgc": {
+        "title": "Windows.Graphics.Capture",
+        "how": "Under Settings > Video encoding, set Screen capture method to Windows.Graphics.Capture and save. Stream a game, then press Win+L or open a UAC prompt on the PC, and go back.",
+        "expect": "The stream works, the lock screen or UAC prompt shows on the TV, and the game comes back when it closes. If anything looks wrong, set it back to Automatic."
       }
     }
+  },
+  "watch": {
+    "title": "Watch",
+    "watching": "Watching",
+    "picture": "The game as it streams",
+    "live": "LIVE",
+    "connecting": "Connecting to the stream…",
+    "waiting": "Nobody is streaming right now. The picture appears here as soon as a device starts playing.",
+    "ended": "The stream ended. Watching starts again by itself when someone plays.",
+    "error": "The stream couldn't be reached. Trying again…",
+    "unsupported": "This browser can't play the stream. Use a recent Chrome, Edge, Firefox or Safari.",
+    "sound_on": "Sound on",
+    "sound_off": "Sound off",
+    "fullscreen": "Full screen",
+    "note": "Watch only: nothing here controls the game.",
+    "no_sound_here": "Watch only. This browser can't play the sound; try Chrome or Edge.",
+    "share": "Share a watch link",
+    "share_name": "Watch link {when}",
+    "share_copied": "Link copied. It works once, on one device, within a day. That device then keeps watching with its own key, which changes every day and stops working after a week unused. Remove it any time under Change Password > Access tokens.",
+    "share_copy_this": "Copy this link:",
+    "share_failed": "The link couldn't be made.",
+    "watching_screen": "Watching this PC's screen",
+    "screen_title": "Share my screen",
+    "screen_desc": "While no TV is streaming, browsers watching (with this page or a watch link) see this PC's main screen and hear its sound. When a TV starts streaming they see its game instead. It turns itself off after the time you choose.",
+    "screen_for": "Share for",
+    "screen_1h": "For 1 hour",
+    "screen_2h": "For 2 hours",
+    "screen_4h": "For 4 hours",
+    "screen_start": "Share my screen",
+    "screen_on": "Your screen is shared for {minutes} more minutes.",
+    "screen_stop": "Stop sharing",
+    "screen_failed": "Sharing couldn't be changed.",
+    "need_link": "This device can't watch yet. Open a new watch link from the person who shares, or sign in.",
+    "sign_in": "Sign in",
+    "password_label": "Watch password",
+    "password_go": "Watch",
+    "password_wrong": "That watch password isn't right.",
+    "passwords_title": "Watch passwords",
+    "passwords_desc": "A watch password doesn't change. Typed on the Watch page of a tablet or phone, it lets that device watch, the same as a watch link. Make one for each person, so you can remove one without the others.",
+    "passwords_name": "Who it's for",
+    "passwords_suggest": "Suggest one",
+    "passwords_make": "Make watch password",
+    "passwords_made": "{name} can now watch with the password {password}. It isn't shown again.",
+    "passwords_failed": "The watch password couldn't be made.",
+    "passwords_manage": "Remove watch passwords and links under Change Password > Access tokens",
+    "screen_which": "Which screen",
+    "screen_monitor": "Screen {n}",
+    "screen_main": "main"
+  },
+  "tokens": {
+    "title": "Access tokens",
+    "desc": "Let a script, a Stream Deck, Home Assistant or an AI assistant do a few things without your password. Each token can only do what you tick, and you can remove it any time. To let someone watch, use Share a watch link on the Watch page instead: those links work once and the device's key changes daily.",
+    "token": "Token",
+    "made": "{name} is ready.",
+    "made_once": "Copy it now: it isn't shown again.",
+    "copy": "Copy",
+    "copy_link": "Copy link",
+    "watch_link": "Watch link",
+    "name": "Name",
+    "name_placeholder": "Watch link for the living room",
+    "expires": "Lasts",
+    "days": "{n} days",
+    "never": "Never expires",
+    "may": "It may:",
+    "scope_status": "See what's playing and the devices",
+    "scope_watch": "Watch the stream",
+    "scope_messages": "Send messages and sounds to TVs",
+    "scope_sessions": "End sessions and give more play time",
+    "scope_launch": "Start games",
+    "scope_logs": "Read TunaStream's log and logs sent from TVs",
+    "agent_title": "Use with an AI assistant",
+    "agent_desc": "Claude Desktop, Claude Code and other assistants that use MCP can run TunaStream as a tool with this token. Paste this into the assistant's MCP settings (for Claude Desktop: Settings > Developer > Edit Config), then restart the assistant. It can do only what this token allows.",
+    "make": "Make token",
+    "none": "No tokens yet.",
+    "expires_on": "Until {when}",
+    "used_on": "last used {when}",
+    "unused": "not used yet",
+    "remove": "Remove",
+    "remove_confirm": "Remove {name}? Anything using it stops working.",
+    "failed": "The token couldn't be made.",
+    "kind_invite": "watch link, not opened yet",
+    "kind_rotating": "watch key on a device, changes daily",
+    "kind_password": "watch password, doesn't change; removing it removes its devices too"
   }
 }

@@ -994,7 +994,23 @@ namespace platf {
    * @param hwdevice_type enables possible use of hardware encoder
    */
   std::shared_ptr<display_t> display(mem_type_e hwdevice_type, const std::string &display_name, const video::config_t &config) {
-    if (config::video.capture == "ddx" || config::video.capture.empty()) {
+    // WGC first when chosen; DDX when it can't (secure desktop, nobody signed in, helper trouble)
+    if (config::video.capture == "wgc") {
+      if (hwdevice_type == mem_type_e::dxgi) {
+        auto disp = std::make_shared<dxgi::display_wgc_vram_t>();
+        if (!disp->init(config, display_name)) {
+          return disp;
+        }
+      } else if (hwdevice_type == mem_type_e::system) {
+        auto disp = std::make_shared<dxgi::display_wgc_ram_t>();
+        if (!disp->init(config, display_name)) {
+          return disp;
+        }
+      }
+      BOOST_LOG(info) << "WGC isn't available right now, capturing with DDX"sv;
+    }
+
+    if (config::video.capture == "ddx" || config::video.capture == "wgc" || config::video.capture.empty()) {
       if (hwdevice_type == mem_type_e::dxgi) {
         auto disp = std::make_shared<dxgi::display_ddup_vram_t>();
 
@@ -1010,7 +1026,7 @@ namespace platf {
       }
     }
 
-    if (config::video.capture == "wgc" || config::video.capture.empty()) {
+    if (config::video.capture.empty()) {
       if (hwdevice_type == mem_type_e::dxgi) {
         auto disp = std::make_shared<dxgi::display_wgc_vram_t>();
 

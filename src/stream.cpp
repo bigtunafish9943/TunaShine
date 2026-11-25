@@ -37,6 +37,7 @@ extern "C" {
 #include "replay.h"
 #include "process.h"
 #include "stream.h"
+#include "watch.h"
 #include "sync.h"
 #include "system_tray.h"
 #include "thread_safe.h"
@@ -2500,6 +2501,9 @@ namespace stream {
         task_pool.cancel(force_kill);
       });
 
+      // A browser watching follows the devices' screen, which may change or go away now
+      watch::stop();
+
       BOOST_LOG(debug) << "Waiting for video to end..."sv;
       session.videoThread.join();
       BOOST_LOG(debug) << "Waiting for audio to end..."sv;
@@ -2579,6 +2583,9 @@ namespace stream {
     }
 
     int start(session_t &session, const std::string &addr_string) {
+      // Browsers watching the PC's own screen (Share my screen) follow this stream instead
+      watch::stop_desktop();
+
       session.input = input::alloc(session.mail, session.device_name);
 
       session.broadcast_ref = broadcast.ref();

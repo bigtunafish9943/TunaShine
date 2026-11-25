@@ -2,8 +2,20 @@
  * @file src/platform/windows/display_wgc.cpp
  * @brief Definitions for WinRT Windows.Graphics.Capture API
  */
+// standard includes
+#include <algorithm>
+#include <atomic>
+#include <condition_variable>
+#include <filesystem>
+#include <mutex>
+#include <random>
+#include <string>
+#include <thread>
+
 // platform includes
 #include <dxgi1_2.h>
+#include <sddl.h>
+#include <UserEnv.h>
 
 // Gross hack to work around MINGW-packages#22160
 #define ____FIReference_1_boolean_INTERFACE_DEFINED__
@@ -240,7 +252,15 @@ namespace platf::dxgi {
   }
 
   int display_wgc_ram_t::init(const ::video::config_t &config, const std::string &display_name) {
-    if (display_base_t::init(config, display_name) || dup.init(this, config)) {
+    if (display_base_t::init(config, display_name)) {
+      return -1;
+    }
+    if (platf::is_running_as_system()) {
+      remote = make_wgc_remote(this, config);
+      if (!remote) {
+        return -1;
+      }
+    } else if (dup.init(this, config)) {
       return -1;
     }
 
@@ -259,8 +279,14 @@ namespace platf::dxgi {
     HRESULT status;
     texture2d_t src;
     uint64_t frame_qpc;
-    dup.set_cursor_visible(cursor_visible);
-    auto capture_status = dup.next_frame(timeout, &src, frame_qpc);
+    capture_e capture_status;
+    if (remote) {
+      wgc_remote_set_cursor_visible(*remote, cursor_visible);
+      capture_status = wgc_remote_next_frame(*remote, timeout, &src, frame_qpc);
+    } else {
+      dup.set_cursor_visible(cursor_visible);
+      capture_status = dup.next_frame(timeout, &src, frame_qpc);
+    }
     if (capture_status != capture_e::ok) {
       return capture_status;
     }
@@ -341,6 +367,748 @@ namespace platf::dxgi {
   }
 
   capture_e display_wgc_ram_t::release_snapshot() {
-    return dup.release_frame();
+    return remote ? wgc_remote_release_frame(*remote) : dup.release_frame();
+  }
+}  // namespace platf::dxgi
+
+/*
+ * WGC while TunaStream runs as a service.
+ *
+ * TunaStream runs as SYSTEM, and Windows.Graphics.Capture refuses to capture for SYSTEM. So the
+ * service starts a copy of tunastream.exe as the signed-in user ("tunastream.exe --wgc-helper ...")
+ * that does the capture and copies each frame into one of three textures in shared graphics
+ * memory. Two named pipes connect them: the helper announces the textures and each new frame on
+ * one, and TunaStream sends cursor on/off on the other (closing it tells the helper to quit).
+ * A keyed mutex on each texture keeps the two from touching the same texture at once.
+ *
+ * WGC can't see the secure desktop (UAC prompts, the lock and sign-in screens), so while one is
+ * showing TunaStream captures with DDX instead and comes back to WGC afterwards. If the helper
+ * can't start or stops, TunaStream uses DDX too.
+ */
+namespace platf::dxgi::wgc_ipc {
+  constexpr std::uint32_t MAGIC = 0x43475754;  // "TWGC"
+  constexpr int SLOTS = 3;
+
+  enum : std::uint32_t {
+    MSG_READY = 1,  ///< capture started
+    MSG_RING = 2,  ///< new shared textures: handles[] are valid in the helper's process
+    MSG_FRAME = 3,  ///< slot holds a new frame taken at qpc
+  };
+
+  enum : int {
+    EXIT_DISPLAY_CHANGED = 9,  ///< the display changed size: capture it again
+  };
+
+  struct msg_t {
+    std::uint32_t magic;
+    std::uint32_t type;
+    std::uint32_t slot;
+    std::uint32_t width;
+    std::uint32_t height;
+    std::uint32_t format;
+    std::uint64_t qpc;
+    std::uint64_t handles[SLOTS];
+  };
+}  // namespace platf::dxgi::wgc_ipc
+
+namespace {
+  using namespace platf::dxgi::wgc_ipc;
+
+  /// Helper side: the frames go out on one pipe; the other carries cursor on/off.
+  struct helper_t {
+    HANDLE frame_pipe = INVALID_HANDLE_VALUE;
+    HANDLE ctrl_pipe = INVALID_HANDLE_VALUE;
+    winrt::com_ptr<ID3D11Device> device;
+    winrt::com_ptr<ID3D11DeviceContext> ctx;
+    winrt::com_ptr<ID3D11Texture2D> ring[SLOTS];
+    winrt::com_ptr<IDXGIKeyedMutex> mutexes[SLOTS];
+    HANDLE handles[SLOTS] {};
+    D3D11_TEXTURE2D_DESC ring_desc {};
+    int next_slot = 0;
+    std::mutex lock;
+    winrt::Windows::Graphics::SizeInt32 size {};
+
+    bool send(const msg_t &m) {
+      DWORD written = 0;
+      return WriteFile(frame_pipe, &m, sizeof(m), &written, nullptr) && written == sizeof(m);
+    }
+
+    void quit(int code) {
+      TerminateProcess(GetCurrentProcess(), (UINT) code);
+    }
+
+    bool make_ring(const D3D11_TEXTURE2D_DESC &src) {
+      for (int i = 0; i < SLOTS; ++i) {
+        mutexes[i] = nullptr;
+        ring[i] = nullptr;
+        if (handles[i]) {
+          CloseHandle(handles[i]);
+          handles[i] = nullptr;
+        }
+      }
+      D3D11_TEXTURE2D_DESC t {};
+      t.Width = src.Width;
+      t.Height = src.Height;
+      t.MipLevels = 1;
+      t.ArraySize = 1;
+      t.SampleDesc.Count = 1;
+      t.Usage = D3D11_USAGE_DEFAULT;
+      t.Format = src.Format;
+      t.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
+      t.MiscFlags = D3D11_RESOURCE_MISC_SHARED_NTHANDLE | D3D11_RESOURCE_MISC_SHARED_KEYEDMUTEX;
+
+      msg_t m {};
+      m.magic = MAGIC;
+      m.type = MSG_RING;
+      m.width = t.Width;
+      m.height = t.Height;
+      m.format = (std::uint32_t) t.Format;
+      for (int i = 0; i < SLOTS; ++i) {
+        if (FAILED(device->CreateTexture2D(&t, nullptr, ring[i].put()))) {
+          return false;
+        }
+        if (FAILED(ring[i]->QueryInterface(__uuidof(IDXGIKeyedMutex), mutexes[i].put_void()))) {
+          return false;
+        }
+        winrt::com_ptr<IDXGIResource1> resource;
+        if (FAILED(ring[i]->QueryInterface(__uuidof(IDXGIResource1), resource.put_void())) ||
+            FAILED(resource->CreateSharedHandle(nullptr, DXGI_SHARED_RESOURCE_READ | DXGI_SHARED_RESOURCE_WRITE, nullptr, &handles[i]))) {
+          return false;
+        }
+        m.handles[i] = (std::uint64_t) (std::uintptr_t) handles[i];
+      }
+      ring_desc = t;
+      next_slot = 0;
+      return send(m);
+    }
+
+    void on_frame(winrt::Direct3D11CaptureFramePool const &sender) {
+      winrt::Direct3D11CaptureFrame frame {nullptr};
+      try {
+        frame = sender.TryGetNextFrame();
+      } catch (winrt::hresult_error &) {
+        return;
+      }
+      if (frame == nullptr) {
+        return;
+      }
+      std::lock_guard lg {lock};
+      auto content = frame.ContentSize();
+      if (content.Width != size.Width || content.Height != size.Height) {
+        quit(EXIT_DISPLAY_CHANGED);
+      }
+
+      winrt::com_ptr<ID3D11Texture2D> src;
+      auto access = frame.Surface().as<winrt::IDirect3DDxgiInterfaceAccess>();
+      if (!access || FAILED(access->GetInterface(__uuidof(ID3D11Texture2D), src.put_void()))) {
+        return;
+      }
+      D3D11_TEXTURE2D_DESC desc;
+      src->GetDesc(&desc);
+      if (!ring[0] || desc.Width != ring_desc.Width || desc.Height != ring_desc.Height || desc.Format != ring_desc.Format) {
+        if (!make_ring(desc)) {
+          quit(8);
+        }
+      }
+
+      // Use the next texture TunaStream isn't reading from
+      for (int k = 0; k < SLOTS; ++k) {
+        const int slot = (next_slot + k) % SLOTS;
+        if (mutexes[slot]->AcquireSync(0, 0) != S_OK) {
+          continue;
+        }
+        ctx->CopyResource(ring[slot].get(), src.get());
+        mutexes[slot]->ReleaseSync(0);
+        next_slot = (slot + 1) % SLOTS;
+
+        msg_t m {};
+        m.magic = MAGIC;
+        m.type = MSG_FRAME;
+        m.slot = (std::uint32_t) slot;
+        m.width = ring_desc.Width;
+        m.height = ring_desc.Height;
+        m.format = (std::uint32_t) ring_desc.Format;
+        m.qpc = (std::uint64_t) frame.SystemRelativeTime().count();
+        if (!send(m)) {
+          quit(0);  // TunaStream went away
+        }
+        break;
+      }
+    }
+  };
+
+  HANDLE open_pipe(const std::string &name, DWORD access) {
+    const auto path = platf::from_utf8("\\\\.\\pipe\\" + name);
+    for (int attempt = 0; attempt < 50; ++attempt) {
+      HANDLE h = CreateFileW(path.c_str(), access, 0, nullptr, OPEN_EXISTING, 0, nullptr);
+      if (h != INVALID_HANDLE_VALUE) {
+        return h;
+      }
+      if (GetLastError() == ERROR_PIPE_BUSY) {
+        WaitNamedPipeW(path.c_str(), 100);
+      } else {
+        Sleep(100);
+      }
+    }
+    return INVALID_HANDLE_VALUE;
+  }
+}  // namespace
+
+namespace platf {
+  int wgc_helper_main(int argc, char *argv[]) {
+    using namespace platf::dxgi::wgc_ipc;
+    // tunastream.exe --wgc-helper <pipe> <luid low> <luid high> <display> <hdr> <fps>
+    if (argc < 8) {
+      return 2;
+    }
+    const std::string pipe = argv[2];
+    LUID luid;
+    luid.LowPart = (DWORD) std::strtoul(argv[3], nullptr, 10);
+    luid.HighPart = (LONG) std::strtol(argv[4], nullptr, 10);
+    const std::wstring display_name = from_utf8(argv[5]);
+    const bool hdr = argv[6][0] == '1';
+    const int fps = (std::max)(1, std::atoi(argv[7]));
+
+    helper_t helper;
+    helper.frame_pipe = open_pipe(pipe + "-f", GENERIC_WRITE);
+    helper.ctrl_pipe = open_pipe(pipe + "-c", GENERIC_READ);
+    if (helper.frame_pipe == INVALID_HANDLE_VALUE || helper.ctrl_pipe == INVALID_HANDLE_VALUE) {
+      return 3;
+    }
+
+    try {
+      winrt::init_apartment(winrt::apartment_type::multi_threaded);
+    } catch (winrt::hresult_error &) {
+      // already initialised
+    }
+
+    // The same graphics card TunaStream encodes on
+    winrt::com_ptr<IDXGIFactory1> factory;
+    if (FAILED(CreateDXGIFactory1(__uuidof(IDXGIFactory1), factory.put_void()))) {
+      return 4;
+    }
+    winrt::com_ptr<IDXGIAdapter1> adapter;
+    for (UINT i = 0;; ++i) {
+      winrt::com_ptr<IDXGIAdapter1> candidate;
+      if (factory->EnumAdapters1(i, candidate.put()) == DXGI_ERROR_NOT_FOUND) {
+        break;
+      }
+      DXGI_ADAPTER_DESC1 desc;
+      if (SUCCEEDED(candidate->GetDesc1(&desc)) && desc.AdapterLuid.LowPart == luid.LowPart && desc.AdapterLuid.HighPart == luid.HighPart) {
+        adapter = candidate;
+        break;
+      }
+    }
+    if (!adapter) {
+      return 4;
+    }
+    if (FAILED(D3D11CreateDevice(adapter.get(), D3D_DRIVER_TYPE_UNKNOWN, nullptr, D3D11_CREATE_DEVICE_BGRA_SUPPORT, nullptr, 0, D3D11_SDK_VERSION, helper.device.put(), nullptr, helper.ctx.put()))) {
+      return 4;
+    }
+
+    // The display to capture, by its name (\\.\DISPLAYn)
+    struct find_t {
+      std::wstring name;
+      HMONITOR found = nullptr;
+    } find {display_name};
+    EnumDisplayMonitors(nullptr, nullptr, [](HMONITOR monitor, HDC, LPRECT, LPARAM param) -> BOOL {
+      auto f = (find_t *) param;
+      MONITORINFOEXW info {};
+      info.cbSize = sizeof(info);
+      if (GetMonitorInfoW(monitor, &info) && f->name == info.szDevice) {
+        f->found = monitor;
+        return FALSE;
+      }
+      return TRUE;
+    }, (LPARAM) &find);
+    if (!find.found) {
+      return 5;
+    }
+
+    winrt::GraphicsCaptureItem item {nullptr};
+    winrt::Direct3D11CaptureFramePool pool {nullptr};
+    winrt::GraphicsCaptureSession session {nullptr};
+    try {
+      if (!winrt::GraphicsCaptureSession::IsSupported()) {
+        return 6;
+      }
+      winrt::com_ptr<IDXGIDevice> dxgi_device;
+      winrt::com_ptr<::IInspectable> inspectable;
+      if (FAILED(helper.device->QueryInterface(__uuidof(IDXGIDevice), dxgi_device.put_void())) ||
+          FAILED(winrt::CreateDirect3D11DeviceFromDXGIDevice(dxgi_device.get(), inspectable.put()))) {
+        return 6;
+      }
+      auto uwp_device = inspectable.as<winrt::IDirect3DDevice>();
+      auto interop = winrt::get_activation_factory<winrt::GraphicsCaptureItem, IGraphicsCaptureItemInterop>();
+      if (!interop || FAILED(interop->CreateForMonitor(find.found, winrt::guid_of<winrt::IGraphicsCaptureItem>(), winrt::put_abi(item)))) {
+        return 6;
+      }
+      helper.size = item.Size();
+      auto format = hdr ? winrt::Windows::Graphics::DirectX::DirectXPixelFormat::R16G16B16A16Float : winrt::Windows::Graphics::DirectX::DirectXPixelFormat::B8G8R8A8UIntNormalized;
+      pool = winrt::Direct3D11CaptureFramePool::CreateFreeThreaded(uwp_device, format, 2, helper.size);
+      session = pool.CreateCaptureSession(item);
+      pool.FrameArrived([&helper](winrt::Direct3D11CaptureFramePool const &sender, winrt::IInspectable const &) {
+        helper.on_frame(sender);
+      });
+    } catch (winrt::hresult_error &) {
+      return 7;
+    }
+    try {
+      if (winrt::ApiInformation::IsPropertyPresent(L"Windows.Graphics.Capture.GraphicsCaptureSession", L"IsBorderRequired")) {
+        session.IsBorderRequired(false);
+      }
+      if (winrt::ApiInformation::IsPropertyPresent(L"Windows.Graphics.Capture.GraphicsCaptureSession", L"MinUpdateInterval")) {
+        session.MinUpdateInterval(winrt::TimeSpan {10000000 / (fps * 2)});
+      }
+    } catch (winrt::hresult_error &) {
+      // optional
+    }
+    try {
+      session.StartCapture();
+    } catch (winrt::hresult_error &) {
+      return 7;
+    }
+    {
+      msg_t m {};
+      m.magic = MAGIC;
+      m.type = MSG_READY;
+      std::lock_guard lg {helper.lock};
+      if (!helper.send(m)) {
+        return 0;
+      }
+    }
+
+    // Cursor on/off until TunaStream closes the pipe
+    while (true) {
+      char c = 0;
+      DWORD got = 0;
+      if (!ReadFile(helper.ctrl_pipe, &c, 1, &got, nullptr) || got == 0) {
+        break;
+      }
+      try {
+        if (c == 'C' || c == 'c') {
+          session.IsCursorCaptureEnabled(c == 'C');
+        }
+      } catch (winrt::hresult_error &) {
+      }
+    }
+    helper.quit(0);
+    return 0;
+  }
+}  // namespace platf
+
+namespace platf::dxgi {
+  namespace {
+    // After the helper fails, DDX is used for a while before WGC is tried again
+    std::atomic<std::int64_t> wgc_retry_after {0};
+
+    // Display changes restart the helper; too many in a row means something else is wrong
+    std::atomic<std::int64_t> display_change_window {0};
+    std::atomic<int> display_changes {0};
+
+    std::int64_t steady_ms() {
+      return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+    }
+
+    const char *helper_exit_reason(DWORD code) {
+      switch (code) {
+        case 3:
+          return "couldn't connect";
+        case 4:
+          return "couldn't open the graphics card";
+        case 5:
+          return "couldn't find the display";
+        case 6:
+          return "WGC isn't available";
+        case 7:
+          return "couldn't start capturing";
+        case 8:
+          return "couldn't share frames";
+        case wgc_ipc::EXIT_DISPLAY_CHANGED:
+          return "the display changed";
+        case STILL_ACTIVE:
+          return "stopped answering";
+        default:
+          return "stopped";
+      }
+    }
+  }  // namespace
+
+  bool secure_desktop_active() {
+    HDESK desk = OpenInputDesktop(0, FALSE, DESKTOP_READOBJECTS);
+    if (!desk) {
+      return true;  // can't tell: DDX copes with either
+    }
+    wchar_t name[64] {};
+    DWORD needed = 0;
+    bool secure = false;
+    if (GetUserObjectInformationW(desk, UOI_NAME, name, sizeof(name), &needed)) {
+      secure = _wcsicmp(name, L"Default") != 0;
+    }
+    CloseDesktop(desk);
+    return secure;
+  }
+
+  class wgc_remote_t {
+  public:
+    ~wgc_remote_t() {
+      release_frame();
+      if (ctrl_pipe != INVALID_HANDLE_VALUE) {
+        CloseHandle(ctrl_pipe);  // the helper quits when this closes
+        ctrl_pipe = INVALID_HANDLE_VALUE;
+      }
+      if (frame_pipe != INVALID_HANDLE_VALUE) {
+        CancelIoEx(frame_pipe, nullptr);
+      }
+      if (reader.joinable()) {
+        reader.join();
+      }
+      if (process) {
+        if (WaitForSingleObject(process, 1000) != WAIT_OBJECT_0) {
+          TerminateProcess(process, 0);
+        }
+        CloseHandle(process);
+      }
+      if (frame_pipe != INVALID_HANDLE_VALUE) {
+        CloseHandle(frame_pipe);
+      }
+    }
+
+    int start(display_base_t *d, const ::video::config_t &config) {
+      display = d;
+      DXGI_ADAPTER_DESC1 adapter_desc;
+      DXGI_OUTPUT_DESC output_desc;
+      if (FAILED(d->adapter->GetDesc1(&adapter_desc)) || FAILED(d->output->GetDesc(&output_desc))) {
+        return -1;
+      }
+      d->capture_format = config.dynamicRange ? DXGI_FORMAT_R16G16B16A16_FLOAT : DXGI_FORMAT_B8G8R8A8_UNORM;
+
+      HANDLE token = retrieve_users_token(false);
+      if (!token) {
+        BOOST_LOG(info) << "WGC: nobody is signed in, using DDX"sv;
+        return -1;
+      }
+
+      // Pipes only SYSTEM, administrators and the signed-in user can open, with a random name
+      std::random_device rd;
+      std::string pipe = "TunaStreamWGC-";
+      for (int i = 0; i < 4; ++i) {
+        char part[9];
+        std::snprintf(part, sizeof(part), "%08x", (unsigned) rd());
+        pipe += part;
+      }
+      PSECURITY_DESCRIPTOR sd = nullptr;
+      if (!ConvertStringSecurityDescriptorToSecurityDescriptorW(L"D:P(A;;GA;;;SY)(A;;GA;;;BA)(A;;GRGW;;;IU)", SDDL_REVISION_1, &sd, nullptr)) {
+        CloseHandle(token);
+        return -1;
+      }
+      SECURITY_ATTRIBUTES sa {sizeof(sa), sd, FALSE};
+      auto make_pipe = [&](const std::string &name, DWORD direction) {
+        return CreateNamedPipeW(from_utf8("\\\\.\\pipe\\" + name).c_str(), direction | FILE_FLAG_OVERLAPPED | FILE_FLAG_FIRST_PIPE_INSTANCE, PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT | PIPE_REJECT_REMOTE_CLIENTS, 1, 64 * 1024, 64 * 1024, 0, &sa);
+      };
+      frame_pipe = make_pipe(pipe + "-f", PIPE_ACCESS_INBOUND);
+      ctrl_pipe = make_pipe(pipe + "-c", PIPE_ACCESS_OUTBOUND);
+      LocalFree(sd);
+      if (frame_pipe == INVALID_HANDLE_VALUE || ctrl_pipe == INVALID_HANDLE_VALUE) {
+        BOOST_LOG(warning) << "WGC: couldn't create the helper's pipes: "sv << GetLastError();
+        CloseHandle(token);
+        return -1;
+      }
+
+      // Start the helper: this same program, as the user, on the user's desktop
+      std::wstring exe(32768, L'\0');
+      exe.resize(GetModuleFileNameW(nullptr, exe.data(), (DWORD) exe.size()));
+      const auto dir = std::filesystem::path {exe}.parent_path().wstring();
+      std::wstring cmd = L"\"" + exe + L"\" --wgc-helper " + from_utf8(pipe) + L" " +
+                         std::to_wstring(adapter_desc.AdapterLuid.LowPart) + L" " + std::to_wstring(adapter_desc.AdapterLuid.HighPart) +
+                         L" \"" + output_desc.DeviceName + L"\" " + (config.dynamicRange ? L"1" : L"0") + L" " + std::to_wstring(config.framerate);
+      STARTUPINFOW si {};
+      si.cb = sizeof(si);
+      wchar_t desktop[] = L"winsta0\\default";
+      si.lpDesktop = desktop;
+      void *env = nullptr;
+      CreateEnvironmentBlock(&env, token, FALSE);
+      PROCESS_INFORMATION pi {};
+      const BOOL started = CreateProcessAsUserW(token, exe.c_str(), cmd.data(), nullptr, nullptr, FALSE, CREATE_NO_WINDOW | CREATE_UNICODE_ENVIRONMENT, env, dir.c_str(), &si, &pi);
+      const DWORD start_error = GetLastError();
+      if (env) {
+        DestroyEnvironmentBlock(env);
+      }
+      CloseHandle(token);
+      if (!started) {
+        BOOST_LOG(warning) << "WGC: couldn't start the capture helper: "sv << start_error;
+        return -1;
+      }
+      CloseHandle(pi.hThread);
+      process = pi.hProcess;
+
+      if (!connect(frame_pipe) || !connect(ctrl_pipe)) {
+        BOOST_LOG(warning) << "WGC: the capture helper didn't connect ("sv << exit_reason() << ')';
+        return -1;
+      }
+      ULONG client_pid = 0;
+      if (!GetNamedPipeClientProcessId(frame_pipe, &client_pid) || client_pid != pi.dwProcessId ||
+          !GetNamedPipeClientProcessId(ctrl_pipe, &client_pid) || client_pid != pi.dwProcessId) {
+        BOOST_LOG(warning) << "WGC: an unexpected program connected to the capture helper's pipe"sv;
+        return -1;
+      }
+
+      reader = std::thread {[this]() {
+        read_loop();
+      }};
+      std::unique_lock lk {lock};
+      if (!cv.wait_for(lk, 5s, [this]() {
+            return ready || dead;
+          }) ||
+          dead) {
+        lk.unlock();
+        BOOST_LOG(warning) << "WGC: the capture helper didn't start ("sv << exit_reason() << ')';
+        return -1;
+      }
+      BOOST_LOG(info) << "WGC: capturing through the helper in the user's session"sv;
+      return 0;
+    }
+
+    capture_e next_frame(std::chrono::milliseconds timeout, ID3D11Texture2D **out, std::uint64_t &out_time) {
+      release_frame();
+
+      const auto now = std::chrono::steady_clock::now();
+      if (now >= next_desktop_check) {
+        next_desktop_check = now + 250ms;
+        if (secure_desktop_active()) {
+          BOOST_LOG(info) << "WGC: the secure desktop is showing, switching to DDX until it closes"sv;
+          return capture_e::reinit;
+        }
+      }
+
+      std::unique_lock lk {lock};
+      if (!cv.wait_for(lk, timeout, [this]() {
+            return dead || seq != consumed_seq;
+          })) {
+        return capture_e::timeout;
+      }
+      if (dead) {
+        lk.unlock();
+        auto code = exit_code();
+        const auto now_ms = steady_ms();
+        if (now_ms - display_change_window.load() > 30000) {
+          display_change_window = now_ms;
+          display_changes = 0;
+        }
+        if (code == wgc_ipc::EXIT_DISPLAY_CHANGED && ++display_changes <= 3) {
+          BOOST_LOG(info) << "WGC: the display changed, capturing it again"sv;
+        } else {
+          BOOST_LOG(warning) << "WGC: the capture helper "sv << helper_exit_reason(code) << ", using DDX for a minute"sv;
+          wgc_retry_after = steady_ms() + 60000;
+        }
+        return capture_e::reinit;
+      }
+      consumed_seq = seq;
+      const int slot = latest_slot;
+      const std::uint64_t qpc = latest_qpc;
+      const std::uint32_t gen = ring_gen;
+      std::uint64_t handles[wgc_ipc::SLOTS];
+      std::copy_n(ring_handles, wgc_ipc::SLOTS, handles);
+      lk.unlock();
+
+      if (slot < 0) {
+        return capture_e::timeout;
+      }
+      if (gen != opened_gen) {
+        if (open_ring(handles)) {
+          wgc_retry_after = steady_ms() + 60000;
+          return capture_e::reinit;
+        }
+        opened_gen = gen;
+      }
+
+      if (mutexes[slot]->AcquireSync(0, 100) != S_OK) {
+        return capture_e::timeout;
+      }
+      held = slot;
+      *out = ring[slot].get();
+      (*out)->AddRef();
+      out_time = qpc;
+      return capture_e::ok;
+    }
+
+    capture_e release_frame() {
+      if (held >= 0) {
+        mutexes[held]->ReleaseSync(0);
+        held = -1;
+      }
+      return capture_e::ok;
+    }
+
+    void set_cursor_visible(bool visible) {
+      const int want = visible ? 1 : 0;
+      if (cursor == want || ctrl_pipe == INVALID_HANDLE_VALUE) {
+        return;
+      }
+      const char c = visible ? 'C' : 'c';
+      OVERLAPPED ov {};
+      ov.hEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr);
+      DWORD written = 0;
+      BOOL ok = WriteFile(ctrl_pipe, &c, 1, nullptr, &ov);
+      if (!ok && GetLastError() == ERROR_IO_PENDING) {
+        if (WaitForSingleObject(ov.hEvent, 500) != WAIT_OBJECT_0) {
+          CancelIoEx(ctrl_pipe, &ov);
+        }
+        ok = GetOverlappedResult(ctrl_pipe, &ov, &written, TRUE);
+      }
+      CloseHandle(ov.hEvent);
+      if (ok) {
+        cursor = want;
+      }
+    }
+
+  private:
+    display_base_t *display = nullptr;
+    HANDLE process = nullptr;
+    HANDLE frame_pipe = INVALID_HANDLE_VALUE;
+    HANDLE ctrl_pipe = INVALID_HANDLE_VALUE;
+    std::thread reader;
+
+    // Filled in by the reader thread
+    std::mutex lock;
+    std::condition_variable cv;
+    bool ready = false;
+    bool dead = false;
+    std::uint64_t seq = 0;
+    int latest_slot = -1;
+    std::uint64_t latest_qpc = 0;
+    std::uint32_t ring_gen = 0;
+    std::uint64_t ring_handles[wgc_ipc::SLOTS] {};
+
+    // Used on the capture thread
+    std::uint64_t consumed_seq = 0;
+    std::uint32_t opened_gen = 0;
+    texture2d_t ring[wgc_ipc::SLOTS];
+    keyed_mutex_t mutexes[wgc_ipc::SLOTS];
+    int held = -1;
+    int cursor = -1;
+    std::chrono::steady_clock::time_point next_desktop_check {};
+
+    bool connect(HANDLE pipe) {
+      OVERLAPPED ov {};
+      ov.hEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr);
+      bool ok = false;
+      if (ConnectNamedPipe(pipe, &ov)) {
+        ok = true;
+      } else if (GetLastError() == ERROR_PIPE_CONNECTED) {
+        ok = true;
+      } else if (GetLastError() == ERROR_IO_PENDING) {
+        HANDLE waits[2] = {ov.hEvent, process};
+        DWORD transferred = 0;
+        if (WaitForMultipleObjects(2, waits, FALSE, 5000) == WAIT_OBJECT_0) {
+          ok = GetOverlappedResult(pipe, &ov, &transferred, FALSE);
+        } else {
+          CancelIoEx(pipe, &ov);
+          GetOverlappedResult(pipe, &ov, &transferred, TRUE);
+        }
+      }
+      CloseHandle(ov.hEvent);
+      return ok;
+    }
+
+    DWORD exit_code() {
+      DWORD code = STILL_ACTIVE;
+      if (process) {
+        WaitForSingleObject(process, 500);
+        GetExitCodeProcess(process, &code);
+      }
+      return code;
+    }
+
+    const char *exit_reason() {
+      return helper_exit_reason(exit_code());
+    }
+
+    void read_loop() {
+      OVERLAPPED ov {};
+      ov.hEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr);
+      while (true) {
+        wgc_ipc::msg_t m {};
+        DWORD got = 0;
+        ResetEvent(ov.hEvent);
+        if (!ReadFile(frame_pipe, &m, sizeof(m), nullptr, &ov) && GetLastError() != ERROR_IO_PENDING) {
+          break;
+        }
+        if (!GetOverlappedResult(frame_pipe, &ov, &got, TRUE) || got != sizeof(m) || m.magic != wgc_ipc::MAGIC) {
+          break;
+        }
+        std::lock_guard lg {lock};
+        if (m.type == wgc_ipc::MSG_READY) {
+          ready = true;
+        } else if (m.type == wgc_ipc::MSG_RING) {
+          ++ring_gen;
+          std::copy_n(m.handles, wgc_ipc::SLOTS, ring_handles);
+          latest_slot = -1;  // frames from here on are in the new textures
+        } else if (m.type == wgc_ipc::MSG_FRAME && m.slot < (std::uint32_t) wgc_ipc::SLOTS) {
+          latest_slot = (int) m.slot;
+          latest_qpc = m.qpc;
+          ++seq;
+        }
+        cv.notify_all();
+      }
+      CloseHandle(ov.hEvent);
+      std::lock_guard lg {lock};
+      dead = true;
+      cv.notify_all();
+    }
+
+    int open_ring(const std::uint64_t handles[wgc_ipc::SLOTS]) {
+      release_frame();
+      util::safe_ptr<ID3D11Device1, Release<ID3D11Device1>> device1;
+      if (FAILED(display->device->QueryInterface(__uuidof(ID3D11Device1), (void **) &device1))) {
+        return -1;
+      }
+      for (int i = 0; i < wgc_ipc::SLOTS; ++i) {
+        ring[i].reset();
+        mutexes[i].reset();
+      }
+      for (int i = 0; i < wgc_ipc::SLOTS; ++i) {
+        HANDLE mine = nullptr;
+        if (!DuplicateHandle(process, (HANDLE) (std::uintptr_t) handles[i], GetCurrentProcess(), &mine, 0, FALSE, DUPLICATE_SAME_ACCESS)) {
+          BOOST_LOG(warning) << "WGC: couldn't take the helper's frames: "sv << GetLastError();
+          return -1;
+        }
+        auto status = device1->OpenSharedResource1(mine, __uuidof(ID3D11Texture2D), (void **) &ring[i]);
+        CloseHandle(mine);
+        if (FAILED(status) || FAILED(ring[i]->QueryInterface(__uuidof(IDXGIKeyedMutex), (void **) &mutexes[i]))) {
+          BOOST_LOG(warning) << "WGC: couldn't open the helper's frames [0x"sv << util::hex(status).to_string_view() << ']';
+          return -1;
+        }
+      }
+      return 0;
+    }
+  };
+
+  std::shared_ptr<wgc_remote_t> make_wgc_remote(display_base_t *display, const ::video::config_t &config) {
+    if (steady_ms() < wgc_retry_after.load()) {
+      return nullptr;
+    }
+    if (secure_desktop_active()) {
+      BOOST_LOG(info) << "WGC: the secure desktop is showing, using DDX until it closes"sv;
+      return nullptr;
+    }
+    auto remote = std::make_shared<wgc_remote_t>();
+    if (remote->start(display, config)) {
+      wgc_retry_after = steady_ms() + 60000;
+      return nullptr;
+    }
+    return remote;
+  }
+
+  capture_e wgc_remote_next_frame(wgc_remote_t &remote, std::chrono::milliseconds timeout, ID3D11Texture2D **out, uint64_t &out_time) {
+    return remote.next_frame(timeout, out, out_time);
+  }
+
+  capture_e wgc_remote_release_frame(wgc_remote_t &remote) {
+    return remote.release_frame();
+  }
+
+  void wgc_remote_set_cursor_visible(wgc_remote_t &remote, bool visible) {
+    remote.set_cursor_visible(visible);
   }
 }  // namespace platf::dxgi

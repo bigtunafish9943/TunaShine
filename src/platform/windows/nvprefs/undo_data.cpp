@@ -37,21 +37,6 @@ namespace nlohmann {
   };
 
   template<>
-  struct adl_serializer<data_t> {
-    static void to_json(json &j, const data_t &data) {
-      j = json {{"opengl_swapchain", data.opengl_swapchain}, {"frame_limit", data.frame_limit}};
-    }
-
-    static void from_json(const json &j, data_t &data) {
-      j.at("opengl_swapchain").get_to(data.opengl_swapchain);
-      // Undo files written before the frame limit existed don't have it
-      if (j.contains("frame_limit")) {
-        j.at("frame_limit").get_to(data.frame_limit);
-      }
-    }
-  };
-
-  template<>
   struct adl_serializer<opengl_swapchain_t> {
     static void to_json(json &j, const opengl_swapchain_t &opengl_swapchain) {
       j = json {
@@ -63,6 +48,30 @@ namespace nlohmann {
     static void from_json(const json &j, opengl_swapchain_t &opengl_swapchain) {
       j.at("our_value").get_to(opengl_swapchain.our_value);
       j.at("undo_value").get_to(opengl_swapchain.undo_value);
+    }
+  };
+
+  template<>
+  struct adl_serializer<data_t> {
+    static void to_json(json &j, const data_t &data) {
+      json settings = json::object();
+      for (const auto &[id, value] : data.stream_settings) {
+        settings[std::to_string(id)] = value;
+      }
+      j = json {{"opengl_swapchain", data.opengl_swapchain}, {"frame_limit", data.frame_limit}, {"stream_settings", settings}};
+    }
+
+    static void from_json(const json &j, data_t &data) {
+      j.at("opengl_swapchain").get_to(data.opengl_swapchain);
+      // Undo files written before the frame limit existed don't have it
+      if (j.contains("frame_limit")) {
+        j.at("frame_limit").get_to(data.frame_limit);
+      }
+      if (j.contains("stream_settings") && j.at("stream_settings").is_object()) {
+        for (const auto &[id, value] : j.at("stream_settings").items()) {
+          data.stream_settings[(uint32_t) std::stoul(id)] = value.get<opengl_swapchain_t>();
+        }
+      }
     }
   };
 }  // namespace nlohmann
@@ -89,6 +98,14 @@ namespace nvprefs {
 
   std::optional<undo_data_t::data_t::opengl_swapchain_t> undo_data_t::get_frame_limit() const {
     return data.frame_limit;
+  }
+
+  void undo_data_t::set_stream_setting(uint32_t id, uint32_t our_value, std::optional<uint32_t> undo_value) {
+    data.stream_settings[id] = data_t::opengl_swapchain_t {our_value, undo_value};
+  }
+
+  const std::map<uint32_t, undo_data_t::data_t::opengl_swapchain_t> &undo_data_t::get_stream_settings() const {
+    return data.stream_settings;
   }
 
   std::string undo_data_t::write() const {
@@ -123,6 +140,13 @@ namespace nvprefs {
     if (frame_limit_data) {
       auto undo_value = data.frame_limit ? data.frame_limit->undo_value : frame_limit_data->undo_value;
       set_frame_limit(frame_limit_data->our_value, undo_value);
+    }
+
+    // Same for the other settings: the value from before our first change is the one to put back
+    for (const auto &[id, value] : newer_data.get_stream_settings()) {
+      auto existing = data.stream_settings.find(id);
+      auto undo_value = existing != data.stream_settings.end() ? existing->second.undo_value : value.undo_value;
+      set_stream_setting(id, value.our_value, undo_value);
     }
   }
 

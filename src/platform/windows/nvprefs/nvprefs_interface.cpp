@@ -169,6 +169,27 @@ namespace nvprefs {
     return true;
   }
 
+  bool nvprefs_interface::set_stream_setting(unsigned int id, unsigned int value) {
+    if (!pimpl->loaded) {
+      return false;
+    }
+
+    std::optional<undo_data_t> undo_data;
+    if (!pimpl->driver_settings.set_global_stream_setting(id, value, pimpl->undo_data, undo_data)) {
+      error_message("Couldn't change a global profile setting for streaming");
+      return false;
+    } else if (!undo_data) {
+      return true;
+    }
+
+    if (!commit_global_profile_change(*undo_data)) {
+      pimpl->driver_settings.load_settings();
+      return false;
+    }
+
+    return true;
+  }
+
   bool nvprefs_interface::commit_global_profile_change(const undo_data_t &undo_data) {
     // Create and lock undo file if it hasn't been done yet
     if (!pimpl->undo_file) {

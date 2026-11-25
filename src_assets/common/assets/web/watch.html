@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="auto">
+
+<head>
+  <%- header %>
+  <meta name="theme-color" content="#041431">
+  <style>
+    body {
+      padding-left: 0 !important;
+      background-color: var(--bs-body-bg);
+    }
+
+    .watch {
+      max-width: 72rem;
+      margin: 0 auto;
+      padding: 1rem 1rem 2rem;
+    }
+
+    .watch-top {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .watch-brand {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 700;
+      color: var(--bs-emphasis-color);
+      text-decoration: none;
+    }
+
+    .watch-brand img {
+      width: 28px;
+      height: 28px;
+    }
+
+    .watch-title {
+      flex: 1 1 auto;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--bs-secondary-color);
+    }
+
+    .watch-title b {
+      color: var(--bs-emphasis-color);
+    }
+
+    .watch-stage {
+      position: relative;
+      aspect-ratio: 16 / 9;
+      background: #000;
+      border-radius: 0.9rem;
+      overflow: hidden;
+      border: 1px solid var(--ts-surface-border, rgba(255, 255, 255, 0.1));
+    }
+
+    .watch-stage canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .watch-stage:fullscreen {
+      border-radius: 0;
+      border: 0;
+    }
+
+    .watch-password {
+      margin-top: 1rem;
+      text-align: start;
+      max-width: 22rem;
+    }
+
+    .watch-share {
+      margin-top: 1rem;
+      padding: 0.75rem 1rem;
+      border: 1px solid var(--bs-border-color);
+      border-radius: 0.5rem;
+      max-width: 40rem;
+    }
+
+    .watch-status {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      padding: 1.5rem;
+      text-align: center;
+      color: #e8eef7;
+      background: radial-gradient(circle at center, rgba(4, 20, 49, 0.55), rgba(0, 0, 0, 0.85));
+    }
+
+    .watch-status p {
+      max-width: 34rem;
+      margin: 0;
+    }
+
+    .watch-live {
+      position: absolute;
+      top: 0.75rem;
+      left: 0.75rem;
+      padding: 0.15rem 0.55rem;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #fff;
+      background: rgba(200, 30, 50, 0.85);
+    }
+
+    .watch-controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+    }
+
+    .watch-note {
+      margin-left: auto;
+      font-size: 0.85rem;
+      color: var(--bs-secondary-color);
+    }
+  </style>
+</head>
+
+<body id="app" v-cloak>
+  <main class="watch">
+    <div class="watch-top">
+      <a class="watch-brand" href="./">
+        <img src="./images/logo-tunastream-45.png" alt="">
+        TunaStream
+      </a>
+      <span class="watch-title" v-if="showingScreen">{{ $t('watch.watching_screen') }}</span>
+      <span class="watch-title" v-else-if="app">{{ $t('watch.watching') }} <b>{{ app }}</b></span>
+      <span class="watch-title" v-else>{{ $t('watch.title') }}</span>
+    </div>
+
+    <div class="watch-stage" ref="stage">
+      <canvas ref="canvas" width="1280" height="720" :aria-label="$t('watch.picture')" role="img"></canvas>
+      <span class="watch-live" v-if="state === 'playing'">{{ $t('watch.live') }}</span>
+      <div class="watch-status" v-if="state !== 'playing'" role="status">
+        <div class="spinner-border" v-if="state === 'connecting'" aria-hidden="true"></div>
+        <p>{{ statusText }}</p>
+        <form v-if="state === 'locked'" class="watch-password" @submit.prevent="usePassword">
+          <label for="watch-password" class="form-label">{{ $t('watch.password_label') }}</label>
+          <div class="input-group">
+            <input id="watch-password" class="form-control" type="password" v-model="watchPassword" autocomplete="current-password" required minlength="8">
+            <button class="btn btn-primary" :disabled="passwordBusy">{{ $t('watch.password_go') }}</button>
+          </div>
+          <p class="small text-danger mt-2 mb-0" v-if="passwordError" role="alert">{{ passwordError }}</p>
+          <p class="small mt-2 mb-0"><a href="./login?redir=./watch">{{ $t('watch.sign_in') }}</a></p>
+        </form>
+      </div>
+    </div>
+
+    <div class="watch-controls">
+      <button type="button" class="btn btn-sm" :class="soundOn ? 'btn-primary' : 'btn-outline-secondary'"
+              @click="toggleSound" :disabled="!audioSupported" :aria-pressed="soundOn">
+        <i class="fas" :class="soundOn ? 'fa-volume-high' : 'fa-volume-xmark'" aria-hidden="true"></i>
+        {{ soundOn ? $t('watch.sound_on') : $t('watch.sound_off') }}
+      </button>
+      <button type="button" class="btn btn-sm btn-outline-secondary" @click="fullscreen">
+        <i class="fas fa-expand" aria-hidden="true"></i> {{ $t('watch.fullscreen') }}
+      </button>
+      <button type="button" class="btn btn-sm btn-outline-secondary" @click="share" v-if="!token && signedIn">
+        <i class="fas fa-link" aria-hidden="true"></i> {{ $t('watch.share') }}
+      </button>
+      <span class="small" role="status" v-if="shareStatus">{{ shareStatus }}</span>
+      <span class="watch-note">{{ audioSupported ? $t('watch.note') : $t('watch.no_sound_here') }}</span>
+    </div>
+
+    <!-- Share my screen: only with the password, never from a watch link -->
+    <section class="watch-share" v-if="!token && signedIn && sharing" aria-labelledby="share-title">
+      <h2 class="h6" id="share-title"><i class="fas fa-tower-broadcast" aria-hidden="true"></i> {{ $t('watch.screen_title') }}</h2>
+      <template v-if="sharing.on">
+        <p class="mb-2">{{ $t('watch.screen_on', { minutes: sharing.minutesLeft }) }}
+          <span v-if="monitors.length > 1 && sharedMonitor">({{ monitorLabel(sharedMonitor) }})</span></p>
+        <button type="button" class="btn btn-sm btn-danger" @click="setSharing(false)" :disabled="sharingBusy">{{ $t('watch.screen_stop') }}</button>
+      </template>
+      <template v-else>
+        <p class="mb-2">{{ $t('watch.screen_desc') }}</p>
+        <div class="d-flex flex-wrap gap-2 align-items-center">
+          <label class="visually-hidden" for="share-minutes">{{ $t('watch.screen_for') }}</label>
+          <template v-if="monitors.length > 1">
+            <label class="visually-hidden" for="share-monitor">{{ $t('watch.screen_which') }}</label>
+            <select id="share-monitor" class="form-select form-select-sm w-auto" v-model="shareMonitor">
+              <option v-for="m in monitors" :key="m.id" :value="m.id">{{ monitorLabel(m) }}</option>
+            </select>
+          </template>
+          <select id="share-minutes" class="form-select form-select-sm w-auto" v-model.number="shareMinutes">
+            <option :value="60">{{ $t('watch.screen_1h') }}</option>
+            <option :value="120">{{ $t('watch.screen_2h') }}</option>
+            <option :value="240">{{ $t('watch.screen_4h') }}</option>
+          </select>
+          <button type="button" class="btn btn-sm btn-primary" @click="setSharing(true)" :disabled="sharingBusy">{{ $t('watch.screen_start') }}</button>
+        </div>
+      </template>
+      <p class="small text-danger mt-2 mb-0" v-if="sharingError" role="alert">{{ sharingError }}</p>
+    </section>
+
+    <!-- Watch passwords: don't change, for devices that come back often -->
+    <section class="watch-share" v-if="!token && signedIn" aria-labelledby="pw-title">
+      <h2 class="h6" id="pw-title"><i class="fas fa-key" aria-hidden="true"></i> {{ $t('watch.passwords_title') }}</h2>
+      <p class="mb-2">{{ $t('watch.passwords_desc') }}</p>
+      <form class="d-flex flex-wrap gap-2 align-items-center" @submit.prevent="makePassword">
+        <label class="visually-hidden" for="pw-name">{{ $t('watch.passwords_name') }}</label>
+        <input id="pw-name" class="form-control form-control-sm w-auto" v-model="newPasswordName" :placeholder="$t('watch.passwords_name')" maxlength="60" required>
+        <label class="visually-hidden" for="pw-text">{{ $t('watch.password_label') }}</label>
+        <input id="pw-text" class="form-control form-control-sm w-auto font-monospace" v-model="newPassword" :placeholder="$t('watch.password_label')" minlength="8" maxlength="128" required autocomplete="off">
+        <button type="button" class="btn btn-sm btn-outline-secondary" @click="suggestPassword">{{ $t('watch.passwords_suggest') }}</button>
+        <button class="btn btn-sm btn-primary">{{ $t('watch.passwords_make') }}</button>
+      </form>
+      <p class="small mt-2 mb-0" role="status" v-if="passwordMade">{{ passwordMade }}</p>
+      <p class="small mt-2 mb-0"><a href="./password#tokens-title">{{ $t('watch.passwords_manage') }}</a></p>
+    </section>
+  </main>
+
+  <script type="module">
+    import { createApp } from 'vue'
+    import { initApp } from './init'
+    import { loadAutoTheme } from './theme'
+
+    loadAutoTheme()
+
+    const HEADER = 14
+    const TYPE_INFO = 73, TYPE_VIDEO = 86, TYPE_AUDIO = 65, TYPE_END = 69
+
+    // The H.264 codec string WebCodecs needs, from the sequence parameter set in a key frame
+    function codecFromKeyFrame(data) {
+      for (let i = 0; i + 4 < data.length; i++) {
+        if (data[i] === 0 && data[i + 1] === 0 && data[i + 2] === 1 && (data[i + 3] & 0x1f) === 7) {
+          const hex = (b) => b.toString(16).padStart(2, '0')
+          return 'avc1.' + hex(data[i + 4]) + hex(data[i + 5]) + hex(data[i + 6])
+        }
+      }
+      return null
+    }
+
+    const app = createApp({
+      inject: ['i18n'],
+      data() {
+        return {
+          state: 'connecting',  // connecting, playing, waiting (nobody streaming), ended, error, unsupported
+          message: '',
+          app: '',
+          soundOn: false,
+          audioSupported: typeof window.AudioDecoder !== 'undefined',
+          // This device's watch key (from a watch link), or an access token in the address: it
+          // signs the page's requests. Empty when signed in with the password.
+          token: '',
+          signedIn: false,
+          shareStatus: '',
+          linkProblem: '',
+          watchPassword: '',
+          passwordBusy: false,
+          passwordError: '',
+          newPasswordName: '',
+          newPassword: '',
+          passwordMade: '',
+          sharing: null,
+          sharingBusy: false,
+          sharingError: '',
+          shareMinutes: 120,
+          showingScreen: false,
+          monitors: [],
+          shareMonitor: '',
+        }
+      },
+      computed: {
+        sharedMonitor() {
+          if (!this.sharing) return null
+          return this.monitors.find((m) => m.id === this.sharing.monitor) || this.monitors.find((m) => m.main) || null
+        },
+        statusText() {
+          switch (this.state) {
+            case 'unsupported': return this.$t('watch.unsupported')
+            case 'waiting': return this.message || this.$t('watch.waiting')
+            case 'ended': return this.$t('watch.ended')
+            case 'locked': return this.message || this.$t('watch.need_link')
+            case 'error': return this.message || this.$t('watch.error')
+            default: return this.$t('watch.connecting')
+          }
+        },
+      },
+      created() {
+        this.decoder = null
+        this.needKey = true
+        this.audio = null
+        this.stopped = false
+      },
+      async mounted() {
+        this.ctx2d = this.$refs.canvas.getContext('2d')
+        if (typeof window.VideoDecoder === 'undefined') {
+          this.state = 'unsupported'
+          return
+        }
+        await this.prepareKey()
+        this.connect()
+        this.loadApp()
+        this.loadMonitors()
+        this.appTimer = setInterval(() => this.loadApp(), 15000)
+      },
+      beforeUnmount() {
+        this.stopped = true
+        clearInterval(this.appTimer)
+        clearInterval(this.keyTimer)
+      },
+      methods: {
+        storedKey() {
+          try { return JSON.parse(localStorage.getItem('tunastream.watchKey') || 'null') } catch (e) { return null }
+        },
+        storeKey(key) {
+          try { localStorage.setItem('tunastream.watchKey', JSON.stringify({ key, at: Date.now() })) } catch (e) { /* kept for this visit only */ }
+        },
+        forgetKey() {
+          try { localStorage.removeItem('tunastream.watchKey') } catch (e) { /* nothing kept */ }
+        },
+        // A watch link works once: this device swaps it for its own key, which changes every day
+        async prepareKey() {
+          const params = new URLSearchParams(location.search)
+          const invite = params.get('invite')
+          if (params.get('token')) {
+            this.token = params.get('token')  // an access token made by hand
+          } else if (invite) {
+            history.replaceState(null, '', location.pathname)
+            try {
+              const r = await fetch('./api/watch/redeem', { method: 'POST', headers: { Authorization: 'Bearer ' + invite } }).then((r) => r.json())
+              if (r.status && r.key) {
+                this.storeKey(r.key)
+                this.token = r.key  // even where this browser can't keep it
+              } else if (!this.storedKey()) {
+                this.linkProblem = r.error || ''
+              }
+            } catch (e) { /* tried below with what's kept */ }
+          }
+          if (!this.token) {
+            const kept = this.storedKey()
+            if (kept && kept.key) {
+              this.token = kept.key
+              await this.rotateKey(false)
+            }
+          }
+          this.keyTimer = setInterval(() => this.rotateKey(false), 3600 * 1000)
+        },
+        async usePassword() {
+          this.passwordBusy = true
+          this.passwordError = ''
+          try {
+            const r = await fetch('./api/watch/password', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ password: this.watchPassword }),
+            }).then((r) => r.json())
+            if (!r.status || !r.key) throw new Error(r.error || '')
+            this.storeKey(r.key)
+            this.token = r.key
+            this.watchPassword = ''
+            this.connect()
+            this.loadApp()
+          } catch (e) {
+            this.passwordError = e.message || this.$t('watch.password_wrong')
+          }
+          this.passwordBusy = false
+        },
+        suggestPassword() {
+          // Easy to read out and type on a tablet: three short words and two digits
+          const words = ['tuna', 'reef', 'kelp', 'coral', 'wave', 'shell', 'pearl', 'tide', 'squid', 'crab', 'otter', 'whale', 'shark', 'manta', 'sand', 'foam', 'drift', 'bay', 'cove', 'fin']
+          const pick = (n) => {
+            const a = new Uint32Array(n)
+            crypto.getRandomValues(a)
+            return Array.from(a)
+          }
+          const r = pick(4)
+          this.newPassword = [0, 1, 2].map((i) => words[r[i] % words.length]).join('-') + '-' + String(r[3] % 90 + 10)
+        },
+        async makePassword() {
+          this.passwordMade = ''
+          try {
+            const r = await fetch('./api/watch/passwords', {
+              credentials: 'include', method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ name: this.newPasswordName, password: this.newPassword }),
+            }).then((r) => r.json())
+            if (!r.status) throw new Error(r.error || '')
+            this.passwordMade = this.$t('watch.passwords_made', { name: this.newPasswordName, password: this.newPassword })
+            this.newPasswordName = ''
+            this.newPassword = ''
+          } catch (e) {
+            this.passwordMade = e.message || this.$t('watch.passwords_failed')
+          }
+        },
+        async rotateKey(force) {
+          const kept = this.storedKey()
+          if (!kept || !kept.key || kept.key !== this.token) return
+          if (!force && Date.now() - kept.at < 20 * 3600 * 1000) return
+          try {
+            const r = await fetch('./api/watch/rotate', { method: 'POST', headers: { Authorization: 'Bearer ' + kept.key } })
+            const j = await r.json().catch(() => ({}))
+            if (j.status && j.key) {
+              this.storeKey(j.key)
+              this.token = j.key
+            } else if (r.status === 401 || r.status === 400) {
+              this.forgetKey()
+              this.token = ''
+            }
+          } catch (e) { /* try again later */ }
+        },
+        authHeaders() {
+          return this.token ? { Authorization: 'Bearer ' + this.token } : {}
+        },
+        async share() {
+          this.shareStatus = ''
+          try {
+            const r = await fetch('./api/watch/invite', {
+              credentials: 'include', method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ name: this.$t('watch.share_name', { when: new Date().toLocaleDateString() }) }),
+            }).then((r) => r.json())
+            if (!r.status) throw new Error()
+            const link = `${location.origin}/watch?invite=${encodeURIComponent(r.invite)}`
+            try { await navigator.clipboard.writeText(link); this.shareStatus = this.$t('watch.share_copied') }
+            catch (e) { window.prompt(this.$t('watch.share_copy_this'), link) }
+          } catch (e) {
+            this.shareStatus = this.$t('watch.share_failed')
+          }
+        },
+        async loadApp() {
+          try {
+            const s = await fetch('./api/status', { credentials: 'include', headers: this.authHeaders() }).then((r) => r.ok ? r.json() : null)
+            this.app = (s && s.app) || ''
+            if (!this.token) this.signedIn = !!s
+            this.showingScreen = !!(s && s.sharingScreen && s.sharingScreen.showingScreen)
+            if (!this.token) this.sharing = (s && s.sharingScreen) || null
+          } catch (e) { /* keep the last name */ }
+        },
+        monitorLabel(m) {
+          const name = m.model ? `${m.number}: ${m.model}` : this.$t('watch.screen_monitor', { n: m.number })
+          return `${name}, ${m.width}×${m.height}` + (m.main ? ` (${this.$t('watch.screen_main')})` : '')
+        },
+        async loadMonitors() {
+          if (this.token) return
+          try {
+            const r = await fetch('./api/watch/share', { credentials: 'include' }).then((r) => r.ok ? r.json() : null)
+            if (!r) return
+            this.monitors = r.monitors || []
+            if (!this.shareMonitor) {
+              const main = this.monitors.find((m) => m.main)
+              this.shareMonitor = r.monitor || (main ? main.id : '')
+            }
+          } catch (e) { /* only the main screen then */ }
+        },
+        async setSharing(on) {
+          this.sharingBusy = true
+          this.sharingError = ''
+          try {
+            const r = await fetch('./api/watch/share', {
+              credentials: 'include', method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ on, minutes: this.shareMinutes, monitor: this.shareMonitor }),
+            }).then((r) => r.json())
+            if (r.status === false) throw new Error(r.error || '')
+            this.sharing = r
+            this.showingScreen = false
+            if (on && this.state !== 'playing') {
+              this.connect()
+            }
+          } catch (e) {
+            this.sharingError = e.message || this.$t('watch.screen_failed')
+          }
+          this.sharingBusy = false
+        },
+        retryLater(ms) {
+          if (!this.stopped) setTimeout(() => this.connect(), ms)
+        },
+        async connect() {
+          if (this.state !== 'playing') this.state = 'connecting'
+          let response
+          try {
+            response = await fetch('./api/watch/stream', { credentials: 'include', cache: 'no-store', headers: this.authHeaders() })
+          } catch (e) {
+            this.state = 'error'
+            this.message = this.$t('watch.error')
+            return this.retryLater(5000)
+          }
+          if (response.status === 409) {
+            const j = await response.json().catch(() => ({}))
+            this.state = 'waiting'
+            this.message = j.error || ''
+            return this.retryLater(5000)
+          }
+          if (response.status === 401) {
+            this.state = 'locked'
+            this.message = this.linkProblem || ''
+            return this.retryLater(30000)
+          }
+          if (!response.ok || !response.body) {
+            this.state = 'error'
+            this.message = ''
+            return this.retryLater(5000)
+          }
+          this.needKey = true
+          const reader = response.body.getReader()
+          let buffer = new Uint8Array(0)
+          let ended = false
+          try {
+            while (true) {
+              const { value, done } = await reader.read()
+              if (done) break
+              const joined = new Uint8Array(buffer.length + value.length)
+              joined.set(buffer)
+              joined.set(value, buffer.length)
+              buffer = joined
+              let offset = 0
+              while (buffer.length - offset >= HEADER) {
+                const view = new DataView(buffer.buffer, buffer.byteOffset + offset)
+                const length = view.getUint32(10, true)
+                if (buffer.length - offset < HEADER + length) break
+                const type = buffer[offset]
+                const key = buffer[offset + 1] === 1
+                const timestamp = Number(view.getBigUint64(2, true))
+                const payload = buffer.subarray(offset + HEADER, offset + HEADER + length)
+                offset += HEADER + length
+                if (type === TYPE_VIDEO) this.onVideo(payload, key, timestamp)
+                else if (type === TYPE_AUDIO) this.onAudio(payload, timestamp)
+                else if (type === TYPE_END) { ended = true }
+              }
+              buffer = buffer.slice(offset)
+              if (ended) break
+            }
+          } catch (e) {
+            // The connection dropped: try again below
+          }
+          if (ended) {
+            this.state = 'ended'
+            return this.retryLater(5000)
+          }
+          // TunaStream closes long responses after a few minutes: carry straight on
+          this.retryLater(200)
+        },
+        makeDecoder(codec) {
+          if (this.decoder && this.decoder.state !== 'closed') {
+            try { this.decoder.close() } catch (e) { /* already closed */ }
+          }
+          this.decoder = new VideoDecoder({
+            output: (frame) => {
+              this.ctx2d.drawImage(frame, 0, 0, this.$refs.canvas.width, this.$refs.canvas.height)
+              frame.close()
+              if (this.state !== 'playing') this.state = 'playing'
+            },
+            error: () => {
+              this.needKey = true
+              this.decoder = null
+            },
+          })
+          this.decoder.configure({ codec, optimizeForLatency: true })
+          this.codec = codec
+        },
+        onVideo(data, key, timestamp) {
+          if (key) {
+            const codec = codecFromKeyFrame(data)
+            if (codec && (!this.decoder || this.decoder.state === 'closed' || codec !== this.codec)) {
+              try { this.makeDecoder(codec) } catch (e) { this.state = 'unsupported'; return }
+            }
+            this.needKey = false
+          }
+          if (this.needKey || !this.decoder || this.decoder.state !== 'configured') return
+          // Falling behind (a slow phone): skip to the next key frame rather than lag
+          if (!key && this.decoder.decodeQueueSize > 6) {
+            this.needKey = true
+            return
+          }
+          try {
+            this.decoder.decode(new EncodedVideoChunk({ type: key ? 'key' : 'delta', timestamp, data }))
+          } catch (e) {
+            this.needKey = true
+          }
+        },
+        startAudio() {
+          const context = new AudioContext({ sampleRate: 48000, latencyHint: 'interactive' })
+          const audio = { context, next: 0, decoder: null }
+          audio.decoder = new AudioDecoder({
+            output: (data) => {
+              try {
+                const frames = data.numberOfFrames
+                const channels = Math.min(2, data.numberOfChannels)
+                const buffer = context.createBuffer(channels, frames, data.sampleRate)
+                for (let ch = 0; ch < channels; ch++) {
+                  const plane = new Float32Array(frames)
+                  data.copyTo(plane, { planeIndex: ch, format: 'f32-planar' })
+                  buffer.copyToChannel(plane, ch)
+                }
+                const now = context.currentTime
+                // Keep the sound close to the picture: never more than a quarter second queued
+                if (audio.next < now + 0.03 || audio.next > now + 0.25) audio.next = now + 0.06
+                const source = context.createBufferSource()
+                source.buffer = buffer
+                source.connect(context.destination)
+                source.start(audio.next)
+                audio.next += buffer.duration
+              } catch (e) { /* a packet that couldn't be played */ }
+              data.close()
+            },
+            error: () => { /* the next packet starts over */ },
+          })
+          audio.decoder.configure({ codec: 'opus', sampleRate: 48000, numberOfChannels: 2 })
+          this.audio = audio
+        },
+        onAudio(data, timestamp) {
+          if (!this.soundOn || !this.audio || this.audio.decoder.state !== 'configured') return
+          try {
+            this.audio.decoder.decode(new EncodedAudioChunk({ type: 'key', timestamp, data }))
+          } catch (e) { /* skip it */ }
+        },
+        toggleSound() {
+          if (!this.audioSupported) return
+          this.soundOn = !this.soundOn
+          if (this.soundOn) {
+            // Browsers only start sound after a tap, which this is
+            if (!this.audio) this.startAudio()
+            this.audio.context.resume()
+          } else if (this.audio) {
+            this.audio.context.suspend()
+          }
+        },
+        fullscreen() {
+          const el = this.$refs.stage
+          if (document.fullscreenElement) document.exitFullscreen()
+          else if (el.requestFullscreen) el.requestFullscreen()
+          else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen()
+        },
+      },
+    })
+
+    initApp(app)
+  </script>
+</body>
+
+</html>

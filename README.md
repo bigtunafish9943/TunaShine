@@ -96,6 +96,14 @@ and every step was tightened:
   set to *Windowed* lose their border and fill the TV. Or make the TV's screen the main one, so games open there
   by themselves, and your own new windows (Windows' own included) are moved back to your screens.
   *Settings > Shared PC*.
+- **Watch in a browser.** *Watch* on the home page shows the game being streamed, with its sound, on any laptop
+  or phone on your network, view only and a moment behind the TV. *Share a watch link* gives someone else a link
+  that works once, within a day, and opens nothing but the picture. The device that opens it keeps watching
+  with its own key, which changes every day and stops working after a week unused. For someone who comes back often, a
+  *watch password* doesn't change: typed on the Watch page, it lets that device watch the same way.
+- **Share my screen.** On the Watch page, choose to share one of the PC's own screens for an hour or a few, so someone can
+  watch you play at the desk on a tablet or phone. The home page and the tray say while it's on, a TV's stream takes
+  over while it plays, and it turns itself off when the time is up.
 - **Do not disturb during streams** (on by default). Windows' notifications wait in the notification centre
   instead of popping up over the game.
 - **Privacy mode** (off unless turned on, with Shared PC off). The PC's own monitors go dark while a TV streams,
@@ -112,13 +120,27 @@ and every step was tightened:
   you can reconnect, and TunaReceive reconnects by itself.
 - **A clear web interface.** A home page that shows what is streaming, who is playing and with which
   controllers, which devices are paired and whether the virtual display is working, with an End session button.
-  Settings in plain words, with the technical ones tucked away. Pairing and permissions together on one Devices
-  page. Each device you sign in on stays signed in for 15 days, through restarts and updates, and *Apply* brings
-  the page back by itself once TunaStream has restarted.
+  Settings in plain words, with the ones most people change on the *Everyday* tab and the technical ones tucked
+  away. Pairing and permissions together on one Devices page. Tick *Keep me signed in* to stay signed in for 15
+  days, through restarts and updates; *Apply* brings the page back by itself once TunaStream has restarted.
+- **Access tokens** for scripts and home automation (*Change Password > Access tokens*): each can only do what
+  you tick (see what's playing, watch, send messages, end sessions, start games, read logs) and can be removed
+  any time.
+- **AI assistants.** `tunastream.exe --mcp` makes TunaStream a set of MCP tools for Claude Desktop, Claude Code
+  and other assistants: what's playing, the paired devices and the games, starting a game, ending a session,
+  more play time, a message on the TV, the play recap, and the PC's and TVs' logs. It uses an access token, so
+  an assistant can do only what the token allows; making a token shows the settings to paste in.
 - **Your last seven days.** The home page shows play time for each day, the most-played games and how smooth the
   streams were, with milestones as they're reached. The record stays on the PC.
 - **A reminder when a game runs slow.** When a game itself draws fewer than 59 frames a second, the home page
   says so and names the fix in the game's settings, and keeps a reminder until it runs at full rate.
+- **Your games, kept in sync** (off unless turned on, on the Apps page). Steam games you've played lately and games
+  newly installed from Epic, GOG, EA, Ubisoft, Amazon and the Microsoft Store are added by themselves, with
+  covers, and taken off again when they're uninstalled or, for Steam, not played for a while. Apps you added
+  yourself are never touched, and a synced game you delete stays deleted.
+- **The game's frame rate matches the stream** (on by default). With RivaTuner Statistics Server installed the
+  cap is exact, 59.94 included; otherwise NVIDIA's frame cap is used. V-Sync is turned off in games while
+  streaming on NVIDIA cards, since the TV paces the picture. Both go back as they were when the stream ends.
 - **Game covers from Steam.** Steam games added as apps get their cover on the client's game tiles: a custom cover
   you set in your Steam library first, then the one Steam shows, fetched by itself.
 - **Controller batteries** on the home page next to each controller, in red when one is low.
@@ -194,6 +216,10 @@ grant more, so if a new device says `Permission Denied`, or its mouse and keyboa
 - **Other virtual display drivers.** Remove them before using TunaStream; two at once cause conflicts.
 - **Laptops with two GPUs.** Under **Settings > Screen and sound > Advanced settings**, set *Graphics card* to
   the discrete GPU.
+- **Windows.Graphics.Capture** (*Settings > Video encoding > Screen capture method*) can be smoother with frame
+  generation and windowed games. TunaStream captures through a helper in your signed-in session, and uses
+  Desktop Duplication on the lock screen, during UAC prompts and when nobody is signed in. *Automatic* uses
+  Desktop Duplication.
 - **HDR** needs Windows 11 23H2 or later, and how good it looks depends mostly on the device you stream to.
 
 Something not working? See [troubleshooting](docs/troubleshooting.md) for rumble, connection and stop/start

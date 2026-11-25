@@ -147,7 +147,17 @@
     "virtual_display": "Toujours créer un écran virtuel",
     "virtual_display_desc": "Crée toujours un écran virtuel au lancement de cette app, quelle que soit la demande de l'appareil. Le pilote SudoVDA doit être installé et activé.",
     "virtual_display_primary": "Forcer l'écran virtuel comme écran principal",
-    "virtual_display_primary_desc": "Définit automatiquement l'écran virtuel comme écran principal au lancement de l'app. Il l'est toujours quand un appareil demande un écran virtuel. (Recommandé de laisser activé) [Ne fonctionne pas sous Windows 11 24H2]"
+    "virtual_display_primary_desc": "Définit automatiquement l'écran virtuel comme écran principal au lancement de l'app. Il l'est toujours quand un appareil demande un écran virtuel. (Recommandé de laisser activé) [Ne fonctionne pas sous Windows 11 24H2]",
+    "sync_title": "Garder mes jeux synchronisés",
+    "sync_days": "Récent signifie les derniers",
+    "sync_now": "Synchroniser",
+    "sync_desc": "Ajoute les jeux Steam joués récemment et les jeux nouvellement installés via Epic, GOG, EA, Ubisoft, Amazon ou le Microsoft Store (ces lanceurs n'enregistrent pas le temps de jeu), avec leurs jaquettes. Ils sont retirés à leur désinstallation, ou pour Steam s'ils ne sont pas joués pendant cette durée. Les apps ajoutées par vous ne sont jamais touchées, et un jeu synchronisé que vous supprimez reste supprimé. Rien ne change pendant un stream.",
+    "sync_last": "Dernière synchronisation {when} : {added} ajoutés, {removed} retirés.",
+    "sync_added_list": "Ajoutés : {names}.",
+    "sync_excluded": "{n} jeux synchronisés que vous avez supprimés restent hors de la liste.",
+    "sync_forget": "Les laisser revenir",
+    "sync_badge": "Synchronisé",
+    "sync_badge_title": "Ajouté par Garder mes jeux synchronisés"
   },
   "config": {
     "adapter_name_desc_linux_1": "Spécifiez manuellement un GPU à utiliser pour la capture.",
@@ -346,6 +356,7 @@
     "back_button_timeout_desc": "Pour les manettes sans bouton Guide (Xbox/PS) : maintenir Retour/Select pendant ce nombre de millisecondes l'actionne. -1 désactive cette fonction.",
     "capture": "Méthode de capture d'écran",
     "capture_desc": "« Automatique » utilise la première méthode qui fonctionne.",
+    "capture_wgc_desc": "Windows.Graphics.Capture peut être plus fluide avec les jeux qui utilisent la génération d'images ou tournent en fenêtre, et demande un peu plus de puissance graphique. TunaStream capture via un petit assistant dans votre session ouverte, et passe tout seul à Desktop Duplication quand personne n'est connecté, pendant les invites UAC et sur l'écran de verrouillage. Revenez à « Automatique » si quelque chose ne va pas.",
     "cert_desc": "Sert à sécuriser cette page et l'association. TunaStream le crée pour vous ; il doit utiliser une clé RSA-2048.",
     "controller": "Manettes",
     "controller_desc": "Permettre aux appareils d'utiliser une manette sur ce PC.",
@@ -405,7 +416,7 @@
     "forward_rumble": "Vibration",
     "forward_rumble_desc": "Envoie les vibrations des jeux à la manette de votre appareil. Utilisez le test de la page Dépannage pour vérifier que cela fonctionne.",
     "game_frame_limit": "Caler la fréquence d'images du jeu sur le stream (recommandé)",
-    "game_frame_limit_desc": "Pendant un stream, les jeux sont limités à la fréquence d'images demandée par leur appareil, pour que chaque image dessinée soit envoyée. Cela supprime les saccades dues à un jeu et un stream qui tournent à des vitesses différentes. Votre propre limite revient à la fin du stream. Cartes graphiques NVIDIA uniquement ; si vous avez fixé vous-même une fréquence maximale pour tous les jeux, elle n'est pas modifiée.",
+    "game_frame_limit_desc": "Pendant un stream, les jeux sont limités à la fréquence d'images demandée par leur appareil, pour que chaque image dessinée soit envoyée. Cela supprime les saccades dues à un jeu et un stream qui tournent à des vitesses différentes. Si RivaTuner Statistics Server (RTSS, fourni avec MSI Afterburner) fonctionne, c'est lui qui limite, à la fréquence exacte (59,94 compris) et sur toute carte graphique ; sinon, la limite de NVIDIA est utilisée, arrondie au nombre entier. Vos propres limites reviennent à la fin du stream. Si vous avez fixé vous-même une fréquence maximale pour tous les jeux dans les réglages NVIDIA, elle n'est pas modifiée.",
     "gamepad": "Type de manette vu par le PC",
     "gamepad_desc": "La Xbox 360 fonctionne avec le plus de jeux et a la vibration la plus fiable : c'est le meilleur choix si la vibration ne marche pas. La PlayStation 4 ajoute le pavé tactile et les commandes de mouvement. « Automatique » choisit PlayStation 4 pour les manettes qui en ont, et Xbox 360 pour les autres.",
     "gamepad_ds4": "PlayStation 4 (DS4)",
@@ -557,7 +568,22 @@
     "sharedpc_intro": "Continuez à utiliser ce PC pendant que quelqu'un streame depuis lui : vos écrans, votre son, votre souris et votre clavier restent à vous, seul le jeu part sur la télé. Désactivez PC partagé pour le mode confidentialité.",
     "sharedpc_more": "Comment ça marche",
     "privacy_mode": "Mode confidentialité : éteindre les écrans de ce PC pendant un stream",
-    "privacy_mode_desc": "Seul l'écran propre au stream reste allumé, pour que personne dans la pièce ne voie ce qui est joué sur le PC. Les écrans se rallument, dans leur disposition d'origine, à la fin du stream ou quand la télé se déconnecte. Indisponible en mode PC partagé, où vous utilisez les écrans. S'ils restent éteints, appuyez sur Windows + P et choisissez Étendre."
+    "privacy_mode_desc": "Seul l'écran propre au stream reste allumé, pour que personne dans la pièce ne voie ce qui est joué sur le PC. Les écrans se rallument, dans leur disposition d'origine, à la fin du stream ou quand la télé se déconnecte. Indisponible en mode PC partagé, où vous utilisez les écrans. S'ils restent éteints, appuyez sur Windows + P et choisissez Étendre.",
+    "game_vsync_off": "Désactiver la V-Sync dans les jeux pendant le stream",
+    "game_vsync_off_desc": "Comme la limite cadence les jeux, attendre l'écran n'ajoute que de la latence : cela retire jusqu'à une image. Cartes graphiques NVIDIA ; votre réglage revient à la fin du stream. Désactivez si un jeu présente du tearing sur la télé.",
+    "tab_everyday": "Au quotidien",
+    "everyday_intro": "Les réglages qu'on change le plus, au même endroit. Tout ce qui est ici se trouve aussi dans son propre onglet, avec le reste.",
+    "everyday_screen": "L'écran du stream",
+    "everyday_smooth": "Fluidité",
+    "everyday_games": "Jeux et appareils",
+    "everyday_apps": "Les jeux, et leur synchronisation",
+    "everyday_devices": "Appareils et réglages de la télé",
+    "everyday_watch": "Regarder le stream dans ce navigateur",
+    "everyday_fix": "Si quelque chose ne va pas",
+    "everyday_repair": "Réparer l'écran virtuel",
+    "everyday_restart": "Redémarrer TunaStream",
+    "everyday_logs": "Journaux envoyés par les télés",
+    "everyday_checklist": "Liste de tests"
   },
   "index": {
     "controller_hint": "Ce que les jeux voient de cette manette. La plupart des jeux PC ne font vibrer qu'une manette Xbox 360 ; changez-le dans Réglages > Entrées > Type de manette émulée.",
@@ -718,7 +744,10 @@
     "vdisplay_repair": "Réparer",
     "whatsnew_title": "Nouveautés de la version {version}",
     "whatsnew_since": "Depuis la version {version}, la dernière vue par ce navigateur :",
-    "whatsnew_ok": "Compris"
+    "whatsnew_ok": "Compris",
+    "watch": "Regarder",
+    "sharing_on": "Votre écran est partagé avec les navigateurs qui regardent, encore {minutes} minutes ({viewers} regardent en ce moment).",
+    "sharing_stop": "Arrêter le partage"
   },
   "navbar": {
     "applications": "Apps",
@@ -916,7 +945,8 @@
     "generic_moonlight_clients_desc": "Moonlight et d'autres apps compatibles fonctionnent aussi avec TunaStream."
   },
   "login": {
-    "save_password": "Se souvenir du mot de passe"
+    "save_password": "Se souvenir du mot de passe",
+    "remember_me": "Rester connecté"
   },
   "permissions": {
     "input_controller": "Entrée manette",
@@ -1107,7 +1137,8 @@
     "never": "jamais",
     "just_now": "à l'instant",
     "minutes_ago": "il y a {n} min",
-    "hours_ago": "il y a {n} h"
+    "hours_ago": "il y a {n} h",
+    "watch": "Regarder dans le navigateur"
   },
   "tvset": {
     "title": "Réglages de la télé",
@@ -1255,7 +1286,145 @@
         "title": "Nouveautés",
         "how": "Après la prochaine mise à jour, ouvrez TunaReceive et cette page.",
         "expect": "Chacun montre une fois ce qui a changé, puis plus jamais."
+      },
+      "everyday": {
+        "title": "Réglages du quotidien",
+        "how": "Ouvrez les Réglages. Ils devraient s'ouvrir sur l'onglet Au quotidien. Changez un réglage et enregistrez.",
+        "expect": "L'onglet regroupe les réglages que la plupart des gens changent, avec des liens vers les jeux, les appareils et les dépannages. Le changement est conservé après rechargement."
+      },
+      "watch": {
+        "title": "Regarder dans un navigateur",
+        "how": "Pendant que la télé streame un jeu, ouvrez la page Regarder du tableau de bord sur un portable ou un téléphone du même réseau et touchez Son activé.",
+        "expect": "Le jeu apparaît en quelques secondes avec le son, un peu en retard sur la télé. L'image et les commandes de la télé ne changent pas."
+      },
+      "watchlink": {
+        "title": "Lien pour regarder",
+        "how": "Sur la page Regarder, choisissez Partager un lien pour regarder et ouvrez le lien sur une tablette non connectée. Ouvrez le même lien sur un deuxième appareil. Le lendemain, rouvrez Regarder sur la tablette.",
+        "expect": "La tablette regarde sans mot de passe et ne peut ouvrir aucune autre page. Le deuxième appareil est prévenu que le lien a déjà servi. La tablette fonctionne encore le lendemain, et Changer le mot de passe > Jetons d'accès l'affiche comme clé qui change chaque jour ; la supprimer l'arrête."
+      },
+      "watchpassword": {
+        "title": "Mot de passe pour regarder",
+        "how": "Sur la page Regarder, créez un mot de passe pour quelqu'un. Sur une tablette non connectée, ouvrez la page Regarder et saisissez-le. Puis saisissez-en un faux cinq fois sur un autre appareil.",
+        "expect": "La tablette regarde sans lien. Le mot de passe marche encore les jours suivants. Après cinq erreurs, l'appareil doit attendre dix minutes. Supprimer le mot de passe dans Jetons d'accès arrête aussi la tablette."
+      },
+      "sharescreen": {
+        "title": "Partager mon écran",
+        "how": "Sans stream sur la télé, ouvrez Regarder sur le PC, partagez votre écran pendant 1 heure et ouvrez un lien pour regarder sur une tablette. Lancez ensuite un stream sur la télé, terminez-le, puis choisissez Arrêter le partage.",
+        "expect": "La tablette montre l'écran principal du PC avec le son ; l'accueil et la zone de notification indiquent le partage. Pendant le stream de la télé, la tablette montre son jeu, puis de nouveau l'écran du PC. Après Arrêter le partage, la tablette attend."
+      },
+      "signin": {
+        "title": "Rester connecté",
+        "how": "Déconnectez-vous puis reconnectez-vous avec Rester connecté activé. Fermez le navigateur et rouvrez le tableau de bord. Recommencez en le désactivant.",
+        "expect": "Activé, vous restez connecté après avoir fermé le navigateur ; désactivé, le mot de passe est redemandé."
+      },
+      "tokens": {
+        "title": "Jetons d'accès",
+        "how": "Dans Changer le mot de passe > Jetons d'accès, créez un jeton qui peut seulement voir ce qui est en cours et copiez-le. Supprimez-le ensuite.",
+        "expect": "Le jeton n'est affiché qu'une fois. Une fois supprimé, il cesse aussitôt de fonctionner."
+      },
+      "librarysync": {
+        "title": "Garder mes jeux synchronisés",
+        "how": "Dans Apps, activez Garder mes jeux synchronisés et choisissez Synchroniser. Supprimez ensuite un des jeux synchronisés.",
+        "expect": "Les jeux joués récemment apparaissent avec leur jaquette et le badge Synchronisé. Les jeux ajoutés à la main ne sont pas touchés, et le jeu supprimé ne revient pas."
+      },
+      "framecap": {
+        "title": "Limite d'images exacte",
+        "how": "Avec RivaTuner Statistics Server installé et le réglage de fréquence du jeu activé, streamez un jeu à 59,94 ou 119,88 FPS et regardez la limite dans RTSS. Terminez le stream.",
+        "expect": "RTSS affiche exactement la fréquence du stream pendant le stream, puis retrouve sa propre limite. Sans RTSS, la limite NVIDIA est utilisée comme avant."
+      },
+      "vsync": {
+        "title": "V-Sync coupée pendant le stream",
+        "how": "Sur un PC NVIDIA, gardez Désactiver la V-Sync dans les jeux pendant le stream activé, streamez un jeu qui utilise la V-Sync, puis terminez le stream.",
+        "expect": "Le jeu répond aussi vite que sans V-Sync pendant le stream, et le réglage NVIDIA revient comme avant ensuite."
+      },
+      "wgc": {
+        "title": "Windows.Graphics.Capture",
+        "how": "Dans Réglages > Encodage vidéo, choisissez Windows.Graphics.Capture comme méthode de capture et enregistrez. Streamez un jeu, puis faites Win+L ou ouvrez une invite UAC sur le PC, et revenez.",
+        "expect": "Le stream fonctionne, l'écran de verrouillage ou l'invite UAC s'affiche sur la télé, et le jeu revient ensuite. En cas de souci, revenez à Automatique."
       }
     }
+  },
+  "watch": {
+    "title": "Regarder",
+    "watching": "Vous regardez",
+    "picture": "Le jeu tel qu'il est streamé",
+    "live": "EN DIRECT",
+    "connecting": "Connexion au stream…",
+    "waiting": "Personne ne streame en ce moment. L'image apparaît ici dès qu'un appareil commence à jouer.",
+    "ended": "Le stream est terminé. La diffusion reprend toute seule quand quelqu'un joue.",
+    "error": "Le stream est injoignable. Nouvelle tentative…",
+    "unsupported": "Ce navigateur ne peut pas lire le stream. Utilisez une version récente de Chrome, Edge, Firefox ou Safari.",
+    "sound_on": "Son activé",
+    "sound_off": "Son coupé",
+    "fullscreen": "Plein écran",
+    "note": "Regarder uniquement : rien ici ne contrôle le jeu.",
+    "no_sound_here": "Regarder uniquement. Ce navigateur ne peut pas lire le son ; essayez Chrome ou Edge.",
+    "share": "Partager un lien pour regarder",
+    "share_name": "Lien pour regarder {when}",
+    "share_copied": "Lien copié. Il fonctionne une fois, sur un appareil, pendant un jour. Cet appareil continue ensuite avec sa propre clé, qui change chaque jour et expire après une semaine sans utilisation. Supprimez-la quand vous voulez dans Changer le mot de passe > Jetons d'accès.",
+    "share_copy_this": "Copiez ce lien :",
+    "share_failed": "Le lien n'a pas pu être créé.",
+    "watching_screen": "Vous regardez l'écran de ce PC",
+    "screen_title": "Partager mon écran",
+    "screen_desc": "Tant qu'aucune télé ne streame, les navigateurs qui regardent (avec cette page ou un lien pour regarder) voient l'écran principal de ce PC et entendent son son. Quand une télé lance un stream, ils voient son jeu à la place. Le partage s'arrête tout seul après la durée choisie.",
+    "screen_for": "Partager pendant",
+    "screen_1h": "Pendant 1 heure",
+    "screen_2h": "Pendant 2 heures",
+    "screen_4h": "Pendant 4 heures",
+    "screen_start": "Partager mon écran",
+    "screen_on": "Votre écran est partagé encore {minutes} minutes.",
+    "screen_stop": "Arrêter le partage",
+    "screen_failed": "Le partage n'a pas pu être modifié.",
+    "need_link": "Cet appareil ne peut pas encore regarder. Ouvrez un nouveau lien pour regarder envoyé par la personne qui partage, ou connectez-vous.",
+    "sign_in": "Se connecter",
+    "password_label": "Mot de passe pour regarder",
+    "password_go": "Regarder",
+    "password_wrong": "Ce mot de passe pour regarder n'est pas le bon.",
+    "passwords_title": "Mots de passe pour regarder",
+    "passwords_desc": "Un mot de passe pour regarder ne change pas. Saisi sur la page Regarder d'une tablette ou d'un téléphone, il permet à cet appareil de regarder, comme un lien pour regarder. Créez-en un par personne, pour pouvoir en supprimer un sans toucher aux autres.",
+    "passwords_name": "Pour qui",
+    "passwords_suggest": "Proposer",
+    "passwords_make": "Créer le mot de passe",
+    "passwords_made": "{name} peut maintenant regarder avec le mot de passe {password}. Il n'est plus affiché ensuite.",
+    "passwords_failed": "Le mot de passe pour regarder n'a pas pu être créé.",
+    "passwords_manage": "Supprimez mots de passe et liens dans Changer le mot de passe > Jetons d'accès",
+    "screen_which": "Quel écran",
+    "screen_monitor": "Écran {n}",
+    "screen_main": "principal"
+  },
+  "tokens": {
+    "title": "Jetons d'accès",
+    "desc": "Permettez à un script, un Stream Deck, Home Assistant ou un assistant IA de faire certaines choses sans votre mot de passe. Chaque jeton ne peut faire que ce que vous cochez, et vous pouvez le supprimer à tout moment. Pour laisser quelqu'un regarder, utilisez plutôt Partager un lien pour regarder sur la page Regarder : ces liens ne fonctionnent qu'une fois et la clé de l'appareil change chaque jour.",
+    "token": "Jeton",
+    "made": "{name} est prêt.",
+    "made_once": "Copiez-le maintenant : il ne sera plus affiché.",
+    "copy": "Copier",
+    "copy_link": "Copier le lien",
+    "watch_link": "Lien pour regarder",
+    "name": "Nom",
+    "name_placeholder": "Lien pour regarder au salon",
+    "expires": "Durée",
+    "days": "{n} jours",
+    "never": "N'expire jamais",
+    "may": "Il peut :",
+    "scope_status": "Voir ce qui est en cours et les appareils",
+    "scope_watch": "Regarder le stream",
+    "scope_messages": "Envoyer des messages et des sons aux télés",
+    "scope_sessions": "Terminer les sessions et donner plus de temps de jeu",
+    "scope_launch": "Lancer des jeux",
+    "scope_logs": "Lire le journal de TunaStream et les journaux envoyés par les télés",
+    "agent_title": "Utiliser avec un assistant IA",
+    "agent_desc": "Claude Desktop, Claude Code et les autres assistants compatibles MCP peuvent utiliser TunaStream comme outil avec ce jeton. Collez ceci dans les réglages MCP de l'assistant (pour Claude Desktop : Réglages > Développeur > Modifier la configuration), puis redémarrez l'assistant. Il ne peut faire que ce que ce jeton permet.",
+    "make": "Créer le jeton",
+    "none": "Aucun jeton pour le moment.",
+    "expires_on": "Jusqu'au {when}",
+    "used_on": "dernière utilisation {when}",
+    "unused": "jamais utilisé",
+    "remove": "Retirer",
+    "remove_confirm": "Retirer {name} ? Ce qui l'utilise cessera de fonctionner.",
+    "failed": "Le jeton n'a pas pu être créé.",
+    "kind_invite": "lien pour regarder, pas encore ouvert",
+    "kind_rotating": "clé pour regarder sur un appareil, change chaque jour",
+    "kind_password": "mot de passe pour regarder, ne change pas ; le supprimer retire aussi ses appareils"
   }
 }

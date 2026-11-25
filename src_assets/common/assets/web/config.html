@@ -40,9 +40,16 @@
       <div class="settings-content">
 
       <!-- Sections most people never need -->
-      <p class="experts-note" v-if="!['general', 'sharedpc', 'input', 'av', 'network'].includes(currentTab)">
+      <p class="experts-note" v-if="!['everyday', 'general', 'sharedpc', 'input', 'av', 'network'].includes(currentTab)">
         {{ $t('config.experts_note') }}
       </p>
+
+      <!-- Everyday: what people change most, in one place -->
+      <everyday
+        v-if="currentTab === 'everyday'"
+        :config="config"
+        :platform="platform">
+      </everyday>
 
       <!-- General Tab -->
       <general
@@ -127,6 +134,7 @@
   import { reloadWhenBack } from './restart'
   import Navbar from './Navbar.vue'
   import General from './configs/tabs/General.vue'
+  import Everyday from './configs/tabs/Everyday.vue'
   import Inputs from './configs/tabs/Inputs.vue'
   import Network from './configs/tabs/Network.vue'
   import SharedPc from './configs/tabs/SharedPc.vue'
@@ -141,6 +149,7 @@
   const app = createApp({
     components: {
       Navbar,
+      Everyday,
       General,
       Inputs,
       Network,
@@ -158,12 +167,18 @@
         restarted: false,
         restartSlow: false,
         config: null,
-        currentTab: "general",
+        currentTab: "everyday",
         vdisplayStatus: "1",
         global_prep_cmd: [],
         global_state_cmd: [],
         server_cmd: [],
         tabs: [ // TODO: Move the options to each Component instead, encapsulate.
+          {
+            id: "everyday",
+            name: "Everyday",
+            // Its settings belong to the other tabs, which give their defaults
+            options: {},
+          },
           {
             id: "general",
             name: "General",
@@ -252,6 +267,7 @@
               "minimum_fps_target": 0,
               "isolated_virtual_display_option": "disabled",
               "game_frame_limit": "enabled",
+              "game_vsync_off": "enabled",
               "virtual_display_only": "enabled",
               "virtual_display_primary": "enabled",
             },

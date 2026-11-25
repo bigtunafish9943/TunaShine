@@ -11,6 +11,7 @@
 #include <filesystem>
 #include <format>
 #include <fstream>
+#include <map>
 #include <mutex>
 #include <set>
 #include <sstream>
@@ -18,6 +19,7 @@
 #include <thread>
 #include <numeric>
 #include <algorithm>
+#include <condition_variable>
 #include <cctype>
 
 // lib includes
@@ -31,6 +33,8 @@
 // local includes
 #include "config.h"
 #include "confighttp.h"
+#include "library_sync.h"
+#include "watch.h"
 #include "crypto.h"
 #include "display_device.h"
 #include "file_handler.h"
@@ -179,6 +183,206 @@ namespace confighttp {
   }  // namespace web_sessions
 
   /**
+   * Access tokens for scripts and share links: each allows only the scopes picked for it, is
+   * shown once, and is kept only as a salted hash in api_tokens.json.
+   */
+  namespace api_tokens {
+    struct token_t {
+      std::string id;
+      std::string name;
+      std::string hash;
+      std::vector<std::string> scopes;
+      std::int64_t created = 0;
+      std::int64_t expires = 0;  // 0: never
+      std::int64_t last_used = 0;
+      // Watch links: the link is an invite that works once, for a day; the device that opens it
+      // gets its own key, which changes every day while it's used
+      bool invite = false;
+      bool rotating = false;
+      // A watch password: typed on the Watch page, it gives that device a watch key. It doesn't
+      // change and doesn't run out; removing it also removes the keys it gave.
+      bool password = false;
+      std::string parent;  // the watch password that gave this key
+      std::string prev_hash;  // the key before the last change, for a few minutes
+      std::int64_t prev_until = 0;
+      std::int64_t rotated = 0;
+    };
+
+    constexpr std::int64_t ROTATE_EVERY = 86400;  // a watch key changes daily
+    constexpr std::int64_t ROTATING_LIFETIME = 7 * 86400;  // and stops working after a week unused
+    constexpr std::int64_t ROTATE_GRACE = 600;
+
+    std::mutex lock;
+    std::vector<token_t> tokens;
+    bool loaded = false;
+
+    const std::vector<std::string> SCOPES {"status", "watch", "messages", "sessions", "launch", "logs"};
+
+    std::filesystem::path file() {
+      return platf::appdata() / "api_tokens.json";
+    }
+
+    std::int64_t now_s() {
+      return std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    }
+
+    std::string hash_of(const std::string &token) {
+      return util::hex(crypto::hash(token + config::tunastream.salt)).to_string();
+    }
+
+    // With the lock held
+    void save() {
+      nlohmann::json list = nlohmann::json::array();
+      for (const auto &t : tokens) {
+        list.push_back({{"id", t.id}, {"name", t.name}, {"hash", t.hash}, {"scopes", t.scopes}, {"created", t.created}, {"expires", t.expires}, {"lastUsed", t.last_used}, {"invite", t.invite}, {"rotating", t.rotating}, {"prevHash", t.prev_hash}, {"prevUntil", t.prev_until}, {"rotated", t.rotated}, {"password", t.password}, {"parent", t.parent}});
+      }
+      std::error_code ec;
+      const auto path = file();
+      auto partial = path;
+      partial += ".part";
+      {
+        std::ofstream out {partial, std::ios::trunc};
+        out << list.dump();
+        if (!out) {
+          return;
+        }
+      }
+      std::filesystem::rename(partial, path, ec);
+    }
+
+    // With the lock held
+    void prepare() {
+      if (loaded) {
+        return;
+      }
+      loaded = true;
+      std::ifstream in {file()};
+      if (!in) {
+        return;
+      }
+      try {
+        for (const auto &j : nlohmann::json::parse(in)) {
+          token_t t;
+          t.id = j.value("id", "");
+          t.name = j.value("name", "");
+          t.hash = j.value("hash", "");
+          t.scopes = j.value("scopes", std::vector<std::string> {});
+          t.created = j.value("created", (std::int64_t) 0);
+          t.expires = j.value("expires", (std::int64_t) 0);
+          t.last_used = j.value("lastUsed", (std::int64_t) 0);
+          t.invite = j.value("invite", false);
+          t.rotating = j.value("rotating", false);
+          t.prev_hash = j.value("prevHash", "");
+          t.prev_until = j.value("prevUntil", (std::int64_t) 0);
+          t.rotated = j.value("rotated", (std::int64_t) 0);
+          t.password = j.value("password", false);
+          t.parent = j.value("parent", "");
+          if (!t.id.empty() && !t.hash.empty()) {
+            tokens.push_back(std::move(t));
+          }
+        }
+      } catch (const std::exception &) {
+        tokens.clear();
+      }
+    }
+
+    /// The scope a request needs, or empty when no token may make it
+    std::string scope_of(const std::string &method, const std::string &path) {
+      if (method == "GET") {
+        if (path == "/api/watch/stream" || path == "/watch" || path == "/watch/") {
+          return "watch";
+        }
+        if (path == "/api/tokens/self") {
+          return "any";  // what a token may do, for agents (tunastream.exe --mcp)
+        }
+        if (path == "/api/logs" || path == "/api/receiver-logs" || path == "/api/receiver-log") {
+          return "logs";
+        }
+        for (auto p : {"/api/status", "/api/clients/list", "/api/apps", "/api/recap", "/api/play-limits", "/api/captures", "/api/receiver-settings", "/api/sounds"}) {
+          if (path == p) {
+            return "status";
+          }
+        }
+      } else if (method == "POST") {
+        if (path == "/api/watch/redeem") {
+          return "redeem";  // only an unused watch link
+        }
+        if (path == "/api/watch/rotate") {
+          return "rotate";  // only a device's watch key
+        }
+        if (path == "/api/tv-message" || path == "/api/sounds/play") {
+          return "messages";
+        }
+        if (path == "/api/apps/close" || path == "/api/play-limits/extend") {
+          return "sessions";
+        }
+        if (path == "/api/apps/launch") {
+          return "launch";
+        }
+      }
+      return {};
+    }
+
+    /// Whether this token may make this request. A watch token may also read the game's name.
+    bool allows(const std::string &token, const std::string &method, const std::string &path) {
+      auto scope = scope_of(method, path);
+      if (scope.empty() || token.size() < 20) {
+        return false;
+      }
+      const auto hash = hash_of(token);
+      std::lock_guard lg {lock};
+      prepare();
+      const auto now = now_s();
+      for (auto &t : tokens) {
+        const bool previous = !t.prev_hash.empty() && t.prev_hash == hash && now < t.prev_until;
+        if (t.hash != hash && !previous) {
+          continue;
+        }
+        if (t.expires && t.expires < now) {
+          return false;
+        }
+        // A watch password is only ever typed into the Watch page, never sent as a token
+        if (t.password) {
+          return false;
+        }
+        // A watch link only swaps itself for a key; only a key changes itself
+        if (t.invite || scope == "redeem") {
+          return t.invite && scope == "redeem";
+        }
+        if (scope == "rotate") {
+          return t.rotating && !previous;
+        }
+        bool ok = scope == "any" || std::find(t.scopes.begin(), t.scopes.end(), scope) != t.scopes.end();
+        if (!ok && scope == "status" && path == "/api/status") {
+          ok = std::find(t.scopes.begin(), t.scopes.end(), "watch") != t.scopes.end();
+        }
+        if (ok && now - t.last_used > 60) {
+          t.last_used = now;
+          save();
+        }
+        return ok;
+      }
+      return false;
+    }
+
+    /// The token a request carries: "Authorization: Bearer ...", or ?token= on a GET (share links)
+    std::string from_request(const req_https_t &request) {
+      for (auto &[name, value] : request->header) {
+        if (boost::iequals(name, "authorization") && boost::istarts_with(value, "Bearer ")) {
+          return value.substr(7);
+        }
+      }
+      if (request->method == "GET") {
+        auto args = request->parse_query_string();
+        if (auto it = args.find("token"); it != args.end()) {
+          return it->second;
+        }
+      }
+      return {};
+    }
+  }  // namespace api_tokens
+
+  /**
    * @brief Log the request details.
    * @param request The HTTP request object.
    */
@@ -186,11 +390,12 @@ namespace confighttp {
     BOOST_LOG(debug) << "METHOD :: "sv << request->method;
     BOOST_LOG(debug) << "DESTINATION :: "sv << request->path;
     for (auto &[name, val] : request->header) {
-      BOOST_LOG(debug) << name << " -- " << (name == "Authorization" ? "CREDENTIALS REDACTED" : val);
+      const bool secret = boost::iequals(name, "authorization") || boost::iequals(name, "cookie");
+      BOOST_LOG(debug) << name << " -- " << (secret ? "CREDENTIALS REDACTED" : val);
     }
     BOOST_LOG(debug) << " [--] "sv;
     for (auto &[name, val] : request->parse_query_string()) {
-      BOOST_LOG(debug) << name << " -- " << val;
+      BOOST_LOG(debug) << name << " -- " << (name == "token" ? "REDACTED" : val);
     }
     BOOST_LOG(debug) << " [--] "sv;
   }
@@ -308,6 +513,14 @@ namespace confighttp {
         send_unauthorized(response, request);
       }
     });
+    // A script or a share link with an access token: only what the token allows
+    if (auto token = api_tokens::from_request(request); !token.empty()) {
+      if (!api_tokens::allows(token, request->method, request->path)) {
+        return false;
+      }
+      fg.disable();
+      return true;
+    }
     auto cookies = request->header.find("cookie");
     if (cookies == request->header.end())
       return false;
@@ -706,6 +919,608 @@ namespace confighttp {
     headers.emplace("X-Frame-Options", "DENY");
     headers.emplace("Content-Security-Policy", "frame-ancestors 'none';");
     response->write(content, headers);
+  }
+
+  /**
+   * @brief Keep my games in sync: GET the settings and last sync; POST {"enabled", "days",
+   *        "forgetRemoved", "now"} to change them or sync now.
+   */
+  void getLibrarySync(resp_https_t response, req_https_t request) {
+    if (!authenticate(response, request)) {
+      return;
+    }
+    auto out = library_sync::status();
+    out["status"] = true;
+    send_response(response, out);
+  }
+
+  void postLibrarySync(resp_https_t response, req_https_t request) {
+    if (!validateContentType(response, request, "application/json") || !authenticate(response, request)) {
+      return;
+    }
+    try {
+      std::stringstream ss;
+      ss << request->content.rdbuf();
+      auto input = nlohmann::json::parse(ss.str());
+      if (input.value("now", false)) {
+        library_sync::run_soon();
+      } else {
+        library_sync::configure(input);
+      }
+      auto out = library_sync::status();
+      out["status"] = true;
+      send_response(response, out);
+    } catch (std::exception &e) {
+      bad_request(response, request, e.what());
+    }
+  }
+
+  /**
+   * @brief Signed in with the password (not a token): token management never accepts a token.
+   */
+  bool authenticate_owner(resp_https_t response, req_https_t request) {
+    if (!api_tokens::from_request(request).empty()) {
+      send_unauthorized(response, request);
+      return false;
+    }
+    return authenticate(response, request);
+  }
+
+  /**
+   * @brief Access tokens: {"tokens": [{"id", "name", "scopes", "created", "expires", "lastUsed"}], "scopes": [...]}.
+   */
+  void getApiTokens(resp_https_t response, req_https_t request) {
+    if (!authenticate_owner(response, request)) {
+      return;
+    }
+    nlohmann::json list = nlohmann::json::array();
+    {
+      std::lock_guard lg {api_tokens::lock};
+      api_tokens::prepare();
+      for (const auto &t : api_tokens::tokens) {
+        if (t.expires && t.expires < api_tokens::now_s() && (t.invite || t.rotating)) {
+          continue;  // watch links and keys that ran out
+        }
+        list.push_back({{"id", t.id}, {"name", t.name}, {"scopes", t.scopes}, {"created", t.created}, {"expires", t.expires}, {"lastUsed", t.last_used}, {"invite", t.invite}, {"rotating", t.rotating}, {"password", t.password}, {"parent", t.parent}});
+      }
+    }
+    nlohmann::json out;
+    out["status"] = true;
+    out["tokens"] = list;
+    out["scopes"] = api_tokens::SCOPES;
+#ifdef _WIN32
+    // For connecting an AI assistant: "tunastream.exe --mcp" with a token
+    out["exePath"] = (platf::appdata().parent_path() / "tunastream.exe").string();
+#endif
+    send_response(response, out);
+  }
+
+  /**
+   * @brief GET /api/tokens/self: what the token this request carries may do, {"name", "scopes",
+   *        "expires"}. Signed in with the password, everything.
+   */
+  void getApiTokenSelf(resp_https_t response, req_https_t request) {
+    if (!authenticate(response, request)) {
+      return;
+    }
+    nlohmann::json out;
+    out["status"] = true;
+    const auto token = api_tokens::from_request(request);
+    if (token.empty()) {
+      out["name"] = "Signed in with the password";
+      out["scopes"] = api_tokens::SCOPES;
+      out["expires"] = 0;
+      send_response(response, out);
+      return;
+    }
+    const auto hash = api_tokens::hash_of(token);
+    std::lock_guard lg {api_tokens::lock};
+    api_tokens::prepare();
+    for (const auto &t : api_tokens::tokens) {
+      if (t.hash == hash) {
+        out["name"] = t.name;
+        out["scopes"] = t.scopes;
+        out["expires"] = t.expires;
+        break;
+      }
+    }
+    send_response(response, out);
+  }
+
+  /**
+   * @brief Make a token: {"name", "scopes": [...], "days": 0 for never}. Answers the token, once.
+   */
+  void postApiToken(resp_https_t response, req_https_t request) {
+    if (!validateContentType(response, request, "application/json") || !authenticate_owner(response, request)) {
+      return;
+    }
+    try {
+      std::stringstream ss;
+      ss << request->content.rdbuf();
+      auto input = nlohmann::json::parse(ss.str());
+      api_tokens::token_t t;
+      t.name = input.value("name", std::string {});
+      if (t.name.size() > 60) {
+        t.name.resize(60);
+      }
+      for (const auto &s : input.value("scopes", std::vector<std::string> {})) {
+        if (std::find(api_tokens::SCOPES.begin(), api_tokens::SCOPES.end(), s) != api_tokens::SCOPES.end() &&
+            std::find(t.scopes.begin(), t.scopes.end(), s) == t.scopes.end()) {
+          t.scopes.push_back(s);
+        }
+      }
+      if (t.name.empty() || t.scopes.empty()) {
+        bad_request(response, request, "Give the token a name and at least one thing it may do.");
+        return;
+      }
+      const int days = std::clamp(input.value("days", 0), 0, 3650);
+      const std::string token = "tst_" + crypto::rand_alphabet(40);
+      t.id = crypto::rand_alphabet(12);
+      t.hash = api_tokens::hash_of(token);
+      t.created = api_tokens::now_s();
+      t.expires = days ? t.created + days * 86400LL : 0;
+      {
+        std::lock_guard lg {api_tokens::lock};
+        api_tokens::prepare();
+        if (api_tokens::tokens.size() >= 50) {
+          bad_request(response, request, "There are 50 tokens already. Remove some first.");
+          return;
+        }
+        api_tokens::tokens.push_back(t);
+        api_tokens::save();
+      }
+      BOOST_LOG(info) << "Access token made: "sv << t.name;
+      nlohmann::json out;
+      out["status"] = true;
+      out["id"] = t.id;
+      out["token"] = token;
+      send_response(response, out);
+    } catch (std::exception &e) {
+      bad_request(response, request, e.what());
+    }
+  }
+
+  /**
+   * @brief Remove a token: {"id"}.
+   */
+  void postApiTokenDelete(resp_https_t response, req_https_t request) {
+    if (!validateContentType(response, request, "application/json") || !authenticate_owner(response, request)) {
+      return;
+    }
+    try {
+      std::stringstream ss;
+      ss << request->content.rdbuf();
+      auto id = nlohmann::json::parse(ss.str()).value("id", std::string {});
+      {
+        std::lock_guard lg {api_tokens::lock};
+        api_tokens::prepare();
+        std::erase_if(api_tokens::tokens, [&](const api_tokens::token_t &t) {
+          return t.id == id || (!id.empty() && t.parent == id);  // a watch password takes its devices' keys along
+        });
+        api_tokens::save();
+      }
+      nlohmann::json out;
+      out["status"] = true;
+      send_response(response, out);
+    } catch (std::exception &e) {
+      bad_request(response, request, e.what());
+    }
+  }
+
+  namespace watch_keys {
+    std::string read_body(req_https_t request) {
+      std::stringstream ss;
+      ss << request->content.rdbuf();
+      return ss.str();
+    }
+
+    /// Give this token a new secret; the old one keeps working for a few minutes. With the lock held.
+    std::string renew_locked(api_tokens::token_t &t, bool keep_previous) {
+      const std::string fresh = "tst_" + crypto::rand_alphabet(40);
+      const auto now = api_tokens::now_s();
+      if (keep_previous) {
+        t.prev_hash = t.hash;
+        t.prev_until = now + api_tokens::ROTATE_GRACE;
+      } else {
+        t.prev_hash.clear();
+        t.prev_until = 0;
+      }
+      t.hash = api_tokens::hash_of(fresh);
+      t.rotated = now;
+      t.expires = now + api_tokens::ROTATING_LIFETIME;
+      t.last_used = now;
+      api_tokens::save();
+      return fresh;
+    }
+  }  // namespace watch_keys
+
+  /**
+   * @brief POST /api/watch/invite {"name"}: a watch link to share. It works once, within a day:
+   *        the device that opens it gets its own watch key, which changes every day.
+   */
+  void postWatchInvite(resp_https_t response, req_https_t request) {
+    if (!validateContentType(response, request, "application/json") || !authenticate_owner(response, request)) {
+      return;
+    }
+    try {
+      auto input = nlohmann::json::parse(watch_keys::read_body(request));
+      api_tokens::token_t t;
+      t.name = input.value("name", std::string {"Watch link"});
+      if (t.name.size() > 60) {
+        t.name.resize(60);
+      }
+      t.scopes = {"watch"};
+      t.invite = true;
+      const std::string invite = "tst_" + crypto::rand_alphabet(40);
+      t.id = crypto::rand_alphabet(12);
+      t.hash = api_tokens::hash_of(invite);
+      t.created = api_tokens::now_s();
+      t.expires = t.created + 86400;
+      {
+        std::lock_guard lg {api_tokens::lock};
+        api_tokens::prepare();
+        // Old links nobody opened go first
+        std::erase_if(api_tokens::tokens, [&](const api_tokens::token_t &x) {
+          return x.expires && x.expires < t.created;
+        });
+        if (api_tokens::tokens.size() >= 50) {
+          bad_request(response, request, "There are 50 tokens and watch links already. Remove some under Change Password > Access tokens first.");
+          return;
+        }
+        api_tokens::tokens.push_back(t);
+        api_tokens::save();
+      }
+      BOOST_LOG(info) << "Watch link made: "sv << t.name;
+      nlohmann::json out;
+      out["status"] = true;
+      out["invite"] = invite;
+      send_response(response, out);
+    } catch (std::exception &e) {
+      bad_request(response, request, e.what());
+    }
+  }
+
+  /**
+   * @brief POST /api/watch/redeem with a watch link (Authorization: Bearer): the link stops
+   *        working, and this device gets its own watch key, {"key", "rotateAfter"}.
+   */
+  void postWatchRedeem(resp_https_t response, req_https_t request) {
+    if (!authenticate(response, request)) {
+      return;
+    }
+    const auto hash = api_tokens::hash_of(api_tokens::from_request(request));
+    std::lock_guard lg {api_tokens::lock};
+    api_tokens::prepare();
+    for (auto &t : api_tokens::tokens) {
+      if (t.hash == hash && t.invite) {
+        t.invite = false;
+        t.rotating = true;
+        const auto key = watch_keys::renew_locked(t, false);
+        BOOST_LOG(info) << "Watch link opened on a device: "sv << t.name;
+        nlohmann::json out;
+        out["status"] = true;
+        out["key"] = key;
+        out["rotateAfter"] = api_tokens::ROTATE_EVERY;
+        send_response(response, out);
+        return;
+      }
+    }
+    bad_request(response, request, "This watch link was already used or has expired.");
+  }
+
+  namespace watch_passwords {
+    std::mutex lock;
+    std::map<std::string, std::pair<int, std::int64_t>> failures;  // address: count, since
+
+    /// Too many wrong watch passwords from this address lately: 5 in 10 minutes
+    bool blocked(const std::string &address) {
+      std::lock_guard lg {lock};
+      auto it = failures.find(address);
+      if (it == failures.end()) {
+        return false;
+      }
+      if (api_tokens::now_s() - it->second.second > 600) {
+        failures.erase(it);
+        return false;
+      }
+      return it->second.first >= 5;
+    }
+
+    void failed(const std::string &address) {
+      std::lock_guard lg {lock};
+      auto &f = failures[address];
+      if (f.first == 0 || api_tokens::now_s() - f.second > 600) {
+        f = {0, api_tokens::now_s()};
+      }
+      ++f.first;
+    }
+  }  // namespace watch_passwords
+
+  /**
+   * @brief POST /api/watch/passwords {"name", "password"}: a watch password that doesn't change.
+   *        Typed on the Watch page, it lets that device watch (with its own daily-changing key).
+   */
+  void postWatchPasswordMake(resp_https_t response, req_https_t request) {
+    if (!validateContentType(response, request, "application/json") || !authenticate_owner(response, request)) {
+      return;
+    }
+    try {
+      auto input = nlohmann::json::parse(watch_keys::read_body(request));
+      api_tokens::token_t t;
+      t.name = input.value("name", std::string {});
+      const auto password = input.value("password", std::string {});
+      if (t.name.empty() || t.name.size() > 60) {
+        bad_request(response, request, "Give the watch password a name, up to 60 characters.");
+        return;
+      }
+      if (password.size() < 8 || password.size() > 128) {
+        bad_request(response, request, "A watch password needs at least 8 characters.");
+        return;
+      }
+      t.scopes = {"watch"};
+      t.password = true;
+      t.id = crypto::rand_alphabet(12);
+      t.hash = api_tokens::hash_of("watch-password:" + password);
+      t.created = api_tokens::now_s();
+      {
+        std::lock_guard lg {api_tokens::lock};
+        api_tokens::prepare();
+        for (const auto &x : api_tokens::tokens) {
+          if (x.password && x.hash == t.hash) {
+            bad_request(response, request, "That watch password is already in use. Choose another.");
+            return;
+          }
+        }
+        if (api_tokens::tokens.size() >= 50) {
+          bad_request(response, request, "There are 50 tokens and watch passwords already. Remove some first.");
+          return;
+        }
+        api_tokens::tokens.push_back(t);
+        api_tokens::save();
+      }
+      BOOST_LOG(info) << "Watch password made: "sv << t.name;
+      nlohmann::json out;
+      out["status"] = true;
+      out["id"] = t.id;
+      send_response(response, out);
+    } catch (std::exception &e) {
+      bad_request(response, request, e.what());
+    }
+  }
+
+  /**
+   * @brief POST /api/watch/password {"password"}: from the Watch page on a device, no sign-in.
+   *        A right watch password gives this device its own watch key, {"key", "rotateAfter"}.
+   *        Five wrong tries from one address wait ten minutes.
+   */
+  void postWatchPasswordUse(resp_https_t response, req_https_t request) {
+    if (!checkIPOrigin(response, request) || !validateContentType(response, request, "application/json")) {
+      return;
+    }
+    const auto address = net::addr_to_normalized_string(request->remote_endpoint().address());
+    if (watch_passwords::blocked(address)) {
+      bad_request(response, request, "Too many wrong tries. Wait ten minutes, then try again.");
+      return;
+    }
+    try {
+      auto input = nlohmann::json::parse(watch_keys::read_body(request));
+      const auto hash = api_tokens::hash_of("watch-password:" + input.value("password", std::string {}));
+      std::lock_guard lg {api_tokens::lock};
+      api_tokens::prepare();
+      std::string parent_id;
+      std::string parent_name;
+      for (auto &t : api_tokens::tokens) {
+        if (t.password && t.hash == hash) {
+          parent_id = t.id;
+          parent_name = t.name;
+          t.last_used = api_tokens::now_s();
+        }
+      }
+      if (parent_id.empty()) {
+        watch_passwords::failed(address);
+        bad_request(response, request, "That watch password isn't right.");
+        return;
+      }
+      // Each device keeps at most a few keys from one password: the oldest go first
+      std::vector<std::size_t> mine;
+      for (std::size_t i = 0; i < api_tokens::tokens.size(); ++i) {
+        if (api_tokens::tokens[i].parent == parent_id) {
+          mine.push_back(i);
+        }
+      }
+      if (mine.size() >= 10) {
+        api_tokens::tokens.erase(api_tokens::tokens.begin() + (std::ptrdiff_t) mine.front());
+      }
+      api_tokens::token_t key;
+      key.id = crypto::rand_alphabet(12);
+      key.name = parent_name;
+      key.scopes = {"watch"};
+      key.rotating = true;
+      key.parent = parent_id;
+      key.created = api_tokens::now_s();
+      api_tokens::tokens.push_back(key);
+      const auto fresh = watch_keys::renew_locked(api_tokens::tokens.back(), false);
+      BOOST_LOG(info) << "Watch password used on a device: "sv << parent_name;
+      nlohmann::json out;
+      out["status"] = true;
+      out["key"] = fresh;
+      out["rotateAfter"] = api_tokens::ROTATE_EVERY;
+      send_response(response, out);
+    } catch (std::exception &e) {
+      bad_request(response, request, e.what());
+    }
+  }
+
+  /**
+   * @brief POST /api/watch/rotate with a device's watch key: a new key for tomorrow, {"key",
+   *        "rotateAfter"}. The old key stops working a few minutes later.
+   */
+  void postWatchRotate(resp_https_t response, req_https_t request) {
+    if (!authenticate(response, request)) {
+      return;
+    }
+    const auto hash = api_tokens::hash_of(api_tokens::from_request(request));
+    std::lock_guard lg {api_tokens::lock};
+    api_tokens::prepare();
+    for (auto &t : api_tokens::tokens) {
+      if (t.hash == hash && t.rotating) {
+        nlohmann::json out;
+        out["status"] = true;
+        out["key"] = watch_keys::renew_locked(t, true);
+        out["rotateAfter"] = api_tokens::ROTATE_EVERY;
+        send_response(response, out);
+        return;
+      }
+    }
+    bad_request(response, request, "This device's watch key isn't valid any more. Ask for a new watch link.");
+  }
+
+  /**
+   * @brief The Watch page: the stream in a browser, to watch only.
+   */
+  void getWatchPage(resp_https_t response, req_https_t request) {
+    // Open to the network like the sign-in page: it holds nothing, and what it shows needs the
+    // password, a watch link or a device's watch key
+    if (!checkIPOrigin(response, request)) {
+      return;
+    }
+
+    print_req(request);
+
+    std::string content = file_handler::read_file(WEB_DIR "watch.html");
+    SimpleWeb::CaseInsensitiveMultimap headers;
+    headers.emplace("Content-Type", "text/html; charset=utf-8");
+    headers.emplace("X-Frame-Options", "DENY");
+    headers.emplace("Content-Security-Policy", "frame-ancestors 'none';");
+    response->write(content, headers);
+  }
+
+  /**
+   * @brief GET /api/watch/share: Share my screen's state, {"on", "minutesLeft", "showingScreen", "viewers"}.
+   */
+  void getWatchShare(resp_https_t response, req_https_t request) {
+    if (!authenticate_owner(response, request)) {
+      return;
+    }
+    auto out = watch::sharing();
+    out["monitors"] = watch::monitors();
+    out["status"] = true;
+    send_response(response, out);
+  }
+
+  /**
+   * @brief POST /api/watch/share: {"on": true, "minutes": 120} shows this PC's own screen to
+   *        browsers watching while nobody streams; {"on": false} stops. Only with the password.
+   */
+  void postWatchShare(resp_https_t response, req_https_t request) {
+    if (!validateContentType(response, request, "application/json") || !authenticate_owner(response, request)) {
+      return;
+    }
+    try {
+      std::stringstream ss;
+      ss << request->content.rdbuf();
+      auto input = nlohmann::json::parse(ss.str());
+      const bool on = input.value("on", false);
+      if (on && !video::parallel_encoding()) {
+        bad_request(response, request, "This PC's video encoder can't make a second picture at the same time. Sharing needs a graphics card encoder.");
+        return;
+      }
+      watch::share_screen(on, input.value("minutes", 120), input.value("monitor", std::string {}));
+      auto out = watch::sharing();
+      out["status"] = true;
+      send_response(response, out);
+    } catch (std::exception &e) {
+      bad_request(response, request, e.what());
+    }
+  }
+
+  /**
+   * @brief GET /api/watch/stream: the stream for the Watch page, as one long response of short
+   *        messages (see watch.cpp). Ends when the stream does, or the browser goes away.
+   */
+  void getWatchStream(resp_https_t response, req_https_t request) {
+    if (!authenticate(response, request)) {
+      return;
+    }
+
+    std::string error;
+    auto viewer = watch::join(error);
+    if (!viewer) {
+      nlohmann::json out;
+      out["status"] = false;
+      out["error"] = error;
+      SimpleWeb::CaseInsensitiveMultimap headers;
+      headers.emplace("Content-Type", "application/json");
+      response->write(SimpleWeb::StatusCode::client_error_conflict, out.dump(), headers);
+      return;
+    }
+
+    response->close_connection_after_response = true;
+    SimpleWeb::CaseInsensitiveMultimap headers;
+    headers.emplace("Content-Type", "application/octet-stream");
+    headers.emplace("Cache-Control", "no-store");
+    headers.emplace("X-Content-Type-Options", "nosniff");
+    response->write(SimpleWeb::StatusCode::success_ok, headers);
+
+    // Sending happens on a thread of its own, one write at a time, so a slow browser only ever
+    // holds one write: what it can't take is skipped ahead to the next key frame in watch.cpp.
+    std::thread([response, viewer]() {
+      struct flow_t {
+        std::mutex lock;
+        std::condition_variable cv;
+        bool in_flight = false;
+        bool failed = false;
+      };
+      auto flow = std::make_shared<flow_t>();
+      auto done = util::fail_guard([&]() {
+        watch::leave(viewer);
+      });
+
+      auto send = [&](std::string &&bytes) -> bool {
+        {
+          std::unique_lock lk {flow->lock};
+          flow->cv.wait_for(lk, 5s, [&]() {
+            return !flow->in_flight || flow->failed;
+          });
+          if (flow->failed || flow->in_flight) {
+            return false;
+          }
+          flow->in_flight = true;
+        }
+        response->write(bytes.data(), (std::streamsize) bytes.size());
+        response->send([flow](const SimpleWeb::error_code &ec) {
+          std::lock_guard lk {flow->lock};
+          flow->in_flight = false;
+          if (ec) {
+            flow->failed = true;
+          }
+          flow->cv.notify_all();
+        });
+        return true;
+      };
+
+      if (!send(std::string {})) {
+        return;
+      }
+      std::string message;
+      while (watch::next(*viewer, message, 1s)) {
+        if (message.empty()) {
+          continue;
+        }
+        // Whatever else is ready goes in the same write
+        std::string batch = std::move(message);
+        while (batch.size() < 256 * 1024 && watch::next(*viewer, message, 0ms) && !message.empty()) {
+          batch += message;
+        }
+        if (!send(std::move(batch))) {
+          break;
+        }
+      }
+      std::unique_lock lk {flow->lock};
+      flow->cv.wait_for(lk, 2s, [&]() {
+        return !flow->in_flight;
+      });
+    }).detach();
   }
 
   namespace checklist {
@@ -1488,6 +2303,9 @@ namespace confighttp {
     nlohmann::json output_tree;
     output_tree["status"] = true;
     output_tree["app"] = proc::proc.get_last_run_app_name();
+    // Browsers watching the stream from the Watch page
+    output_tree["watchers"] = watch::viewers();
+    output_tree["sharingScreen"] = watch::sharing();
     output_tree["sessions"] = rtsp_stream::session_count();
     output_tree["version"] = PROJECT_VERSION;
     nlohmann::json controllers = nlohmann::json::array();
@@ -2780,8 +3598,10 @@ namespace confighttp {
         return;
       std::string sessionCookieRaw = crypto::rand_alphabet(64);
       web_sessions::add(util::hex(crypto::hash(sessionCookieRaw + config::tunastream.salt)).to_string());
+      // Keep me signed in: 15 days. Otherwise until the browser closes.
+      const bool remember = input_tree.value("remember", true);
       const SimpleWeb::CaseInsensitiveMultimap headers {
-        { "Set-Cookie", "auth=" + sessionCookieRaw + "; Secure; SameSite=Strict; Max-Age=1296000; Path=/" }
+        { "Set-Cookie", "auth=" + sessionCookieRaw + "; Secure; SameSite=Strict; " + (remember ? "Max-Age=1296000; "s : ""s) + "HttpOnly; Path=/" }
       };
       response->write(headers);
       fg.disable();
@@ -2886,6 +3706,21 @@ namespace confighttp {
     server.resource["^/live.webmanifest$"]["GET"] = getLiveManifest;
     server.resource["^/live/?$"]["GET"] = getLivePage;
     server.resource["^/checklist/?$"]["GET"] = getChecklistPage;
+    server.resource["^/watch/?$"]["GET"] = getWatchPage;
+    server.resource["^/api/tokens$"]["GET"] = getApiTokens;
+    server.resource["^/api/tokens/self$"]["GET"] = getApiTokenSelf;
+    server.resource["^/api/library-sync$"]["GET"] = getLibrarySync;
+    server.resource["^/api/library-sync$"]["POST"] = postLibrarySync;
+    server.resource["^/api/tokens$"]["POST"] = postApiToken;
+    server.resource["^/api/tokens/delete$"]["POST"] = postApiTokenDelete;
+    server.resource["^/api/watch/stream$"]["GET"] = getWatchStream;
+    server.resource["^/api/watch/share$"]["GET"] = getWatchShare;
+    server.resource["^/api/watch/share$"]["POST"] = postWatchShare;
+    server.resource["^/api/watch/invite$"]["POST"] = postWatchInvite;
+    server.resource["^/api/watch/redeem$"]["POST"] = postWatchRedeem;
+    server.resource["^/api/watch/rotate$"]["POST"] = postWatchRotate;
+    server.resource["^/api/watch/passwords$"]["POST"] = postWatchPasswordMake;
+    server.resource["^/api/watch/password$"]["POST"] = postWatchPasswordUse;
     server.resource["^/api/checklist$"]["GET"] = getChecklist;
     server.resource["^/api/checklist$"]["POST"] = postChecklist;
     server.resource["^/api/cover$"]["GET"] = getCover;

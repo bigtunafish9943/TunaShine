@@ -147,7 +147,17 @@
     "virtual_display": "Immer einen virtuellen Bildschirm erstellen",
     "virtual_display_desc": "Erstellt beim Start dieser App immer einen virtuellen Bildschirm, egal was das Gerät anfragt. Der SudoVDA-Treiber muss installiert und aktiviert sein.",
     "virtual_display_primary": "Virtuellen Bildschirm als Hauptbildschirm erzwingen",
-    "virtual_display_primary_desc": "Macht den virtuellen Bildschirm beim Start der App automatisch zum Hauptbildschirm. Wenn ein Gerät einen virtuellen Bildschirm anfragt, wird er immer zum Hauptbildschirm. (Am besten eingeschaltet lassen) [Unter Windows 11 24H2 defekt]"
+    "virtual_display_primary_desc": "Macht den virtuellen Bildschirm beim Start der App automatisch zum Hauptbildschirm. Wenn ein Gerät einen virtuellen Bildschirm anfragt, wird er immer zum Hauptbildschirm. (Am besten eingeschaltet lassen) [Unter Windows 11 24H2 defekt]",
+    "sync_title": "Meine Spiele synchron halten",
+    "sync_days": "Kürzlich heißt in den letzten",
+    "sync_now": "Jetzt synchronisieren",
+    "sync_desc": "Fügt Steam-Spiele hinzu, die du kürzlich gespielt hast, und Spiele, die neu über Epic, GOG, EA, Ubisoft, Amazon oder den Microsoft Store installiert wurden (diese Launcher speichern keine Spielzeiten), mit ihren Covern. Sie werden wieder entfernt, wenn sie deinstalliert werden, oder bei Steam, wenn so lange nicht gespielt. Selbst hinzugefügte Apps werden nie angefasst, und ein synchronisiertes Spiel, das du löschst, bleibt gelöscht. Während jemand streamt, ändert sich nichts.",
+    "sync_last": "Zuletzt synchronisiert {when}: {added} hinzugefügt, {removed} entfernt.",
+    "sync_added_list": "Hinzugefügt: {names}.",
+    "sync_excluded": "{n} synchronisierte Spiele, die du gelöscht hast, bleiben von der Liste fern.",
+    "sync_forget": "Wieder zulassen",
+    "sync_badge": "Synchronisiert",
+    "sync_badge_title": "Hinzugefügt von „Meine Spiele synchron halten“"
   },
   "config": {
     "adapter_name_desc_linux_1": "Geben Sie eine GPU für die Aufnahme manuell an.",
@@ -346,6 +356,7 @@
     "back_button_timeout_desc": "Für Controller ohne Guide-Taste (Xbox/PS): Zurück/Select so viele Millisekunden halten drückt sie. -1 schaltet das aus.",
     "capture": "Methode der Bildschirmaufnahme",
     "capture_desc": "„Automatisch“ nutzt die erste Methode, die funktioniert.",
+    "capture_wgc_desc": "Windows.Graphics.Capture kann bei Spielen mit Frame-Generierung oder im Fenstermodus flüssiger sein und braucht etwas mehr Grafikleistung. TunaStream nimmt über einen kleinen Helfer in deiner angemeldeten Sitzung auf und wechselt von selbst zu Desktop Duplication, wenn niemand angemeldet ist, bei UAC-Abfragen und auf dem Sperrbildschirm. Stell wieder auf „Automatisch“, wenn etwas nicht stimmt.",
     "cert_desc": "Schützt diese Seite und das Koppeln. TunaStream erstellt es für dich; es sollte einen RSA-2048-Schlüssel nutzen.",
     "controller": "Controller",
     "controller_desc": "Geräten erlauben, einen Controller an diesem PC zu nutzen.",
@@ -405,7 +416,7 @@
     "forward_rumble": "Vibration",
     "forward_rumble_desc": "Sendet Vibrationen aus Spielen an den Controller deines Geräts. Prüfe mit dem Test auf der Seite „Fehlerbehebung“, ob es funktioniert.",
     "game_frame_limit": "Bildrate des Spiels an den Stream anpassen (empfohlen)",
-    "game_frame_limit_desc": "Während jemand streamt, werden Spiele auf die Bildrate begrenzt, die das Gerät angefragt hat, sodass jedes gezeichnete Bild gesendet wird. Das beseitigt das Ruckeln, wenn Spiel und Stream unterschiedlich schnell laufen. Deine eigene Bildratenbegrenzung kommt zurück, wenn das Streamen endet. Nur NVIDIA-Grafikkarten; hast du selbst eine maximale Bildrate für alle Spiele gesetzt, bleibt sie unverändert.",
+    "game_frame_limit_desc": "Während jemand streamt, werden Spiele auf die Bildrate begrenzt, die das Gerät angefragt hat, sodass jedes gezeichnete Bild gesendet wird. Das beseitigt das Ruckeln, wenn Spiel und Stream unterschiedlich schnell laufen. Läuft RivaTuner Statistics Server (RTSS, Teil von MSI Afterburner), begrenzt er, mit exakter Rate (auch 59,94) und auf jeder Grafikkarte; sonst wird NVIDIAs eigene Begrenzung genutzt, auf die nächste ganze Zahl gerundet. Deine eigenen Begrenzungen kommen zurück, wenn das Streamen endet. Hast du selbst in NVIDIAs Einstellungen eine maximale Bildrate für alle Spiele gesetzt, bleibt sie unverändert.",
     "gamepad": "Controller-Typ, den der PC sieht",
     "gamepad_desc": "Xbox 360 funktioniert mit den meisten Spielen und hat die zuverlässigste Vibration, also die beste Wahl, wenn die Vibration nicht geht. PlayStation 4 bringt Touchpad und Bewegungssteuerung. „Automatisch“ wählt PlayStation 4 für Controller mit diesen Funktionen und Xbox 360 für alle anderen.",
     "gamepad_ds4": "PlayStation 4 (DS4)",
@@ -557,7 +568,22 @@
     "sharedpc_intro": "Nutze diesen PC weiter, während jemand von ihm streamt: Deine Bildschirme, dein Ton, Maus und Tastatur bleiben deine, nur das Spiel geht auf den Fernseher. Schalte „Geteilter PC“ für den Privatmodus aus.",
     "sharedpc_more": "So funktioniert es",
     "privacy_mode": "Privatmodus: Monitore dieses PCs ausschalten, während jemand streamt",
-    "privacy_mode_desc": "Nur der eigene Bildschirm des Streams bleibt an, sodass niemand im Raum sieht, was am PC gespielt wird. Die Monitore gehen wieder an, so angeordnet wie vorher, wenn der Stream endet oder der Fernseher die Verbindung trennt. Im Modus „Geteilter PC“ nicht verfügbar, da du die Monitore dort nutzt. Bleiben sie je aus, drücke Windows + P und wähle „Erweitern“."
+    "privacy_mode_desc": "Nur der eigene Bildschirm des Streams bleibt an, sodass niemand im Raum sieht, was am PC gespielt wird. Die Monitore gehen wieder an, so angeordnet wie vorher, wenn der Stream endet oder der Fernseher die Verbindung trennt. Im Modus „Geteilter PC“ nicht verfügbar, da du die Monitore dort nutzt. Bleiben sie je aus, drücke Windows + P und wähle „Erweitern“.",
+    "game_vsync_off": "V-Sync in Spielen während des Streamens ausschalten",
+    "game_vsync_off_desc": "Da die Begrenzung die Spiele taktet, bringt das Warten auf den Bildschirm nur Verzögerung: Das spart bis zu ein Bild. NVIDIA-Grafikkarten; deine eigene Einstellung kommt zurück, wenn das Streamen endet. Schalte es aus, wenn ein Spiel auf dem Fernseher Tearing zeigt.",
+    "tab_everyday": "Alltag",
+    "everyday_intro": "Die Einstellungen, die am häufigsten geändert werden, an einem Ort. Alles hier steht auch auf seinem eigenen Reiter, zusammen mit dem Rest.",
+    "everyday_screen": "Der Bildschirm des Streams",
+    "everyday_smooth": "Flüssigkeit",
+    "everyday_games": "Spiele und Geräte",
+    "everyday_apps": "Spiele, und sie synchron halten",
+    "everyday_devices": "Geräte und Einstellungen des Fernsehers",
+    "everyday_watch": "Den Stream in diesem Browser ansehen",
+    "everyday_fix": "Wenn etwas nicht stimmt",
+    "everyday_repair": "Virtuellen Bildschirm reparieren",
+    "everyday_restart": "TunaStream neu starten",
+    "everyday_logs": "Protokolle von Fernsehern",
+    "everyday_checklist": "Test-Checkliste"
   },
   "index": {
     "controller_hint": "Als was Spiele diesen Controller sehen. Die meisten PC-Spiele lassen nur einen Xbox-360-Controller vibrieren; ändere es unter Einstellungen > Eingabe > Emulierter Gamepad-Typ.",
@@ -718,7 +744,10 @@
     "vdisplay_repair": "Reparieren",
     "whatsnew_title": "Neu in {version}",
     "whatsnew_since": "Seit {version}, der Version, die dieser Browser zuletzt gesehen hat:",
-    "whatsnew_ok": "Verstanden"
+    "whatsnew_ok": "Verstanden",
+    "watch": "Zuschauen",
+    "sharing_on": "Dein Bildschirm wird noch {minutes} Minuten mit zuschauenden Browsern geteilt ({viewers} schauen gerade zu).",
+    "sharing_stop": "Teilen beenden"
   },
   "navbar": {
     "applications": "Apps",
@@ -916,7 +945,8 @@
     "generic_moonlight_clients_desc": "Moonlight und andere kompatible Apps funktionieren auch mit TunaStream."
   },
   "login": {
-    "save_password": "Passwort merken"
+    "save_password": "Passwort merken",
+    "remember_me": "Angemeldet bleiben"
   },
   "permissions": {
     "input_controller": "Controller-Eingabe",
@@ -1107,7 +1137,8 @@
     "never": "nie",
     "just_now": "gerade eben",
     "minutes_ago": "vor {n} Min.",
-    "hours_ago": "vor {n} Std."
+    "hours_ago": "vor {n} Std.",
+    "watch": "Im Browser zuschauen"
   },
   "tvset": {
     "title": "Einstellungen des Fernsehers",
@@ -1255,7 +1286,145 @@
         "title": "Neuigkeiten",
         "how": "Öffne nach dem nächsten Update TunaReceive und diese Seite.",
         "expect": "Beide zeigen einmal, was sich geändert hat, und dann nicht wieder."
+      },
+      "everyday": {
+        "title": "Alltags-Einstellungen",
+        "how": "Öffne die Einstellungen. Sie sollten auf dem Tab „Alltag“ starten. Ändere dort eine Einstellung und speichere.",
+        "expect": "Der Tab zeigt die Einstellungen, die die meisten ändern, gruppiert und mit Links zu Spielen, Geräten und Hilfen. Die Änderung bleibt nach dem Neuladen erhalten."
+      },
+      "watch": {
+        "title": "Im Browser zuschauen",
+        "how": "Während der Fernseher ein Spiel streamt, öffne auf einem Laptop oder Handy im selben Netzwerk die Seite „Zuschauen“ im Dashboard und tippe auf „Ton an“.",
+        "expect": "Das Spiel erscheint nach wenigen Sekunden mit Ton, etwas hinter dem Fernseher. Bild und Steuerung am Fernseher bleiben unberührt."
+      },
+      "watchlink": {
+        "title": "Zuschau-Link",
+        "how": "Wähle auf der Seite „Zuschauen“ „Zuschau-Link teilen“ und öffne den Link auf einem nicht angemeldeten Tablet. Öffne denselben Link auf einem zweiten Gerät. Öffne am nächsten Tag „Zuschauen“ wieder auf dem Tablet.",
+        "expect": "Das Tablet schaut ohne Passwort zu und kann keine andere Seite öffnen. Das zweite Gerät erfährt, dass der Link schon benutzt wurde. Am nächsten Tag geht es auf dem Tablet weiter, und unter Passwort ändern > Zugriffstoken steht es als täglich wechselnder Zuschau-Schlüssel; Entfernen beendet es."
+      },
+      "watchpassword": {
+        "title": "Zuschau-Passwort",
+        "how": "Lege auf der Seite „Zuschauen“ ein Zuschau-Passwort für jemanden an. Öffne auf einem nicht angemeldeten Tablet die Seite „Zuschauen“ und gib es ein. Gib dann auf einem anderen Gerät fünfmal ein falsches ein.",
+        "expect": "Das Tablet schaut ohne Link zu. Das Passwort funktioniert auch an späteren Tagen. Nach fünf Fehlversuchen soll das Gerät zehn Minuten warten. Entfernen des Passworts unter Zugriffstoken beendet auch das Tablet."
+      },
+      "sharescreen": {
+        "title": "Meinen Bildschirm teilen",
+        "how": "Öffne, während kein Fernseher streamt, am PC „Zuschauen“, teile deinen Bildschirm für 1 Stunde und öffne einen Zuschau-Link auf einem Tablet. Starte dann einen Stream am Fernseher, beende ihn und wähle zum Schluss „Teilen beenden“.",
+        "expect": "Das Tablet zeigt den Hauptbildschirm des PCs mit Ton; Startseite und Infobereich zeigen, dass geteilt wird. Streamt der Fernseher, zeigt das Tablet dessen Spiel, danach wieder den PC-Bildschirm. Nach „Teilen beenden“ wartet das Tablet."
+      },
+      "signin": {
+        "title": "Angemeldet bleiben",
+        "how": "Melde dich ab und mit eingeschaltetem „Angemeldet bleiben“ wieder an. Schließ den Browser und öffne das Dashboard erneut. Wiederhole es ausgeschaltet.",
+        "expect": "Eingeschaltet bleibst du nach dem Schließen angemeldet; ausgeschaltet wirst du wieder nach dem Passwort gefragt."
+      },
+      "tokens": {
+        "title": "Zugriffstoken",
+        "how": "Erstelle unter Passwort ändern > Zugriffstoken ein Token, das nur sehen darf, was läuft, und kopiere es. Entferne es danach.",
+        "expect": "Das Token wird einmal angezeigt. Nach dem Entfernen funktioniert es sofort nicht mehr."
+      },
+      "librarysync": {
+        "title": "Meine Spiele synchron halten",
+        "how": "Schalte unter Apps „Meine Spiele synchron halten“ ein und wähle „Jetzt synchronisieren“. Lösche dann eines der synchronisierten Spiele.",
+        "expect": "Kürzlich gespielte Spiele erscheinen mit Cover und dem Hinweis „Synchronisiert“. Selbst hinzugefügte Spiele bleiben unberührt, und das gelöschte Spiel kommt nicht zurück."
+      },
+      "framecap": {
+        "title": "Genaue Bildratenbegrenzung",
+        "how": "Mit installiertem RivaTuner Statistics Server und eingeschaltetem „Bildrate des Spiels an den Stream anpassen“ streame ein Spiel mit 59,94 oder 119,88 FPS und prüfe das Limit in RTSS. Beende den Stream.",
+        "expect": "RTSS zeigt beim Streamen genau die Rate des Streams, danach ist sein eigenes Limit wieder da. Ohne RTSS wird wie bisher die NVIDIA-Begrenzung genutzt."
+      },
+      "vsync": {
+        "title": "V-Sync aus beim Streamen",
+        "how": "Lass auf einem NVIDIA-PC „V-Sync in Spielen während des Streamens ausschalten“ an, streame ein Spiel mit V-Sync und beende dann den Stream.",
+        "expect": "Das Spiel reagiert beim Streamen so direkt wie ohne V-Sync, und die NVIDIA-Einstellung ist danach wie vorher."
+      },
+      "wgc": {
+        "title": "Windows.Graphics.Capture",
+        "how": "Stell unter Einstellungen > Videokodierung die Methode der Bildschirmaufnahme auf Windows.Graphics.Capture und speichere. Streame ein Spiel, drück dann am PC Win+L oder öffne eine UAC-Abfrage und geh zurück.",
+        "expect": "Der Stream läuft, Sperrbildschirm oder UAC-Abfrage erscheinen auf dem Fernseher, und das Spiel kommt danach zurück. Wenn etwas nicht stimmt, stell wieder auf „Automatisch“."
       }
     }
+  },
+  "watch": {
+    "title": "Zuschauen",
+    "watching": "Du schaust",
+    "picture": "Das Spiel, wie es gestreamt wird",
+    "live": "LIVE",
+    "connecting": "Verbinde mit dem Stream…",
+    "waiting": "Gerade streamt niemand. Das Bild erscheint hier, sobald ein Gerät zu spielen beginnt.",
+    "ended": "Der Stream ist zu Ende. Zuschauen beginnt von selbst wieder, wenn jemand spielt.",
+    "error": "Der Stream ist nicht erreichbar. Versuche es erneut…",
+    "unsupported": "Dieser Browser kann den Stream nicht abspielen. Nutze ein aktuelles Chrome, Edge, Firefox oder Safari.",
+    "sound_on": "Ton an",
+    "sound_off": "Ton aus",
+    "fullscreen": "Vollbild",
+    "note": "Nur zuschauen: Nichts hier steuert das Spiel.",
+    "no_sound_here": "Nur zuschauen. Dieser Browser kann den Ton nicht abspielen; versuche Chrome oder Edge.",
+    "share": "Zuschau-Link teilen",
+    "share_name": "Zuschau-Link {when}",
+    "share_copied": "Link kopiert. Er funktioniert einmal, auf einem Gerät, innerhalb eines Tages. Danach schaut das Gerät mit einem eigenen Schlüssel weiter, der sich täglich ändert und nach einer Woche ohne Nutzung verfällt. Entfernen kannst du ihn jederzeit unter Passwort ändern > Zugriffstoken.",
+    "share_copy_this": "Kopiere diesen Link:",
+    "share_failed": "Der Link konnte nicht erstellt werden.",
+    "watching_screen": "Du siehst den Bildschirm dieses PCs",
+    "screen_title": "Meinen Bildschirm teilen",
+    "screen_desc": "Solange kein Fernseher streamt, sehen zuschauende Browser (über diese Seite oder einen Zuschau-Link) den Hauptbildschirm dieses PCs und hören seinen Ton. Startet ein Fernseher einen Stream, sehen sie stattdessen dessen Spiel. Nach der gewählten Zeit schaltet es sich selbst aus.",
+    "screen_for": "Teilen für",
+    "screen_1h": "1 Stunde lang",
+    "screen_2h": "2 Stunden lang",
+    "screen_4h": "4 Stunden lang",
+    "screen_start": "Meinen Bildschirm teilen",
+    "screen_on": "Dein Bildschirm wird noch {minutes} Minuten geteilt.",
+    "screen_stop": "Teilen beenden",
+    "screen_failed": "Das Teilen konnte nicht geändert werden.",
+    "need_link": "Dieses Gerät kann noch nicht zuschauen. Öffne einen neuen Zuschau-Link von der Person, die teilt, oder melde dich an.",
+    "sign_in": "Anmelden",
+    "password_label": "Zuschau-Passwort",
+    "password_go": "Zuschauen",
+    "password_wrong": "Das Zuschau-Passwort stimmt nicht.",
+    "passwords_title": "Zuschau-Passwörter",
+    "passwords_desc": "Ein Zuschau-Passwort ändert sich nicht. Auf der Seite „Zuschauen“ eines Tablets oder Handys eingegeben, lässt es dieses Gerät zuschauen, genau wie ein Zuschau-Link. Leg für jede Person eines an, dann kannst du eines entfernen, ohne die anderen.",
+    "passwords_name": "Für wen",
+    "passwords_suggest": "Vorschlagen",
+    "passwords_make": "Zuschau-Passwort anlegen",
+    "passwords_made": "{name} kann jetzt mit dem Passwort {password} zuschauen. Es wird nicht noch einmal angezeigt.",
+    "passwords_failed": "Das Zuschau-Passwort konnte nicht angelegt werden.",
+    "passwords_manage": "Zuschau-Passwörter und -Links entfernst du unter Passwort ändern > Zugriffstoken",
+    "screen_which": "Welcher Bildschirm",
+    "screen_monitor": "Bildschirm {n}",
+    "screen_main": "Hauptbildschirm"
+  },
+  "tokens": {
+    "title": "Zugriffstoken",
+    "desc": "Lass ein Skript, ein Stream Deck, Home Assistant oder einen KI-Assistenten ein paar Dinge ohne dein Passwort tun. Jedes Token darf nur, was du ankreuzt, und du kannst es jederzeit entfernen. Zum Zuschauen nimm stattdessen „Zuschau-Link teilen“ auf der Seite „Zuschauen“: Diese Links funktionieren einmal, und der Schlüssel des Geräts ändert sich täglich.",
+    "token": "Token",
+    "made": "{name} ist bereit.",
+    "made_once": "Kopiere es jetzt: Es wird nicht noch einmal angezeigt.",
+    "copy": "Kopieren",
+    "copy_link": "Link kopieren",
+    "watch_link": "Zuschau-Link",
+    "name": "Name",
+    "name_placeholder": "Zuschau-Link fürs Wohnzimmer",
+    "expires": "Gültig",
+    "days": "{n} Tage",
+    "never": "Läuft nie ab",
+    "may": "Es darf:",
+    "scope_status": "Sehen, was läuft, und die Geräte",
+    "scope_watch": "Den Stream ansehen",
+    "scope_messages": "Nachrichten und Töne an Fernseher senden",
+    "scope_sessions": "Sitzungen beenden und mehr Spielzeit geben",
+    "scope_launch": "Spiele starten",
+    "scope_logs": "Das Protokoll von TunaStream und von Fernsehern gesendete Protokolle lesen",
+    "agent_title": "Mit einem KI-Assistenten nutzen",
+    "agent_desc": "Claude Desktop, Claude Code und andere Assistenten mit MCP können TunaStream mit diesem Token als Werkzeug nutzen. Füge dies in die MCP-Einstellungen des Assistenten ein (bei Claude Desktop: Einstellungen > Entwickler > Konfiguration bearbeiten) und starte den Assistenten neu. Er kann nur, was dieses Token erlaubt.",
+    "make": "Token erstellen",
+    "none": "Noch keine Token.",
+    "expires_on": "Bis {when}",
+    "used_on": "zuletzt genutzt {when}",
+    "unused": "noch nicht genutzt",
+    "remove": "Entfernen",
+    "remove_confirm": "{name} entfernen? Alles, was es nutzt, funktioniert dann nicht mehr.",
+    "failed": "Das Token konnte nicht erstellt werden.",
+    "kind_invite": "Zuschau-Link, noch nicht geöffnet",
+    "kind_rotating": "Zuschau-Schlüssel auf einem Gerät, ändert sich täglich",
+    "kind_password": "Zuschau-Passwort, ändert sich nicht; Entfernen entfernt auch seine Geräte"
   }
 }

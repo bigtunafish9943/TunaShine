@@ -31,6 +31,7 @@ extern "C" {
 #include "platform/common.h"
 #include "sync.h"
 #include "video.h"
+#include "watch.h"
 
 #ifdef _WIN32
   #include "platform/windows/virtual_display.h"
@@ -1994,7 +1995,8 @@ namespace video {
     BOOST_LOG(info) << "Encoding Frame threshold: "sv << encode_frame_threshold;
 
     auto shutdown_event = mail->event<bool>(mail::shutdown);
-    auto packets = mail::man->queue<packet_t>(mail::video_packets);
+    // A browser watching the stream gets its own packets; streaming devices share the global queue
+    auto packets = watch::is_watch(channel_data) ? mail->queue<packet_t>(mail::video_packets) : mail::man->queue<packet_t>(mail::video_packets);
     auto idr_events = mail->event<bool>(mail::idr);
     auto invalidate_ref_frames_events = mail->event<std::pair<int64_t, int64_t>>(mail::invalidate_ref_frames);
     auto bitrate_events = mail->event<int>(mail::bitrate);
@@ -2608,6 +2610,10 @@ namespace video {
         config
       );
     }
+  }
+
+  bool parallel_encoding() {
+    return chosen_encoder && (chosen_encoder->flags & PARALLEL_ENCODING);
   }
 
   void capture(

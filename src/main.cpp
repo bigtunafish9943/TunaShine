@@ -17,6 +17,8 @@
 #include "httpcommon.h"
 #include "logging.h"
 #include "main.h"
+#include "library_sync.h"
+#include "mcp_bridge.h"
 #include "nvhttp.h"
 #include "play_limits.h"
 #include "process.h"
@@ -147,8 +149,18 @@ int main(int argc, char *argv[]) {
   // by placing a user-writable directory in the system-wide PATH variable.
   SetDefaultDllDirectories(LOAD_LIBRARY_SEARCH_APPLICATION_DIR | LOAD_LIBRARY_SEARCH_SYSTEM32);
 
+  // The screen capture helper TunaStream starts in the user's session (WGC under the service)
+  if (argc > 1 && std::string_view {argv[1]} == "--wgc-helper") {
+    return platf::wgc_helper_main(argc, argv);
+  }
+
   setlocale(LC_ALL, "C");
 #endif
+
+  // "tunastream --mcp": tools for an AI assistant, over standard input and output
+  if (argc > 1 && std::string_view {argv[1]} == "--mcp") {
+    return mcp_bridge::run(argc, argv);
+  }
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -342,10 +354,14 @@ int main(int argc, char *argv[]) {
 
   // Daily play-time limits, with warnings on the TV
   play_limits::start();
+  // Keep my games in sync (when turned on, on the Apps page)
+  library_sync::start();
   // Do not disturb left on if TunaStream stopped during a stream
   platf::quiet_notifications_cleanup();
   // Monitors left off by privacy mode if TunaStream stopped during a stream
   platf::privacy_screens_cleanup();
+  // A frame rate cap left by a stream that ended in a crash (RTSS, NVIDIA): the PC's own comes back
+  platf::set_game_frame_limit(0);
 
   // If any of the following fail, we log an error and continue event though tunastream will not function correctly.
   // This allows access to the UI to fix configuration problems or view the logs.

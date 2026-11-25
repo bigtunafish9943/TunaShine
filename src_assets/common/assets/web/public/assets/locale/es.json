@@ -147,7 +147,17 @@
     "virtual_display": "Crear siempre una pantalla virtual",
     "virtual_display_desc": "Crea siempre una pantalla virtual al iniciar esta app, pida lo que pida el dispositivo. El controlador SudoVDA debe estar instalado y activado.",
     "virtual_display_primary": "Forzar la pantalla virtual como principal",
-    "virtual_display_primary_desc": "Convierte la pantalla virtual en principal al iniciar la app. Siempre lo es cuando un dispositivo pide una pantalla virtual. (Recomendado dejarlo activado) [No funciona en Windows 11 24H2]"
+    "virtual_display_primary_desc": "Convierte la pantalla virtual en principal al iniciar la app. Siempre lo es cuando un dispositivo pide una pantalla virtual. (Recomendado dejarlo activado) [No funciona en Windows 11 24H2]",
+    "sync_title": "Mantener mis juegos sincronizados",
+    "sync_days": "Reciente significa los últimos",
+    "sync_now": "Sincronizar ahora",
+    "sync_desc": "Añade los juegos de Steam que has jugado hace poco y los juegos recién instalados con Epic, GOG, EA, Ubisoft, Amazon o Microsoft Store (esos lanzadores no guardan el tiempo de juego), con sus portadas. Se quitan al desinstalarlos o, en Steam, si no se juegan durante ese tiempo. Las apps que añadiste tú nunca se tocan, y un juego sincronizado que borres sigue borrado. No cambia nada mientras alguien transmite.",
+    "sync_last": "Última sincronización {when}: {added} añadidos, {removed} quitados.",
+    "sync_added_list": "Añadidos: {names}.",
+    "sync_excluded": "{n} juegos sincronizados que borraste no vuelven a la lista.",
+    "sync_forget": "Dejar que vuelvan",
+    "sync_badge": "Sincronizado",
+    "sync_badge_title": "Añadido por Mantener mis juegos sincronizados"
   },
   "config": {
     "adapter_name_desc_linux_1": "Especifique manualmente un GPU a usar para capturar.",
@@ -348,6 +358,7 @@
     "back_button_timeout_desc": "Para mandos sin botón Guía (Xbox/PS): mantener Atrás/Select estos milisegundos lo pulsa. -1 lo desactiva.",
     "capture": "Método de captura de pantalla",
     "capture_desc": "«Automático» usa el primer método que funcione.",
+    "capture_wgc_desc": "Windows.Graphics.Capture puede ser más fluido con juegos que usan generación de fotogramas o se ejecutan en ventana, y usa un poco más de potencia gráfica. TunaStream captura mediante un pequeño ayudante en tu sesión iniciada, y cambia solo a Desktop Duplication cuando nadie ha iniciado sesión, durante los avisos de UAC y en la pantalla de bloqueo. Vuelve a «Automático» si algo no se ve bien.",
     "cert_desc": "Sirve para proteger esta página y la vinculación. TunaStream lo crea por ti; debe usar una clave RSA-2048.",
     "controller": "Mandos",
     "controller_desc": "Permite que los dispositivos usen un mando en este PC.",
@@ -407,7 +418,7 @@
     "forward_rumble": "Vibración",
     "forward_rumble_desc": "Envía la vibración de los juegos al mando de tu dispositivo. Usa la prueba de la página Solución de problemas para comprobar que funciona.",
     "game_frame_limit": "Ajustar la frecuencia de imagen del juego a la transmisión (recomendado)",
-    "game_frame_limit_desc": "Mientras alguien transmite, los juegos se limitan a la frecuencia de imagen que pidió su dispositivo, para que se envíe cada imagen que dibuja el juego. Así desaparecen los tirones de que el juego y la transmisión vayan a velocidades distintas. Tu propio límite vuelve al terminar la transmisión. Solo tarjetas gráficas NVIDIA; si tú has fijado una frecuencia máxima para todos los juegos, no se toca.",
+    "game_frame_limit_desc": "Mientras alguien transmite, los juegos se limitan a la frecuencia de imagen que pidió su dispositivo, para que se envíe cada imagen que dibuja el juego. Así desaparecen los tirones de que el juego y la transmisión vayan a velocidades distintas. Si RivaTuner Statistics Server (RTSS, incluido con MSI Afterburner) está en marcha, limita él, a la frecuencia exacta (59,94 incluida) y con cualquier tarjeta gráfica; si no, se usa el límite de NVIDIA, redondeado al número entero. Tus propios límites vuelven al terminar la transmisión. Si tú has fijado una frecuencia máxima para todos los juegos en la configuración de NVIDIA, no se toca.",
     "gamepad": "Tipo de mando que ve el PC",
     "gamepad_desc": "Xbox 360 funciona con más juegos y tiene la vibración más fiable, así que es la mejor opción si la vibración no funciona. PlayStation 4 añade el panel táctil y los controles de movimiento. «Automático» elige PlayStation 4 para mandos con esas funciones y Xbox 360 para el resto.",
     "gamepad_ds4": "PlayStation 4 (DS4)",
@@ -557,7 +568,22 @@
     "sharedpc_intro": "Sigue usando este PC mientras alguien transmite desde él: tus pantallas, sonido, ratón y teclado siguen siendo tuyos y solo el juego va a la tele. Desactiva PC compartido para usar el modo privacidad.",
     "sharedpc_more": "Cómo funciona",
     "privacy_mode": "Modo privacidad: apagar los monitores de este PC mientras alguien transmite",
-    "privacy_mode_desc": "Solo la pantalla propia de la transmisión sigue encendida, para que nadie en la habitación vea lo que se juega en el PC. Los monitores se vuelven a encender, con su disposición de antes, cuando termina la transmisión o la tele se desconecta. No está disponible en modo PC compartido, donde usas los monitores. Si alguna vez se quedan apagados, pulsa Windows + P y elige Extender."
+    "privacy_mode_desc": "Solo la pantalla propia de la transmisión sigue encendida, para que nadie en la habitación vea lo que se juega en el PC. Los monitores se vuelven a encender, con su disposición de antes, cuando termina la transmisión o la tele se desconecta. No está disponible en modo PC compartido, donde usas los monitores. Si alguna vez se quedan apagados, pulsa Windows + P y elige Extender.",
+    "game_vsync_off": "Desactivar la V-Sync en los juegos durante la transmisión",
+    "game_vsync_off_desc": "Como el límite marca el ritmo de los juegos, esperar a la pantalla solo añade retraso: esto quita hasta una imagen. Tarjetas gráficas NVIDIA; tu ajuste vuelve al terminar la transmisión. Desactívalo si un juego muestra tearing en la tele.",
+    "tab_everyday": "Día a día",
+    "everyday_intro": "Los ajustes que más se cambian, en un solo sitio. Todo lo que hay aquí está también en su propia pestaña, con el resto.",
+    "everyday_screen": "La pantalla de la transmisión",
+    "everyday_smooth": "Fluidez",
+    "everyday_games": "Juegos y dispositivos",
+    "everyday_apps": "Los juegos, y mantenerlos sincronizados",
+    "everyday_devices": "Dispositivos y configuración de la tele",
+    "everyday_watch": "Ver la transmisión en este navegador",
+    "everyday_fix": "Si algo va mal",
+    "everyday_repair": "Reparar la pantalla virtual",
+    "everyday_restart": "Reiniciar TunaStream",
+    "everyday_logs": "Registros enviados por las teles",
+    "everyday_checklist": "Lista de pruebas"
   },
   "index": {
     "controller_hint": "Cómo ven los juegos este mando. La mayoría de juegos de PC solo hacen vibrar un mando de Xbox 360; cámbialo en Configuración > Entrada > Tipo de mando emulado.",
@@ -718,7 +744,10 @@
     "vdisplay_repair": "Repararlo",
     "whatsnew_title": "Novedades de {version}",
     "whatsnew_since": "Desde {version}, la última versión que vio este navegador:",
-    "whatsnew_ok": "Entendido"
+    "whatsnew_ok": "Entendido",
+    "watch": "Ver",
+    "sharing_on": "Tu pantalla se está compartiendo con los navegadores que miran, {minutes} minutos más ({viewers} mirando ahora).",
+    "sharing_stop": "Dejar de compartir"
   },
   "navbar": {
     "applications": "Apps",
@@ -916,7 +945,8 @@
     "generic_moonlight_clients_desc": "Moonlight y otras apps compatibles también funcionan con TunaStream."
   },
   "login": {
-    "save_password": "Recordar contraseña"
+    "save_password": "Recordar contraseña",
+    "remember_me": "Mantener la sesión iniciada"
   },
   "permissions": {
     "input_controller": "Entrada de mando",
@@ -1107,7 +1137,8 @@
     "never": "nunca",
     "just_now": "ahora mismo",
     "minutes_ago": "hace {n} min",
-    "hours_ago": "hace {n} h"
+    "hours_ago": "hace {n} h",
+    "watch": "Ver en el navegador"
   },
   "tvset": {
     "title": "Configuración de la tele",
@@ -1255,7 +1286,145 @@
         "title": "Novedades",
         "how": "Tras la próxima actualización, abre TunaReceive y esta página.",
         "expect": "Cada uno muestra una vez lo que cambió, y no vuelve a hacerlo."
+      },
+      "everyday": {
+        "title": "Ajustes del día a día",
+        "how": "Abre Configuración. Debería abrirse en la pestaña Día a día. Cambia un ajuste y guarda.",
+        "expect": "La pestaña agrupa los ajustes que más se cambian, con enlaces a juegos, dispositivos y soluciones. El cambio se mantiene al recargar la página."
+      },
+      "watch": {
+        "title": "Ver en un navegador",
+        "how": "Mientras la tele transmite un juego, abre la página Ver del panel en un portátil o móvil de la misma red y toca Sonido activado.",
+        "expect": "El juego aparece en pocos segundos con sonido, un poco por detrás de la tele. La imagen y los controles de la tele no cambian."
+      },
+      "watchlink": {
+        "title": "Enlace para ver",
+        "how": "En la página Ver, elige Compartir un enlace para ver y abre el enlace en una tableta sin sesión iniciada. Abre el mismo enlace en un segundo dispositivo. Al día siguiente, vuelve a abrir Ver en la tableta.",
+        "expect": "La tableta mira sin contraseña y no puede abrir otras páginas. Al segundo dispositivo se le avisa de que el enlace ya se usó. La tableta sigue funcionando al día siguiente, y Cambiar contraseña > Tokens de acceso la muestra como clave que cambia cada día; al quitarla deja de funcionar."
+      },
+      "watchpassword": {
+        "title": "Contraseña para ver",
+        "how": "En la página Ver, crea una contraseña para ver para alguien. En una tableta sin sesión, abre la página Ver y escríbela. Luego escribe una incorrecta cinco veces en otro dispositivo.",
+        "expect": "La tableta mira sin enlace. La contraseña sigue funcionando otros días. Tras cinco intentos fallidos, ese dispositivo debe esperar diez minutos. Quitar la contraseña en Tokens de acceso también detiene la tableta."
+      },
+      "sharescreen": {
+        "title": "Compartir mi pantalla",
+        "how": "Sin transmisión en la tele, abre Ver en el PC, comparte tu pantalla durante 1 hora y abre un enlace para ver en una tableta. Luego inicia una transmisión en la tele, termínala y elige Dejar de compartir.",
+        "expect": "La tableta muestra la pantalla principal del PC con sonido; el inicio y la bandeja indican que se comparte. Mientras la tele transmite, la tableta muestra su juego y después otra vez la pantalla del PC. Tras Dejar de compartir, la tableta espera."
+      },
+      "signin": {
+        "title": "Mantener la sesión iniciada",
+        "how": "Cierra sesión y vuelve a entrar con Mantener la sesión iniciada activado. Cierra el navegador y abre el panel otra vez. Repite con la opción desactivada.",
+        "expect": "Activado, sigues dentro tras cerrar el navegador; desactivado, se vuelve a pedir la contraseña."
+      },
+      "tokens": {
+        "title": "Tokens de acceso",
+        "how": "En Cambiar contraseña > Tokens de acceso, crea un token que solo pueda ver qué se juega y cópialo. Después quítalo.",
+        "expect": "El token se muestra una sola vez. Al quitarlo deja de funcionar al instante."
+      },
+      "librarysync": {
+        "title": "Mantener mis juegos sincronizados",
+        "how": "En Apps, activa Mantener mis juegos sincronizados y elige Sincronizar ahora. Luego borra uno de los juegos sincronizados.",
+        "expect": "Los juegos jugados hace poco aparecen con portada y la etiqueta Sincronizado. Los juegos añadidos a mano no se tocan y el juego borrado no vuelve."
+      },
+      "framecap": {
+        "title": "Límite de fotogramas exacto",
+        "how": "Con RivaTuner Statistics Server instalado y el ajuste de frecuencia del juego activado, transmite un juego a 59,94 o 119,88 FPS y mira el límite en RTSS. Termina la transmisión.",
+        "expect": "RTSS muestra la frecuencia exacta de la transmisión mientras dura y después recupera su propio límite. Sin RTSS se usa el límite de NVIDIA como antes."
+      },
+      "vsync": {
+        "title": "V-Sync desactivada al transmitir",
+        "how": "En un PC con NVIDIA, deja activado Desactivar la V-Sync en los juegos durante la transmisión, transmite un juego que use V-Sync y termina la transmisión.",
+        "expect": "El juego responde como sin V-Sync durante la transmisión, y el ajuste de NVIDIA vuelve a como estaba después."
+      },
+      "wgc": {
+        "title": "Windows.Graphics.Capture",
+        "how": "En Configuración > Codificación de vídeo, elige Windows.Graphics.Capture como método de captura y guarda. Transmite un juego, pulsa Win+L o abre un aviso de UAC en el PC y vuelve.",
+        "expect": "La transmisión funciona, la pantalla de bloqueo o el aviso de UAC aparecen en la tele y el juego vuelve después. Si algo no va bien, vuelve a Automático."
       }
     }
+  },
+  "watch": {
+    "title": "Ver",
+    "watching": "Viendo",
+    "picture": "El juego tal como se transmite",
+    "live": "EN DIRECTO",
+    "connecting": "Conectando con la transmisión…",
+    "waiting": "Nadie está transmitiendo ahora. La imagen aparece aquí en cuanto un dispositivo empiece a jugar.",
+    "ended": "La transmisión terminó. Vuelve a verse sola cuando alguien juegue.",
+    "error": "No se puede llegar a la transmisión. Volviendo a intentarlo…",
+    "unsupported": "Este navegador no puede reproducir la transmisión. Usa una versión reciente de Chrome, Edge, Firefox o Safari.",
+    "sound_on": "Sonido activado",
+    "sound_off": "Sonido desactivado",
+    "fullscreen": "Pantalla completa",
+    "note": "Solo para ver: nada de aquí controla el juego.",
+    "no_sound_here": "Solo para ver. Este navegador no puede reproducir el sonido; prueba Chrome o Edge.",
+    "share": "Compartir un enlace para ver",
+    "share_name": "Enlace para ver {when}",
+    "share_copied": "Enlace copiado. Funciona una vez, en un dispositivo, durante un día. Ese dispositivo sigue viendo con su propia clave, que cambia cada día y deja de funcionar tras una semana sin uso. Quítala cuando quieras en Cambiar contraseña > Tokens de acceso.",
+    "share_copy_this": "Copia este enlace:",
+    "share_failed": "No se pudo crear el enlace.",
+    "watching_screen": "Viendo la pantalla de este PC",
+    "screen_title": "Compartir mi pantalla",
+    "screen_desc": "Mientras ninguna tele transmite, los navegadores que miran (con esta página o un enlace para ver) ven la pantalla principal de este PC y oyen su sonido. Cuando una tele empieza a transmitir, ven su juego en su lugar. Se apaga solo pasado el tiempo que elijas.",
+    "screen_for": "Compartir durante",
+    "screen_1h": "Durante 1 hora",
+    "screen_2h": "Durante 2 horas",
+    "screen_4h": "Durante 4 horas",
+    "screen_start": "Compartir mi pantalla",
+    "screen_on": "Tu pantalla se comparte {minutes} minutos más.",
+    "screen_stop": "Dejar de compartir",
+    "screen_failed": "No se pudo cambiar el uso compartido.",
+    "need_link": "Este dispositivo aún no puede ver. Abre un nuevo enlace para ver de quien comparte, o inicia sesión.",
+    "sign_in": "Iniciar sesión",
+    "password_label": "Contraseña para ver",
+    "password_go": "Ver",
+    "password_wrong": "Esa contraseña para ver no es correcta.",
+    "passwords_title": "Contraseñas para ver",
+    "passwords_desc": "Una contraseña para ver no cambia. Escrita en la página Ver de una tableta o un móvil, deja ver a ese dispositivo, igual que un enlace para ver. Crea una por persona para poder quitar una sin afectar a las demás.",
+    "passwords_name": "Para quién",
+    "passwords_suggest": "Sugerir una",
+    "passwords_make": "Crear contraseña para ver",
+    "passwords_made": "{name} ya puede ver con la contraseña {password}. No se vuelve a mostrar.",
+    "passwords_failed": "No se pudo crear la contraseña para ver.",
+    "passwords_manage": "Quita contraseñas y enlaces en Cambiar contraseña > Tokens de acceso",
+    "screen_which": "Qué pantalla",
+    "screen_monitor": "Pantalla {n}",
+    "screen_main": "principal"
+  },
+  "tokens": {
+    "title": "Tokens de acceso",
+    "desc": "Deja que un script, un Stream Deck, Home Assistant o un asistente de IA hagan algunas cosas sin tu contraseña. Cada token solo puede hacer lo que marques y puedes quitarlo cuando quieras. Para dejar que alguien mire, usa Compartir un enlace para ver en la página Ver: esos enlaces funcionan una vez y la clave del dispositivo cambia cada día.",
+    "token": "Token",
+    "made": "{name} está listo.",
+    "made_once": "Cópialo ahora: no se vuelve a mostrar.",
+    "copy": "Copiar",
+    "copy_link": "Copiar enlace",
+    "watch_link": "Enlace para ver",
+    "name": "Nombre",
+    "name_placeholder": "Enlace para ver en el salón",
+    "expires": "Dura",
+    "days": "{n} días",
+    "never": "No caduca",
+    "may": "Puede:",
+    "scope_status": "Ver qué se juega y los dispositivos",
+    "scope_watch": "Ver la transmisión",
+    "scope_messages": "Enviar mensajes y sonidos a las teles",
+    "scope_sessions": "Terminar sesiones y dar más tiempo de juego",
+    "scope_launch": "Iniciar juegos",
+    "scope_logs": "Leer el registro de TunaStream y los registros enviados por las teles",
+    "agent_title": "Usar con un asistente de IA",
+    "agent_desc": "Claude Desktop, Claude Code y otros asistentes compatibles con MCP pueden usar TunaStream como herramienta con este token. Pega esto en los ajustes MCP del asistente (en Claude Desktop: Configuración > Desarrollador > Editar configuración) y reinicia el asistente. Solo puede hacer lo que permite este token.",
+    "make": "Crear token",
+    "none": "Todavía no hay tokens.",
+    "expires_on": "Hasta el {when}",
+    "used_on": "último uso {when}",
+    "unused": "sin usar todavía",
+    "remove": "Quitar",
+    "remove_confirm": "¿Quitar {name}? Lo que lo use dejará de funcionar.",
+    "failed": "No se pudo crear el token.",
+    "kind_invite": "enlace para ver, aún sin abrir",
+    "kind_rotating": "clave para ver en un dispositivo, cambia cada día",
+    "kind_password": "contraseña para ver, no cambia; al quitarla se quitan también sus dispositivos"
   }
 }

@@ -54,8 +54,10 @@
 
 // local includes
 #include "misc.h"
+#include "rtss.h"
 #include "utils.h"
 #include "nvprefs/nvprefs_interface.h"
+#include "src/config.h"
 #include "src/entry_handler.h"
 #include "src/globals.h"
 #include "src/logging.h"
@@ -1377,22 +1379,37 @@ namespace platf {
   // Driver settings are changed from the streaming thread and the app launcher
   static std::mutex nvprefs_mutex;
 
-  void set_game_frame_limit(int fps) {
+  void set_game_frame_limit(int millifps) {
     std::lock_guard lg {nvprefs_mutex};
+    // RTSS, when it's running, caps at the exact rate (59.94 included) on any graphics card
+    const bool by_rtss = millifps > 0 && rtss::set_limit(millifps);
+    if (millifps <= 0) {
+      rtss::restore();
+    }
     if (!nvprefs_instance.load()) {
       return;  // Not an NVIDIA GPU, or the driver API is unavailable
     }
-    if (fps > 0) {
+    if (millifps > 0) {
       if (!nvprefs_instance.owning_undo_file()) {
         nvprefs_instance.restore_from_and_delete_undo_file_if_exists();
       }
-      if (nvprefs_instance.set_frame_limit((unsigned int) fps)) {
+      const int fps = (millifps + 500) / 1000;
+      if (!by_rtss && nvprefs_instance.set_frame_limit((unsigned int) fps)) {
         BOOST_LOG(info) << "Games are capped at "sv << fps << " FPS while streaming"sv;
       }
+      // With the cap pacing them, games don't need to wait for the screen: Vertical Sync off
+      // takes away a frame of delay. The virtual screen shows no tearing in the stream.
+      if (config::tunastream.game_vsync_off) {
+        constexpr unsigned int VSYNCMODE_ID = 0x00A879CF;
+        constexpr unsigned int VSYNCMODE_FORCEOFF = 0x08416747;
+        if (nvprefs_instance.set_stream_setting(VSYNCMODE_ID, VSYNCMODE_FORCEOFF)) {
+          BOOST_LOG(info) << "Vertical Sync is off in games while streaming"sv;
+        }
+      }
     } else if (nvprefs_instance.owning_undo_file()) {
-      // Puts back the user's own driver settings, including the frame rate limit
+      // Puts back the user's own driver settings: frame rate limit, Vertical Sync and the rest
       if (nvprefs_instance.restore_global_profile()) {
-        BOOST_LOG(info) << "Removed the streaming frame rate cap"sv;
+        BOOST_LOG(info) << "Put back the PC's own game settings after streaming"sv;
       }
     }
     nvprefs_instance.unload();

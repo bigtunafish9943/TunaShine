@@ -42,6 +42,7 @@
 #include "utility.h"
 #include "video.h"
 #include "uuid.h"
+#include "watch.h"
 
 #ifdef _WIN32
   // from_utf8() string conversion function
@@ -265,6 +266,9 @@ namespace proc {
   }
 
   int proc_t::execute(const ctx_t& app, std::shared_ptr<rtsp_stream::launch_session_t> launch_session) {
+    // Browsers watching the PC's own screen (Share my screen) follow the new stream instead
+    watch::stop_desktop();
+
     if (_app_id == input_only_app_id) {
       terminate(false, false);
       std::this_thread::sleep_for(1s);
@@ -512,7 +516,8 @@ namespace proc {
 
     // Cap games at the stream's frame rate before the app starts, so it reads the cap when it starts
     if (config::tunastream.game_frame_limit && launch_session->fps > 0) {
-      frame_limit_fps = (launch_session->fps + 500) / 1000;
+      // In thousandths, so 59.94 stays 59.94 where the limiter can do it (RTSS)
+      frame_limit_fps = launch_session->fps;
       platf::set_game_frame_limit(frame_limit_fps);
     }
 

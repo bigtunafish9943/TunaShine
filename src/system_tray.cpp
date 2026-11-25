@@ -56,6 +56,7 @@
   #include "process.h"
   #include "input.h"
   #include "stream.h"
+  #include "watch.h"
   #include "network.h"
   #include "src/entry_handler.h"
 
@@ -420,6 +421,28 @@ namespace system_tray {
     tray_update(&tray);
   }
 
+  void update_tray_sharing(bool on) {
+    if (!tray_initialized) {
+      return;
+    }
+    tray.notification_title = NULL;
+    tray.notification_text = NULL;
+    tray.notification_cb = NULL;
+    tray.notification_icon = NULL;
+    tray.icon = TRAY_ICON;
+    tray_update(&tray);
+    tray.notification_title = on ? "Sharing your screen" : "Screen sharing stopped";
+    tray.notification_text = on ? "Browsers with a watch link can see this PC's screen and hear its sound. Click to stop." :
+                                  "Browsers watching no longer see this PC's screen.";
+    tray.notification_icon = TRAY_ICON;
+    if (on) {
+      tray.notification_cb = []() {
+        launch_ui("/watch");
+      };
+    }
+    tray_update(&tray);
+  }
+
   // Threading functions available on all platforms
   /**
    * What the tooltip says: who is playing what, how smoothly, and controller batteries. For
@@ -444,6 +467,12 @@ namespace system_tray {
           break;
         }
       }
+    }
+    const auto sharing = watch::sharing();
+    if (sharing.value("on", false)) {
+      const int viewers = sharing.value("viewers", 0);
+      const std::string share = "sharing your screen ("s + std::to_string(viewers) + (viewers == 1 ? " watching)" : " watching)");
+      text = text.empty() ? share : share + "; " + text;
     }
     if (text.empty()) {
       return PROJECT_NAME ": nobody is streaming";
