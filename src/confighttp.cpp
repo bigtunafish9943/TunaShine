@@ -292,6 +292,9 @@ namespace confighttp {
         if (path == "/api/watch/stream" || path == "/watch" || path == "/watch/") {
           return "watch";
         }
+        if (path == "/api/watch/viewers") {
+          return "status";
+        }
         if (path == "/api/tokens/self") {
           return "any";  // what a token may do, for agents (tunastream.exe --mcp)
         }
@@ -377,6 +380,76 @@ namespace confighttp {
         if (auto it = args.find("token"); it != args.end()) {
           return it->second;
         }
+      }
+      return {};
+    }
+
+    /// The token's id and name, for a list of who is watching; empty when it isn't a token.
+    std::pair<std::string, std::string> who(const std::string &token) {
+      if (token.empty()) {
+        return {};
+      }
+      const auto hash = hash_of(token);
+      const auto now = now_s();
+      std::lock_guard lg {lock};
+      prepare();
+      for (const auto &t : tokens) {
+        if (t.hash == hash || (!t.prev_hash.empty() && t.prev_hash == hash && now < t.prev_until)) {
+          return {t.id, t.name};
+        }
+      }
+      return {};
+    }
+
+    /// Remove a token, and the watch password it came from (with that password's other keys).
+    std::string remove_with_source(const std::string &id) {
+      std::lock_guard lg {lock};
+      prepare();
+      std::string parent;
+      std::string name;
+      for (const auto &t : tokens) {
+        if (t.id == id) {
+          parent = t.parent;
+          name = t.name;
+        }
+      }
+      std::erase_if(tokens, [&](const token_t &t) {
+        return t.id == id || (!parent.empty() && (t.id == parent || t.parent == parent));
+      });
+      save();
+      return name;
+    }
+
+    /// "iPad", "Android phone"...: a hint at the device, from its browser
+    std::string device_hint(const req_https_t &request) {
+      auto ua = request->header.find("User-Agent");
+      if (ua == request->header.end()) {
+        return {};
+      }
+      const auto &s = ua->second;
+      auto has = [&](const char *x) {
+        return s.find(x) != std::string::npos;
+      };
+      if (has("iPad") || (has("Macintosh") && has("Mobile"))) {
+        return "iPad";
+      }
+      if (has("iPhone")) {
+        return "iPhone";
+      }
+      if (has("Android")) {
+        return has("Mobile") ? "Android phone" : "Android tablet";
+      }
+      if (has("CrOS")) {
+        return "Chromebook";
+      }
+      if (has("Windows")) {
+        return "Windows PC";
+      }
+      if (has("Macintosh")) {
+        return "Mac";
+      }
+      if (has("Linux")) {
+        return "Linux PC";
       }
       return {};
     }
@@ -879,6 +952,32 @@ namespace confighttp {
     headers.emplace("Content-Type", "image/png");
     headers.emplace("Cache-Control", "public, max-age=86400");
     response->write(SimpleWeb::StatusCode::success_ok, in, headers);
+  }
+
+  /**
+   * @brief Lets a tablet or phone add the Watch page to its home screen like an app.
+   */
+  void getWatchManifest(resp_https_t response, req_https_t request) {
+    if (!checkIPOrigin(response, request)) {
+      return;
+    }
+    nlohmann::json manifest {
+      {"name", "TunaStream Watch"},
+      {"short_name", "Watch"},
+      {"start_url", "./watch"},
+      {"scope", "./"},
+      {"display", "standalone"},
+      {"orientation", "any"},
+      {"background_color", "#000000"},
+      {"theme_color", "#041431"},
+      {"icons", nlohmann::json::array({
+        {{"src", "./images/tunastream-app-180.png"}, {"sizes", "180x180"}, {"type", "image/png"}},
+        {{"src", "./images/tunastream-app-512.png"}, {"sizes", "512x512"}, {"type", "image/png"}},
+      })},
+    };
+    SimpleWeb::CaseInsensitiveMultimap headers;
+    headers.emplace("Content-Type", "application/manifest+json");
+    response->write(SimpleWeb::StatusCode::success_ok, manifest.dump(), headers);
   }
 
   /**
@@ -1409,6 +1508,69 @@ namespace confighttp {
   }
 
   /**
+   * @brief GET /api/watch/viewers: who is watching now, {"viewers": [{"id", "name", "since",
+   *        "signedIn"}], "sharper"}.
+   */
+  void getWatchViewers(resp_https_t response, req_https_t request) {
+    if (!authenticate(response, request)) {
+      return;
+    }
+    nlohmann::json out;
+    out["status"] = true;
+    out["viewers"] = watch::watching_now();
+    out["sharper"] = watch::sharper_picture();
+    send_response(response, out);
+  }
+
+  /**
+   * @brief POST /api/watch/viewers/remove {"id"}: stop one viewer and take away its access: its
+   *        watch key or token, and the watch password it came from. Only with the password.
+   */
+  void postWatchViewerRemove(resp_https_t response, req_https_t request) {
+    if (!validateContentType(response, request, "application/json") || !authenticate_owner(response, request)) {
+      return;
+    }
+    try {
+      std::stringstream ss;
+      ss << request->content.rdbuf();
+      auto input = nlohmann::json::parse(ss.str());
+      const auto token_id = watch::remove_viewer(input.value("id", std::string {}));
+      if (!token_id.empty()) {
+        const auto name = api_tokens::remove_with_source(token_id);
+        BOOST_LOG(info) << "Watch access removed: "sv << name;
+      }
+      nlohmann::json out;
+      out["status"] = true;
+      out["viewers"] = watch::watching_now();
+      send_response(response, out);
+    } catch (std::exception &e) {
+      bad_request(response, request, e.what());
+    }
+  }
+
+  /**
+   * @brief POST /api/watch/quality {"sharper": true}: 1080p for browsers watching (720p when
+   *        false). Kept across restarts. Only with the password.
+   */
+  void postWatchQuality(resp_https_t response, req_https_t request) {
+    if (!validateContentType(response, request, "application/json") || !authenticate_owner(response, request)) {
+      return;
+    }
+    try {
+      std::stringstream ss;
+      ss << request->content.rdbuf();
+      auto input = nlohmann::json::parse(ss.str());
+      watch::set_sharper_picture(input.value("sharper", false));
+      nlohmann::json out;
+      out["status"] = true;
+      out["sharper"] = watch::sharper_picture();
+      send_response(response, out);
+    } catch (std::exception &e) {
+      bad_request(response, request, e.what());
+    }
+  }
+
+  /**
    * @brief POST /api/watch/share: {"on": true, "minutes": 120} shows this PC's own screen to
    *        browsers watching while nobody streams; {"on": false} stops. Only with the password.
    */
@@ -1443,8 +1605,14 @@ namespace confighttp {
       return;
     }
 
+    // Who: the watch key's or token's name, or the owner, with a hint at the device
+    const auto [token_id, token_name] = api_tokens::who(api_tokens::from_request(request));
+    std::string name = token_id.empty() ? std::string {"Signed in with the password"} : token_name;
+    if (const auto hint = api_tokens::device_hint(request); !hint.empty()) {
+      name += " (" + hint + ")";
+    }
     std::string error;
-    auto viewer = watch::join(error);
+    auto viewer = watch::join(error, name, token_id);
     if (!viewer) {
       nlohmann::json out;
       out["status"] = false;
@@ -3704,6 +3872,7 @@ namespace confighttp {
     server.resource["^/images/logo-tunastream-45.png$"]["GET"] = getTunaStreamLogoImage;
     server.resource["^/images/tunastream-app-(180|512).png$"]["GET"] = getAppIcon;
     server.resource["^/live.webmanifest$"]["GET"] = getLiveManifest;
+    server.resource["^/watch.webmanifest$"]["GET"] = getWatchManifest;
     server.resource["^/live/?$"]["GET"] = getLivePage;
     server.resource["^/checklist/?$"]["GET"] = getChecklistPage;
     server.resource["^/watch/?$"]["GET"] = getWatchPage;
@@ -3716,6 +3885,9 @@ namespace confighttp {
     server.resource["^/api/watch/stream$"]["GET"] = getWatchStream;
     server.resource["^/api/watch/share$"]["GET"] = getWatchShare;
     server.resource["^/api/watch/share$"]["POST"] = postWatchShare;
+    server.resource["^/api/watch/viewers$"]["GET"] = getWatchViewers;
+    server.resource["^/api/watch/viewers/remove$"]["POST"] = postWatchViewerRemove;
+    server.resource["^/api/watch/quality$"]["POST"] = postWatchQuality;
     server.resource["^/api/watch/invite$"]["POST"] = postWatchInvite;
     server.resource["^/api/watch/redeem$"]["POST"] = postWatchRedeem;
     server.resource["^/api/watch/rotate$"]["POST"] = postWatchRotate;

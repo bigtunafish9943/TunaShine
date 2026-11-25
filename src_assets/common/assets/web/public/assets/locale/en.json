@@ -1307,6 +1307,11 @@
         "how": "On the Watch page, make a watch password for someone. On a tablet that isn't signed in, open the Watch page and type it. Then type a wrong one five times on another device.",
         "expect": "The tablet watches without a link. The password keeps working on later days. After five wrong tries, that device is told to wait ten minutes. Removing the password under Access tokens stops the tablet too."
       },
+      "watchers": {
+        "title": "Who's watching",
+        "how": "While someone watches through a watch link or password, open Watch on the PC signed in. Switch Picture to Sharper, then choose Remove access for that viewer.",
+        "expect": "The list shows them by name and device. Their picture comes back sharper after a few seconds. After Remove access their device stops and asks for a new link or password."
+      },
       "sharescreen": {
         "title": "Share my screen",
         "how": "With no TV streaming, open Watch on the PC, choose Share my screen for 1 hour, and open a watch link on a tablet. Then start a stream on the TV, end it, and finally choose Stop sharing.",
@@ -1377,6 +1382,16 @@
     "screen_failed": "Sharing couldn't be changed.",
     "need_link": "This device can't watch yet. Open a new watch link from the person who shares, or sign in.",
     "sign_in": "Sign in",
+    "home_screen_tip": "Tip: Add to Home Screen in the browser's menu opens Watch like an app.",
+    "viewers_title": "Watching now",
+    "viewers_none": "Nobody is watching.",
+    "viewers_since": "since {time}",
+    "viewers_remove": "Remove access",
+    "viewers_remove_desc": "Remove access stops that device watching. If it got in with a watch password, that password stops working too, on every device.",
+    "viewers_remove_confirm": "Stop {name} watching and remove its access?",
+    "picture": "Picture",
+    "picture_standard": "Standard (720p)",
+    "picture_sharper": "Sharper (1080p), for small text",
     "password_label": "Watch password",
     "password_go": "Watch",
     "password_wrong": "That watch password isn't right.",

@@ -24,6 +24,8 @@
 #include <atomic>
 #include <condition_variable>
 #include <deque>
+#include <filesystem>
+#include <fstream>
 #include <list>
 #include <mutex>
 #include <thread>
@@ -35,6 +37,7 @@
 #include "audio.h"
 #include "globals.h"
 #include "logging.h"
+#include "platform/common.h"
 #include "process.h"
 #include "rtsp.h"
 #include "system_tray.h"
@@ -50,9 +53,15 @@ using namespace std::literals;
 
 namespace watch {
   namespace {
-    constexpr int WIDTH = 1280;
-    constexpr int HEIGHT = 720;
-    constexpr int BITRATE_KBPS = 6000;
+    // Standard: 720p; Sharper (chosen on the Watch page): 1080p, for small text such as a game's
+    struct quality_t {
+      int width;
+      int height;
+      int kbps;
+    };
+
+    constexpr quality_t STANDARD {1280, 720, 6000};
+    constexpr quality_t SHARPER {1920, 1080, 12000};
     constexpr std::size_t MAX_VIEWERS = 4;
     // A viewer this far behind is skipped ahead to the next key frame
     constexpr std::size_t MAX_QUEUED = 90;
@@ -66,6 +75,36 @@ namespace watch {
     std::atomic<std::int64_t> desktop_blocked_until {0};
     // The screen to share (\\.\DISPLAYn); empty for the main one. With state_lock.
     std::string shared_monitor;
+    // 1080p instead of 720p. With state_lock.
+    bool sharper = false;
+    bool settings_loaded = false;
+
+    // The Watch page's choices, kept across restarts: watch.json next to the settings
+    std::filesystem::path settings_file() {
+      return platf::appdata() / "watch.json";
+    }
+
+    void load_settings_locked() {
+      if (settings_loaded) {
+        return;
+      }
+      settings_loaded = true;
+      std::ifstream in {settings_file()};
+      if (!in) {
+        return;
+      }
+      try {
+        auto j = nlohmann::json::parse(in);
+        sharper = j.value("sharper", false);
+        shared_monitor = j.value("monitor", std::string {});
+      } catch (const std::exception &) {
+      }
+    }
+
+    void save_settings_locked() {
+      std::ofstream out {settings_file(), std::ios::trunc};
+      out << nlohmann::json {{"sharper", sharper}, {"monitor", shared_monitor}}.dump(2);
+    }
 
     std::int64_t now_us() {
       return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
@@ -94,6 +133,12 @@ namespace watch {
     std::deque<std::string> queue;
     bool waiting_for_key = true;
     bool ended = false;
+
+    // Who: shown on the Watch page, so the owner always knows who sees the screen
+    std::string id;
+    std::string name;
+    std::string token_id;  ///< the watch key or token it uses; empty when signed in
+    std::int64_t since = 0;  ///< seconds since 1970
   };
 
   namespace {
@@ -235,6 +280,8 @@ namespace watch {
       if (running) {
         return true;
       }
+      load_settings_locked();
+      const auto quality = sharper ? SHARPER : STANDARD;
       const bool desktop = rtsp_stream::session_count() == 0;
       if (desktop && !sharing_now()) {
         error = "Nobody is streaming right now. Watching starts when a device is playing.";
@@ -271,11 +318,11 @@ namespace watch {
 #endif
 
       video::config_t config {};
-      config.width = WIDTH;
-      config.height = HEIGHT;
+      config.width = quality.width;
+      config.height = quality.height;
       config.framerate = 60;
       config.encodingFramerate = 60;
-      config.bitrate = BITRATE_KBPS;
+      config.bitrate = quality.kbps;
       config.slicesPerFrame = 1;
       config.numRefFrames = 1;
       config.encoderCscMode = 2;  // BT.709, limited range: what browsers expect
@@ -300,10 +347,10 @@ namespace watch {
       }};
       run->pump_thread = std::thread {pump, run};
 
-      nlohmann::json details {{"width", WIDTH}, {"height", HEIGHT}, {"codec", "h264"}, {"audio", "opus"}, {"sampleRate", 48000}, {"channels", 2}};
+      nlohmann::json details {{"width", quality.width}, {"height", quality.height}, {"codec", "h264"}, {"audio", "opus"}, {"sampleRate", 48000}, {"channels", 2}};
       info_message = message('I', false, now_us(), details.dump());
       running = std::move(run);
-      BOOST_LOG(info) << "Watching in the browser: encoding "sv << WIDTH << 'x' << HEIGHT << " H.264 for viewers"sv << (desktop ? " (this PC's screen)"sv : ""sv);
+      BOOST_LOG(info) << "Watching in the browser: encoding "sv << quality.width << 'x' << quality.height << " H.264 for viewers"sv << (desktop ? " (this PC's screen)"sv : ""sv);
       return true;
     }
 
@@ -347,7 +394,7 @@ namespace watch {
     deliver(message('A', false, now_us(), opus), false, false);
   }
 
-  std::shared_ptr<viewer_t> join(std::string &error) {
+  std::shared_ptr<viewer_t> join(std::string &error, const std::string &name, const std::string &token_id) {
     std::lock_guard lg {state_lock};
     viewer_list.remove_if([](const std::shared_ptr<viewer_t> &v) {
       std::lock_guard vl {v->lock};
@@ -365,11 +412,16 @@ namespace watch {
       std::thread {linger, running}.detach();
     }
     auto viewer = std::make_shared<viewer_t>();
+    static std::atomic<int> next_id {1};
+    viewer->id = std::to_string(next_id++);
+    viewer->name = name;
+    viewer->token_id = token_id;
+    viewer->since = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     viewer->queue.push_back(info_message);
     viewer_list.push_back(viewer);
     // A key frame for the new viewer
     running->mail->event<bool>(mail::idr)->raise(true);
-    BOOST_LOG(info) << "A browser started watching ("sv << viewer_list.size() << " now)"sv;
+    BOOST_LOG(info) << "Started watching in a browser: "sv << name << " ("sv << viewer_list.size() << " now)"sv;
     return viewer;
   }
 
@@ -416,6 +468,68 @@ namespace watch {
   int viewers() {
     std::lock_guard lg {state_lock};
     return (int) viewer_list.size();
+  }
+
+  nlohmann::json watching_now() {
+    nlohmann::json out = nlohmann::json::array();
+    std::lock_guard lg {state_lock};
+    for (const auto &v : viewer_list) {
+      std::lock_guard vl {v->lock};
+      if (!v->ended) {
+        out.push_back({{"id", v->id}, {"name", v->name}, {"since", v->since}, {"signedIn", v->token_id.empty()}});
+      }
+    }
+    return out;
+  }
+
+  std::string remove_viewer(const std::string &id) {
+    std::lock_guard lg {state_lock};
+    for (auto it = viewer_list.begin(); it != viewer_list.end(); ++it) {
+      auto v = *it;
+      if (v->id != id) {
+        continue;
+      }
+      const auto token_id = v->token_id;
+      {
+        std::lock_guard vl {v->lock};
+        v->queue.clear();
+        v->queue.push_back(message('E', false, now_us(), "You can't watch on this device any more."));
+        v->ended = true;
+        v->cv.notify_one();
+      }
+      viewer_list.erase(it);
+      if (viewer_list.empty()) {
+        last_viewer_left = now_us();
+      }
+      BOOST_LOG(info) << "Stopped a browser watching: "sv << v->name;
+      return token_id;
+    }
+    return {};
+  }
+
+  bool sharper_picture() {
+    std::lock_guard lg {state_lock};
+    load_settings_locked();
+    return sharper;
+  }
+
+  void set_sharper_picture(bool on) {
+    std::shared_ptr<run_t> done;
+    {
+      std::lock_guard lg {state_lock};
+      load_settings_locked();
+      if (sharper == on) {
+        return;
+      }
+      sharper = on;
+      save_settings_locked();
+      // Viewers pick the new picture up when they reconnect, a few seconds later
+      if (running) {
+        end_viewers("Changing the picture.");
+        done = take_locked();
+      }
+    }
+    finish(std::move(done));
   }
 
   void stop_desktop() {
@@ -483,8 +597,10 @@ namespace watch {
       std::shared_ptr<run_t> done;
       {
         std::lock_guard lg {state_lock};
+        load_settings_locked();
         if (shared_monitor != monitor) {
           shared_monitor = monitor;
+          save_settings_locked();
           if (running && running->desktop) {
             end_viewers("Switching screens.");
             done = take_locked();

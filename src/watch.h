@@ -31,8 +31,10 @@ namespace watch {
   /**
    * @brief Start watching. Starts the watch encoders when this is the first viewer.
    * @param error Why it couldn't start, in a sentence for the page, when it returns nullptr.
+   * @param name Who is watching, for the list on the Watch page.
+   * @param token_id The watch key or token they use, empty when signed in with the password.
    */
-  std::shared_ptr<viewer_t> join(std::string &error);
+  std::shared_ptr<viewer_t> join(std::string &error, const std::string &name, const std::string &token_id);
 
   /**
    * @brief The next message for this viewer, waiting up to timeout for one.
@@ -60,6 +62,16 @@ namespace watch {
 
   /// {"on", "minutesLeft", "showingScreen", "viewers", "monitor"} for the home and watch pages.
   nlohmann::json sharing();
+
+  /// Who is watching now: [{"id", "name", "since", "signedIn"}].
+  nlohmann::json watching_now();
+
+  /// Stop one viewer now. Returns the id of the watch key or token it used (empty if signed in).
+  std::string remove_viewer(const std::string &id);
+
+  /// The Watch page's picture: 1080p when true, 720p when false. Kept across restarts.
+  bool sharper_picture();
+  void set_sharper_picture(bool on);
 
   /// The PC's screens that can be shared: [{"id", "number", "model", "width", "height", "main"}].
   nlohmann::json monitors();
