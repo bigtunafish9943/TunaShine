@@ -48,16 +48,22 @@ NVIDIA Shield), phones and tablets, built on Artemis and Moonlight for Android. 
 
 Done: setup on first start, a short settings page, updates from inside the app, going straight to the PC's games
 (waking it if needed), a connection test that fits the picture quality to the Wi-Fi, the quick menu on a held Home
-button, plain-words stream stats, and TunaStream's look.
+button, plain-words stream stats, and TunaStream's look. Also:
+
+- **Rumble for the 8BitDo Ultimate 2 through its 2.4G adapter** on a TV box, with menus driven by that controller.
+- **TunaStream actions from the couch**: repair the virtual screen; files sent with *Send to device* arrive in
+  Downloads.
+- **A stream that fits itself to the connection**: picture quality and size adjust while playing, the TV is asked
+  for its game mode, and a dropped stream reconnects by itself.
+- **How the last stream went**: a plain report after each stream, and the TV's view of the stream shown on
+  TunaStream's home page next to the PC's.
 
 Still to come:
 
-- **Rumble over Bluetooth for 8BitDo controllers**, and their 2.4G adapter on a TV box
+- **Rumble for 8BitDo controllers over Bluetooth** on Android, which the controller doesn't offer in that mode
   ([moonlight-android#1442](https://github.com/moonlight-stream/moonlight-android/issues/1442)).
-- **TunaStream actions from the couch**: play it on the PC, repair the virtual screen.
 - Pairing without typing a PIN, by scanning a code shown on the TunaStream home page.
-- **Send files from the PC to the device**: a *Send to device* button on the TunaStream home page, delivered
-  over the existing paired connection, with no extra app or login. Until then, LocalSend does the job.
+- Translations of TunaReceive's own screens.
 
 ## Later (needs testing on real hardware for each change)
 
