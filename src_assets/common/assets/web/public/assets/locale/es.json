@@ -1312,10 +1312,25 @@
         "how": "Mientras alguien mira con un enlace o una contraseña, abre Ver en el PC con sesión iniciada. Cambia Imagen a Más nítida y luego elige Quitar acceso para esa persona.",
         "expect": "La lista la muestra por nombre y dispositivo. Su imagen vuelve más nítida tras unos segundos. Tras Quitar acceso, su dispositivo se detiene y pide un enlace o contraseña nuevos."
       },
+      "cheers": {
+        "title": "Ánimos",
+        "how": "Mientras alguien mira tu pantalla compartida, toca 🔥 en la página Ver. Luego lo mismo mientras una tele transmite. Por último, desactiva los ánimos.",
+        "expect": "El ánimo aparece unos segundos en la esquina de tu pantalla compartida (y en su imagen), y en la tele como mensaje mientras transmite. Los demás también lo ven. Desactivados, los botones lo indican."
+      },
+      "watchtv": {
+        "title": "Ver en una tele",
+        "how": "Mientras una tele transmite un juego, en una segunda tele con TunaReceive mantén pulsado el PC y elige Ver. Luego termina la transmisión en la primera tele.",
+        "expect": "La segunda tele muestra el juego con sonido en pocos segundos, con algo de retraso, y no puede controlar nada. Cuando termina la transmisión lo indica y espera a la siguiente."
+      },
       "sharescreen": {
         "title": "Compartir mi pantalla",
         "how": "Sin transmisión en la tele, abre Ver en el PC, comparte tu pantalla durante 1 hora y abre un enlace para ver en una tableta. Luego inicia una transmisión en la tele, termínala y elige Dejar de compartir.",
         "expect": "La tableta muestra la pantalla principal del PC con sonido; el inicio y la bandeja indican que se comparte. Mientras la tele transmite, la tableta muestra su juego y después otra vez la pantalla del PC. Tras Dejar de compartir, la tableta espera."
+      },
+      "gamesound": {
+        "title": "Solo el sonido del juego",
+        "how": "Comparte tu pantalla con un chat de voz de Discord, pon Sonido en Todo menos Discord y escucha en la tableta.",
+        "expect": "La tableta oye el juego pero no el chat de voz. Al volver a Todo, el chat de voz vuelve en unos segundos."
       },
       "signin": {
         "title": "Mantener la sesión iniciada",
@@ -1382,6 +1397,21 @@
     "screen_failed": "No se pudo cambiar el uso compartido.",
     "need_link": "Este dispositivo aún no puede ver. Abre un nuevo enlace para ver de quien comparte, o inicia sesión.",
     "sign_in": "Iniciar sesión",
+    "cheer_label": "Animar",
+    "cheer_thumbs": "Pulgar arriba",
+    "cheer_heart": "Me encanta",
+    "cheer_laugh": "Qué risa",
+    "cheer_fire": "Imparable",
+    "cheer_clap": "Bien jugado",
+    "cheer_wow": "Guau",
+    "cheer_gg": "Buena partida",
+    "cheer_failed": "No se pudo enviar.",
+    "cheers_allow": "Dejar que quienes miran animen (aparece en tu pantalla mientras la compartes, o en la tele mientras transmite)",
+    "sound_label": "Sonido",
+    "sound_everything": "Todo lo que suena en el PC",
+    "sound_without": "Todo menos {app}",
+    "sound_not_running": "(no abierto ahora)",
+    "sound_desc": "Quienes miran oyen el juego pero no este programa ni lo que reproduce. En Windows 10 anterior a la versión 2004 lo oyen todo.",
     "home_screen_tip": "Consejo: «Añadir a pantalla de inicio» en el menú del navegador abre Ver como una app.",
     "viewers_title": "Mirando ahora",
     "viewers_none": "Nadie está mirando.",
@@ -1389,7 +1419,7 @@
     "viewers_remove": "Quitar acceso",
     "viewers_remove_desc": "Quitar acceso detiene ese dispositivo. Si entró con una contraseña para ver, esa contraseña deja de funcionar también, en todos los dispositivos.",
     "viewers_remove_confirm": "¿Dejar de mostrar a {name} y quitar su acceso?",
-    "picture": "Imagen",
+    "picture_label": "Imagen",
     "picture_standard": "Estándar (720p)",
     "picture_sharper": "Más nítida (1080p), para texto pequeño",
     "password_label": "Contraseña para ver",

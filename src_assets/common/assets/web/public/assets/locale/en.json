@@ -1312,10 +1312,25 @@
         "how": "While someone watches through a watch link or password, open Watch on the PC signed in. Switch Picture to Sharper, then choose Remove access for that viewer.",
         "expect": "The list shows them by name and device. Their picture comes back sharper after a few seconds. After Remove access their device stops and asks for a new link or password."
       },
+      "cheers": {
+        "title": "Cheers",
+        "how": "While someone watches your shared screen, they tap 🔥 on the Watch page. Then do the same while a TV streams. Finally turn off Let viewers send cheers.",
+        "expect": "The cheer pops up in the corner of your shared screen for a few seconds (and in their picture), and on the TV as a message while it streams. Other viewers see it too. With cheers off, the buttons say they're turned off."
+      },
+      "watchtv": {
+        "title": "Watch on a TV",
+        "how": "While one TV streams a game, on a second TV with TunaReceive press and hold the PC and choose Watch. Then end the stream on the first TV.",
+        "expect": "The second TV shows the game with sound within a few seconds, a little behind, and can't control anything. When the stream ends it says so and waits for the next one."
+      },
       "sharescreen": {
         "title": "Share my screen",
         "how": "With no TV streaming, open Watch on the PC, choose Share my screen for 1 hour, and open a watch link on a tablet. Then start a stream on the TV, end it, and finally choose Stop sharing.",
         "expect": "The tablet shows the PC's main screen with sound; the home page and the tray say it's being shared. When the TV streams the tablet shows the TV's game, then the PC's screen again. After Stop sharing the tablet waits."
+      },
+      "gamesound": {
+        "title": "Game sound only",
+        "how": "Share your screen with Discord voice chat going, set Sound to Everything except Discord, and listen on the tablet.",
+        "expect": "The tablet hears the game but not the voice chat. Switching back to Everything brings the voice chat back after a few seconds."
       },
       "signin": {
         "title": "Keep me signed in",
@@ -1382,6 +1397,21 @@
     "screen_failed": "Sharing couldn't be changed.",
     "need_link": "This device can't watch yet. Open a new watch link from the person who shares, or sign in.",
     "sign_in": "Sign in",
+    "cheer_label": "Send a cheer",
+    "cheer_thumbs": "Thumbs up",
+    "cheer_heart": "Love it",
+    "cheer_laugh": "Funny",
+    "cheer_fire": "On fire",
+    "cheer_clap": "Well played",
+    "cheer_wow": "Wow",
+    "cheer_gg": "Good game",
+    "cheer_failed": "The cheer didn't go through.",
+    "cheers_allow": "Let viewers send cheers (they pop up on your screen while you share it, or on the TV while it streams)",
+    "sound_label": "Sound",
+    "sound_everything": "Everything the PC plays",
+    "sound_without": "Everything except {app}",
+    "sound_not_running": "(not open now)",
+    "sound_desc": "Viewers hear the game but not this program, or anything it plays. On Windows 10 before version 2004 they hear everything.",
     "home_screen_tip": "Tip: Add to Home Screen in the browser's menu opens Watch like an app.",
     "viewers_title": "Watching now",
     "viewers_none": "Nobody is watching.",
@@ -1389,7 +1419,7 @@
     "viewers_remove": "Remove access",
     "viewers_remove_desc": "Remove access stops that device watching. If it got in with a watch password, that password stops working too, on every device.",
     "viewers_remove_confirm": "Stop {name} watching and remove its access?",
-    "picture": "Picture",
+    "picture_label": "Picture",
     "picture_standard": "Standard (720p)",
     "picture_sharper": "Sharper (1080p), for small text",
     "password_label": "Watch password",

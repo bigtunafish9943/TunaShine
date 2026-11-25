@@ -1312,10 +1312,25 @@
         "how": "Pendant que quelqu'un regarde avec un lien ou un mot de passe, ouvrez Regarder sur le PC, connecté. Passez Image à Plus nette, puis choisissez Retirer l'accès pour cette personne.",
         "expect": "La liste l'affiche par nom et appareil. Son image revient plus nette après quelques secondes. Après Retirer l'accès, son appareil s'arrête et demande un nouveau lien ou mot de passe."
       },
+      "cheers": {
+        "title": "Encouragements",
+        "how": "Pendant que quelqu'un regarde votre écran partagé, il touche 🔥 sur la page Regarder. Puis pareil pendant un stream sur la télé. Enfin, désactivez les encouragements.",
+        "expect": "L'encouragement s'affiche quelques secondes dans le coin de votre écran partagé (et dans son image), et sur la télé en message pendant son stream. Les autres spectateurs le voient aussi. Désactivés, les boutons l'indiquent."
+      },
+      "watchtv": {
+        "title": "Regarder sur une télé",
+        "how": "Pendant qu'une télé streame un jeu, sur une deuxième télé avec TunaReceive, appuyez longuement sur le PC et choisissez Regarder. Puis terminez le stream sur la première télé.",
+        "expect": "La deuxième télé montre le jeu avec le son en quelques secondes, un peu en retard, sans rien pouvoir contrôler. Quand le stream se termine, elle l'indique et attend le suivant."
+      },
       "sharescreen": {
         "title": "Partager mon écran",
         "how": "Sans stream sur la télé, ouvrez Regarder sur le PC, partagez votre écran pendant 1 heure et ouvrez un lien pour regarder sur une tablette. Lancez ensuite un stream sur la télé, terminez-le, puis choisissez Arrêter le partage.",
         "expect": "La tablette montre l'écran principal du PC avec le son ; l'accueil et la zone de notification indiquent le partage. Pendant le stream de la télé, la tablette montre son jeu, puis de nouveau l'écran du PC. Après Arrêter le partage, la tablette attend."
+      },
+      "gamesound": {
+        "title": "Son du jeu seulement",
+        "how": "Partagez votre écran avec un vocal Discord en cours, réglez Son sur Tout sauf Discord et écoutez sur la tablette.",
+        "expect": "La tablette entend le jeu mais pas le vocal. En revenant à Tout, le vocal revient après quelques secondes."
       },
       "signin": {
         "title": "Rester connecté",
@@ -1382,6 +1397,21 @@
     "screen_failed": "Le partage n'a pas pu être modifié.",
     "need_link": "Cet appareil ne peut pas encore regarder. Ouvrez un nouveau lien pour regarder envoyé par la personne qui partage, ou connectez-vous.",
     "sign_in": "Se connecter",
+    "cheer_label": "Encourager",
+    "cheer_thumbs": "Pouce levé",
+    "cheer_heart": "J'adore",
+    "cheer_laugh": "Drôle",
+    "cheer_fire": "En feu",
+    "cheer_clap": "Bien joué",
+    "cheer_wow": "Waouh",
+    "cheer_gg": "Bien joué, la partie",
+    "cheer_failed": "L'encouragement n'est pas passé.",
+    "cheers_allow": "Autoriser les encouragements (ils s'affichent sur votre écran pendant le partage, ou sur la télé pendant son stream)",
+    "sound_label": "Son",
+    "sound_everything": "Tout ce que joue le PC",
+    "sound_without": "Tout sauf {app}",
+    "sound_not_running": "(pas ouvert)",
+    "sound_desc": "Les spectateurs entendent le jeu mais pas ce programme, ni ce qu'il joue. Sous Windows 10 avant la version 2004, ils entendent tout.",
     "home_screen_tip": "Astuce : « Sur l'écran d'accueil » dans le menu du navigateur ouvre Regarder comme une app.",
     "viewers_title": "Regardent en ce moment",
     "viewers_none": "Personne ne regarde.",
@@ -1389,7 +1419,7 @@
     "viewers_remove": "Retirer l'accès",
     "viewers_remove_desc": "Retirer l'accès arrête cet appareil. S'il est entré avec un mot de passe pour regarder, ce mot de passe cesse aussi de fonctionner, sur tous les appareils.",
     "viewers_remove_confirm": "Arrêter {name} et retirer son accès ?",
-    "picture": "Image",
+    "picture_label": "Image",
     "picture_standard": "Standard (720p)",
     "picture_sharper": "Plus nette (1080p), pour les petits textes",
     "password_label": "Mot de passe pour regarder",
