@@ -206,6 +206,10 @@
         };
       },
       computed: {
+        // One computed block only: a second one replaces this one, and the log box goes blank
+        vdisplayStatusName() {
+          return { 0: 'ok', 1: 'unknown', '-1': 'failed', '-2': 'version', '-3': 'watchdog' }[this.vdisplayStatus] || 'unknown';
+        },
         actualLogs() {
           if (!this.logFilter) return this.logs;
           let lines = this.logs.split("\n");
@@ -229,11 +233,6 @@
       },
       beforeDestroy() {
         clearInterval(this.logInterval);
-      },
-      computed: {
-        vdisplayStatusName() {
-          return { 0: 'ok', 1: 'unknown', '-1': 'failed', '-2': 'version', '-3': 'watchdog' }[this.vdisplayStatus] || 'unknown';
-        },
       },
       methods: {
         async refreshVdisplay() {
