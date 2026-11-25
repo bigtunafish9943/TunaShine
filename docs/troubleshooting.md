@@ -65,6 +65,11 @@ virtual gamepad.
   it up afterwards.
 - The home page says when this PC is on Wi-Fi. Windows stops scanning for other Wi-Fi networks while a stream
   runs; the log shows `won't scan for other networks while streaming`.
+- On graphics cards with two or more NVENC chips (an RTX 5080 has two), 4K HEVC and AV1 streams split each frame
+  across both chips, which nearly halves the time to encode it. The log's `NvEnc: created encoder` line ends with
+  `split-frame` when it is on, and the home page says so while streaming. If the picture looks wrong or a stream
+  won't start, turn off *Settings → NVIDIA encoder → Encode each frame in halves at once*; a driver that refuses it
+  is handled by itself (`couldn't create an encoder that splits frames; trying the usual way`).
 - A stream that drops and comes back shows `CLIENT DISCONNECTED (connection lost)` in the log. One that the
   client ended on purpose shows `CLIENT DISCONNECTED`.
 

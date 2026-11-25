@@ -123,7 +123,8 @@ namespace stream {
     std::vector<health_t> health();
 
     /// Keep what the device reports it sees of its stream, for the health readout.
-    void set_device_view(session_t &session, const device_view_t &view);
+    /// @return The PC's own figures for the same stream, so the device can report both ends.
+    health_t set_device_view(session_t &session, const device_view_t &view);
 
     state_e state(session_t &session);
     inline bool send(session_t& session, const std::string_view &payload);
