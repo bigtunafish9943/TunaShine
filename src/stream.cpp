@@ -2328,10 +2328,11 @@ namespace stream {
       return clamped;
     }
 
-    void set_device_view(session_t &session, const device_view_t &view) {
+    health_t set_device_view(session_t &session, const device_view_t &view) {
       std::lock_guard lg {session.health.lock};
       session.health.device_view = view;
       session.health.device_view_at = std::chrono::steady_clock::now();
+      return summarise_health(session);
     }
 
     int set_picture_scale(session_t &session, int percent) {

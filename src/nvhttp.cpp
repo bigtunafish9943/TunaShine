@@ -1779,7 +1779,20 @@ namespace nvhttp {
     auto session = rtsp_stream::find_session(named_cert_p->uuid);
     out["applied"] = (bool) session;
     if (session) {
-      stream::session::set_device_view(*session, view);
+      // Answer with the PC's side of the same stream, so the device's own report covers both ends
+      const auto pc = stream::session::set_device_view(*session, view);
+      out["pc"] = {
+        {"fps", pc.fps},
+        {"pcMsAvg", pc.pc_ms_avg},
+        {"pcMsMax", pc.pc_ms_max},
+        {"sendMsAvg", pc.send_ms_avg},
+        {"skippedPerSec", pc.skipped_per_sec},
+        {"recoveries", pc.recoveries},
+        {"bitrateKbps", pc.bitrate_kbps},
+        {"fecPercent", pc.fec_percent},
+        {"pictureScale", pc.picture_scale},
+        {"splitFrames", pc.split_frames},
+      };
     }
     SimpleWeb::CaseInsensitiveMultimap headers;
     headers.emplace("Content-Type", "application/json");
