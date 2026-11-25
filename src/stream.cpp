@@ -1512,7 +1512,16 @@ namespace stream {
                       << s.gaps << " gaps, PC time avg "sv << s.pc_ms_avg << " ms worst "sv << s.pc_ms_max << " ms, "sv
                       << "send avg "sv << s.send_ms_avg << " ms worst "sv << s.send_ms_max << " ms, "sv
                       << s.recoveries << " lost-video requests (last "sv << s.window_s << " s), "sv
-                      << s.bitrate_kbps << " kbps, error correction "sv << s.fec_percent << "%"sv;
+                      << s.bitrate_kbps << " kbps, error correction "sv << s.fec_percent << "%"sv
+                      << (s.split_frames ? ", split frames"sv : ""sv)
+                      << (s.picture_scale < 100 ? ", picture at "s + std::to_string(s.picture_scale) + "%"s : ""s);
+      if (s.view.known) {
+        BOOST_LOG(info) << "Device view for "sv << s.device << ": "sv
+                        << std::fixed << std::setprecision(1) << s.view.loss_pct << "% of the picture lost, "sv
+                        << s.view.slow_pct << "% of frames slow to arrive, "sv << s.view.fps << " fps received, decode "sv
+                        << s.view.decode_ms << " ms, "sv << s.view.latency_ms << " ms on the device, asking "sv
+                        << s.view.kbps << " of "sv << s.view.setting_kbps << " kbps"sv;
+      }
     }
   }
 
