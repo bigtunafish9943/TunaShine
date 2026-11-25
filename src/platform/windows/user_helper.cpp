@@ -16,9 +16,10 @@
 #include <string>
 
 // platform includes
+#include <windows.h>
+// after windows.h
 #include <sddl.h>
 #include <UserEnv.h>
-#include <windows.h>
 
 // local includes
 #include "app_sound.h"
