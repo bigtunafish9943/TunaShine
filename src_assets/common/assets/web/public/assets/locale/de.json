@@ -147,7 +147,17 @@
     "virtual_display": "Immer einen virtuellen Bildschirm erstellen",
     "virtual_display_desc": "Erstellt beim Start dieser App immer einen virtuellen Bildschirm, egal was das Gerät anfragt. Der SudoVDA-Treiber muss installiert und aktiviert sein.",
     "virtual_display_primary": "Virtuellen Bildschirm als Hauptbildschirm erzwingen",
-    "virtual_display_primary_desc": "Macht den virtuellen Bildschirm beim Start der App automatisch zum Hauptbildschirm. Wenn ein Gerät einen virtuellen Bildschirm anfragt, wird er immer zum Hauptbildschirm. (Am besten eingeschaltet lassen) [Unter Windows 11 24H2 defekt]"
+    "virtual_display_primary_desc": "Macht den virtuellen Bildschirm beim Start der App automatisch zum Hauptbildschirm. Wenn ein Gerät einen virtuellen Bildschirm anfragt, wird er immer zum Hauptbildschirm. (Am besten eingeschaltet lassen) [Unter Windows 11 24H2 defekt]",
+    "sync_title": "Meine Spiele synchron halten",
+    "sync_days": "Kürzlich heißt in den letzten",
+    "sync_now": "Jetzt synchronisieren",
+    "sync_desc": "Fügt Steam-Spiele hinzu, die du kürzlich gespielt hast, und Spiele, die neu über Epic, GOG, EA, Ubisoft, Amazon oder den Microsoft Store installiert wurden (diese Launcher speichern keine Spielzeiten), mit ihren Covern. Sie werden wieder entfernt, wenn sie deinstalliert werden, oder bei Steam, wenn so lange nicht gespielt. Selbst hinzugefügte Apps werden nie angefasst, und ein synchronisiertes Spiel, das du löschst, bleibt gelöscht. Während jemand streamt, ändert sich nichts.",
+    "sync_last": "Zuletzt synchronisiert {when}: {added} hinzugefügt, {removed} entfernt.",
+    "sync_added_list": "Hinzugefügt: {names}.",
+    "sync_excluded": "{n} synchronisierte Spiele, die du gelöscht hast, bleiben von der Liste fern.",
+    "sync_forget": "Wieder zulassen",
+    "sync_badge": "Synchronisiert",
+    "sync_badge_title": "Hinzugefügt von „Meine Spiele synchron halten“"
   },
   "config": {
     "adapter_name_desc_linux_1": "Geben Sie eine GPU für die Aufnahme manuell an.",

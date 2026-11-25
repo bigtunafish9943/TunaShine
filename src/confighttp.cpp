@@ -32,6 +32,7 @@
 // local includes
 #include "config.h"
 #include "confighttp.h"
+#include "library_sync.h"
 #include "watch.h"
 #include "crypto.h"
 #include "display_device.h"
@@ -871,6 +872,40 @@ namespace confighttp {
     headers.emplace("X-Frame-Options", "DENY");
     headers.emplace("Content-Security-Policy", "frame-ancestors 'none';");
     response->write(content, headers);
+  }
+
+  /**
+   * @brief Keep my games in sync: GET the settings and last sync; POST {"enabled", "days",
+   *        "forgetRemoved", "now"} to change them or sync now.
+   */
+  void getLibrarySync(resp_https_t response, req_https_t request) {
+    if (!authenticate(response, request)) {
+      return;
+    }
+    auto out = library_sync::status();
+    out["status"] = true;
+    send_response(response, out);
+  }
+
+  void postLibrarySync(resp_https_t response, req_https_t request) {
+    if (!validateContentType(response, request, "application/json") || !authenticate(response, request)) {
+      return;
+    }
+    try {
+      std::stringstream ss;
+      ss << request->content.rdbuf();
+      auto input = nlohmann::json::parse(ss.str());
+      if (input.value("now", false)) {
+        library_sync::run_soon();
+      } else {
+        library_sync::configure(input);
+      }
+      auto out = library_sync::status();
+      out["status"] = true;
+      send_response(response, out);
+    } catch (std::exception &e) {
+      bad_request(response, request, e.what());
+    }
   }
 
   /**
@@ -3277,6 +3312,8 @@ namespace confighttp {
     server.resource["^/checklist/?$"]["GET"] = getChecklistPage;
     server.resource["^/watch/?$"]["GET"] = getWatchPage;
     server.resource["^/api/tokens$"]["GET"] = getApiTokens;
+    server.resource["^/api/library-sync$"]["GET"] = getLibrarySync;
+    server.resource["^/api/library-sync$"]["POST"] = postLibrarySync;
     server.resource["^/api/tokens$"]["POST"] = postApiToken;
     server.resource["^/api/tokens/delete$"]["POST"] = postApiTokenDelete;
     server.resource["^/api/watch/stream$"]["GET"] = getWatchStream;

@@ -147,7 +147,17 @@
     "virtual_display": "Toujours créer un écran virtuel",
     "virtual_display_desc": "Crée toujours un écran virtuel au lancement de cette app, quelle que soit la demande de l'appareil. Le pilote SudoVDA doit être installé et activé.",
     "virtual_display_primary": "Forcer l'écran virtuel comme écran principal",
-    "virtual_display_primary_desc": "Définit automatiquement l'écran virtuel comme écran principal au lancement de l'app. Il l'est toujours quand un appareil demande un écran virtuel. (Recommandé de laisser activé) [Ne fonctionne pas sous Windows 11 24H2]"
+    "virtual_display_primary_desc": "Définit automatiquement l'écran virtuel comme écran principal au lancement de l'app. Il l'est toujours quand un appareil demande un écran virtuel. (Recommandé de laisser activé) [Ne fonctionne pas sous Windows 11 24H2]",
+    "sync_title": "Garder mes jeux synchronisés",
+    "sync_days": "Récent signifie les derniers",
+    "sync_now": "Synchroniser",
+    "sync_desc": "Ajoute les jeux Steam joués récemment et les jeux nouvellement installés via Epic, GOG, EA, Ubisoft, Amazon ou le Microsoft Store (ces lanceurs n'enregistrent pas le temps de jeu), avec leurs jaquettes. Ils sont retirés à leur désinstallation, ou pour Steam s'ils ne sont pas joués pendant cette durée. Les apps ajoutées par vous ne sont jamais touchées, et un jeu synchronisé que vous supprimez reste supprimé. Rien ne change pendant un stream.",
+    "sync_last": "Dernière synchronisation {when} : {added} ajoutés, {removed} retirés.",
+    "sync_added_list": "Ajoutés : {names}.",
+    "sync_excluded": "{n} jeux synchronisés que vous avez supprimés restent hors de la liste.",
+    "sync_forget": "Les laisser revenir",
+    "sync_badge": "Synchronisé",
+    "sync_badge_title": "Ajouté par Garder mes jeux synchronisés"
   },
   "config": {
     "adapter_name_desc_linux_1": "Spécifiez manuellement un GPU à utiliser pour la capture.",

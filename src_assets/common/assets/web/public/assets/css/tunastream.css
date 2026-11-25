@@ -553,6 +553,13 @@ body .auth-card {
     vertical-align: middle;
 }
 
+/* Added by Keep my games in sync */
+.app-badge.app-badge-synced {
+  background: transparent;
+  color: var(--bs-secondary-color);
+  border: 1px solid var(--bs-border-color);
+}
+
 .app-actions {
     flex: none;
     display: flex;

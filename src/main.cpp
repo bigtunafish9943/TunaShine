@@ -17,6 +17,7 @@
 #include "httpcommon.h"
 #include "logging.h"
 #include "main.h"
+#include "library_sync.h"
 #include "nvhttp.h"
 #include "play_limits.h"
 #include "process.h"
@@ -342,6 +343,8 @@ int main(int argc, char *argv[]) {
 
   // Daily play-time limits, with warnings on the TV
   play_limits::start();
+  // Keep my games in sync (when turned on, on the Apps page)
+  library_sync::start();
   // Do not disturb left on if TunaStream stopped during a stream
   platf::quiet_notifications_cleanup();
   // Monitors left off by privacy mode if TunaStream stopped during a stream

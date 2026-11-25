@@ -147,7 +147,17 @@
     "virtual_display": "Crear siempre una pantalla virtual",
     "virtual_display_desc": "Crea siempre una pantalla virtual al iniciar esta app, pida lo que pida el dispositivo. El controlador SudoVDA debe estar instalado y activado.",
     "virtual_display_primary": "Forzar la pantalla virtual como principal",
-    "virtual_display_primary_desc": "Convierte la pantalla virtual en principal al iniciar la app. Siempre lo es cuando un dispositivo pide una pantalla virtual. (Recomendado dejarlo activado) [No funciona en Windows 11 24H2]"
+    "virtual_display_primary_desc": "Convierte la pantalla virtual en principal al iniciar la app. Siempre lo es cuando un dispositivo pide una pantalla virtual. (Recomendado dejarlo activado) [No funciona en Windows 11 24H2]",
+    "sync_title": "Mantener mis juegos sincronizados",
+    "sync_days": "Reciente significa los últimos",
+    "sync_now": "Sincronizar ahora",
+    "sync_desc": "Añade los juegos de Steam que has jugado hace poco y los juegos recién instalados con Epic, GOG, EA, Ubisoft, Amazon o Microsoft Store (esos lanzadores no guardan el tiempo de juego), con sus portadas. Se quitan al desinstalarlos o, en Steam, si no se juegan durante ese tiempo. Las apps que añadiste tú nunca se tocan, y un juego sincronizado que borres sigue borrado. No cambia nada mientras alguien transmite.",
+    "sync_last": "Última sincronización {when}: {added} añadidos, {removed} quitados.",
+    "sync_added_list": "Añadidos: {names}.",
+    "sync_excluded": "{n} juegos sincronizados que borraste no vuelven a la lista.",
+    "sync_forget": "Dejar que vuelvan",
+    "sync_badge": "Sincronizado",
+    "sync_badge_title": "Añadido por Mantener mis juegos sincronizados"
   },
   "config": {
     "adapter_name_desc_linux_1": "Especifique manualmente un GPU a usar para capturar.",
