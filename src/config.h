@@ -270,6 +270,7 @@ namespace config {
     bool enable_discovery;
     bool envvar_compatibility_mode;
     std::string locale;
+    std::string ui_theme;  ///< Colour theme for the web page and TunaReceive: deepsea, reef, kelp, midnight or gold
     int min_log_level;
     std::bitset<flag::FLAG_SIZE> flags;
     std::string credentials_file;

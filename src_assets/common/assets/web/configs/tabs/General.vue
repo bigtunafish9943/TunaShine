@@ -11,6 +11,21 @@ const props = defineProps({
 })
 
 const config = ref(props.config)
+
+// Swatches show each theme's background and accent; names come from the wording file
+const colourThemes = [
+  { id: 'deepsea', navy: '#041431', accent: '#0cc8f6' },
+  { id: 'reef', navy: '#1a0a12', accent: '#ff7a59' },
+  { id: 'kelp', navy: '#03140e', accent: '#5ee89a' },
+  { id: 'midnight', navy: '#07060f', accent: '#b08cff' },
+  { id: 'gold', navy: '#120d04', accent: '#ffc23d' },
+]
+
+// Shows the theme straight away; Save keeps it, and TunaReceive follows
+function pickTheme(id) {
+  config.value.ui_theme = id
+  document.documentElement.setAttribute('data-ts-theme', id)
+}
 const globalPrepCmd = ref(props.globalPrepCmd)
 const globalStateCmd = ref(props.globalStateCmd)
 const serverCmd = ref(props.serverCmd)
@@ -63,6 +78,24 @@ onMounted(() => {
       <input type="text" class="form-control" id="tunastream_name" placeholder="TunaStream"
              v-model="config.tunastream_name" />
       <div class="form-text">{{ $t('config.tunastream_name_desc') }}</div>
+    </div>
+
+    <!-- Colour theme, also worn by TunaReceive unless it picks its own -->
+    <div class="mb-3">
+      <span class="form-label d-block" id="ui_theme_label">{{ $t('config.ui_theme') }}</span>
+      <div class="ts-theme-picker" role="radiogroup" aria-labelledby="ui_theme_label">
+        <button v-for="t in colourThemes" :key="t.id" type="button" role="radio"
+                class="ts-theme-swatch" :class="{ active: (config.ui_theme || 'deepsea') === t.id }"
+                :aria-checked="(config.ui_theme || 'deepsea') === t.id"
+                @click="pickTheme(t.id)">
+          <span class="ts-theme-dots" aria-hidden="true">
+            <span :style="{ background: t.navy }"></span>
+            <span :style="{ background: t.accent }"></span>
+          </span>
+          {{ $t('config.ui_theme_' + t.id) }}
+        </button>
+      </div>
+      <div class="form-text">{{ $t('config.ui_theme_desc') }}</div>
     </div>
 
     <!-- Locale -->

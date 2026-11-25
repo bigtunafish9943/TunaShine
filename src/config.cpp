@@ -591,6 +591,7 @@ namespace config {
     true, // enable_discovery
     false, // envvar_compatibility_mode
     "en",  // locale
+    "deepsea",  // ui_theme
     2,  // min_log_level
     0,  // flags
     {},  // User file
@@ -1332,6 +1333,8 @@ namespace config {
     if (upnp) {
       config::tunastream.flags[config::flag::UPNP].flip();
     }
+
+    string_restricted_f(vars, "ui_theme", config::tunastream.ui_theme, {"deepsea"sv, "reef"sv, "kelp"sv, "midnight"sv, "gold"sv});
 
     string_restricted_f(vars, "locale", config::tunastream.locale, {
                                                                    "bg"sv,  // Bulgarian

@@ -1426,6 +1426,8 @@ namespace confighttp {
     nlohmann::json output_tree;
     output_tree["status"] = true;
     output_tree["locale"] = config::tunastream.locale;
+    // Every page asks for this first, so the colour theme comes along with it
+    output_tree["theme"] = config::tunastream.ui_theme;
     send_response(response, output_tree);
   }
 
