@@ -441,7 +441,16 @@ namespace mcp_bridge {
               res = {std::string {"Something went wrong: "} + e.what(), true};
             }
           }
-          return {{"jsonrpc", "2.0"}, {"id", id}, {"result", {{"content", json::array({{{"type", "text"}, {"text", res.text}}})}, {"isError", res.error}}}}};
+          json content = json::array();
+          content.push_back({{"type", "text"}, {"text", res.text}});
+          json result = json::object();
+          result["content"] = content;
+          result["isError"] = res.error;
+          json reply = json::object();
+          reply["jsonrpc"] = "2.0";
+          reply["id"] = id;
+          reply["result"] = result;
+          return reply;
         }
         return error_reply(id, -32602, "Unknown tool: " + name);
       }
