@@ -12,6 +12,7 @@
 #include <atomic>
 #include <cctype>
 #include <filesystem>
+#include <set>
 #include <string>
 #include <thread>
 #include <vector>
@@ -1124,7 +1125,23 @@ namespace proc {
       }
     }
 
-    return validate_app_image_path(app_image_path);
+    return themed_app_image(validate_app_image_path(app_image_path));
+  }
+
+  /**
+   * TunaStream's own pictures (Desktop, Steam, Virtual Desktop, ...) in the colours of the theme
+   * the page wears now, from assets/themed; any other picture as it is.
+   */
+  std::string themed_app_image(const std::string &path) {
+    static const std::set<std::string> own {"desktop", "desktop-alt", "steam", "virtual_desktop", "input_only", "terminate"};
+    const std::filesystem::path p {path};
+    std::error_code ec;
+    if (!own.count(p.stem().string()) ||
+        !std::filesystem::equivalent(p.parent_path(), std::filesystem::path {TUNASTREAM_ASSETS_DIR}, ec)) {
+      return path;
+    }
+    const auto themed = std::filesystem::path {TUNASTREAM_ASSETS_DIR} / "themed" / (p.stem().string() + "-" + config::effective_theme() + ".png");
+    return std::filesystem::exists(themed, ec) ? themed.string() : path;
   }
 
   std::string proc_t::get_last_run_app_name() {

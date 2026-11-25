@@ -220,6 +220,9 @@ namespace proc {
   std::tuple<std::string, std::string> calculate_app_id(const std::string &app_name, std::string app_image_path, int index);
 
   std::string validate_app_image_path(std::string app_image_path);
+
+  /// TunaStream's own app pictures in the colours of the current theme (other pictures unchanged).
+  std::string themed_app_image(const std::string &path);
   void refresh(const std::string &file_name, bool needs_terminate = true);
   void migrate_apps(nlohmann::json* fileTree_p, nlohmann::json* inputTree_p);
   std::optional<proc::proc_t> parse(const std::string &file_name);
