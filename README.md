@@ -12,28 +12,84 @@
 </p>
 
 TunaStream runs on your gaming PC and streams it to another device over your network. It is built to be easy to
-set up and pleasant to use.
+set up, pleasant to use, and smooth on ordinary home Wi-Fi.
 
-> [!WARNING]
-> TunaStream is new. Every release passes automated checks, but it has had very little testing on real hardware.
-> Expect rough edges.
+> [!NOTE]
+> TunaStream is young. It is played on every day with one setup (an RTX 5080 PC streaming over Wi-Fi to an NVIDIA
+> Shield TV Pro running [TunaReceive](https://github.com/bigtunafish9943/TunaReceive)), and every release passes
+> automated checks, but it has had little testing on other hardware. Expect rough edges.
 
-## What it does
+## Smooth on Wi-Fi
+
+Most streaming hosts send at one fixed quality and hope the network keeps up. TunaStream and TunaReceive watch
+the stream together and adjust it while you play, so a busy evening on the Wi-Fi costs a little sharpness
+instead of a frozen picture.
+
+- **It eases off before anything is lost.** TunaReceive notices when frames start arriving late, which happens
+  well before packets go missing, and the bitrate steps down straight away. When the connection clears, it
+  climbs back up.
+- **The picture size follows, without a freeze.** When the bitrate has dropped too far for a sharp 4K picture,
+  the stream moves to 1440p or 1080p and the TV scales it to fill the screen. The new encoder is prepared in the
+  background and swapped in between two frames, so the change is a slight softening rather than a pause. It
+  goes back to full size when there is room again.
+- **Error correction that fits the connection.** Extra recovery data lets the TV repair lost packets without
+  asking for them again. On a clean connection TunaStream sends less of it (as little as half your setting),
+  leaving more of the bitrate for the picture; at the first lost video it sends more, and holds that level for longer each time
+  the connection proves rough.
+- **Split-frame encoding on high-end Nvidia cards.** Cards with two or more NVENC engines (high-end RTX 40 and
+  50 series) encode each 4K frame in two halves at the same time, which cuts the time the PC spends on every
+  frame. It is on by default and turns itself off on cards that can't do it. *Settings > NVIDIA*.
+- **No Wi-Fi scans mid-stream.** Windows looks for other Wi-Fi networks every minute or so, and on a PC that is
+  itself on Wi-Fi each scan is a short lag spike. TunaStream pauses those scans while someone is streaming. The
+  home page also says when the PC is on Wi-Fi and how strong its signal is, since a cable is the biggest single
+  improvement most setups can make.
+- **TV game mode.** TunaReceive asks the TV to skip its picture processing (HDMI ALLM), which on many TVs takes
+  tens of milliseconds off every frame.
+- **Sound that doesn't drop out.** TunaReceive starts with the smallest sound buffer and gives it a little more
+  room each time a packet arrives late, so a clean connection keeps the lowest delay and an uneven one stops
+  going silent.
+- **You can see all of it.** The home page shows each device that is playing: frame rate, bitrate, error
+  correction, picture size and whether frames are being split, next to the TV's own view of the stream (frames
+  arriving late, decode time, delay). The log keeps a line a minute for every stream.
+
+## Rumble that works
+
+Rumble goes game → virtual Xbox 360 controller on the PC → TunaStream → network → TunaReceive → your controller,
+and every step was tightened:
+
+- **Fast.** TunaStream sends rumble to the client within about 20 ms, where it used to take up to 150 ms, and a
+  controller that reconnects no longer loses its first rumble.
+- **The right controller for the game.** Controllers with motion sensors but no touchpad, such as 8BitDo and
+  Switch Pro controllers, are presented to games as an Xbox 360 controller, which nearly every PC game rumbles.
+- **8BitDo Ultimate 2 through its 2.4G adapter, on a TV box.** Android can read this controller's buttons but has
+  no way to rumble it. During a stream TunaReceive takes the adapter over and drives it directly, so rumble,
+  motion and the battery level all work, and the controller still drives the menus. Rumble is refreshed several
+  times a second, so a long rumble never fades out early.
+- **Controllers in Xbox mode** get the start-up message Windows' own driver sends; some adapters, 8BitDo's among
+  them, send no input until they receive it.
+- **A rumble test.** *Rumble now* on the Troubleshooting page buzzes the controller directly, which tells a game
+  problem from a client problem in one press. TunaReceive's *Check my controller* shows what the controller is
+  and whether it can rumble.
+
+## Everything else
 
 - **Streams on its own virtual monitor.** Every stream gets a virtual display sized to the device you are playing
   on, with HDR. No spare monitor or dummy plug, and your real monitor keeps its own picture.
 - **Gives your screen back when you stop.** The virtual display is the main display only while someone is
   streaming. Close the client and your monitor is the main display again, even if the game is left running.
 - **Survives a dropped connection.** A Wi-Fi hiccup does not quit your game: it keeps running for two minutes so
-  you can reconnect.
-- **A clear web interface.** A home page that shows what is streaming, which devices are paired and whether the
-  virtual display is working, with an End session button. Settings in plain words, with the technical ones tucked
-  away. Pairing and permissions together on one Devices page.
-- **Updates itself.** When a new version is out, the home page offers *Update now*; TunaStream downloads it,
-  checks it and installs it, keeping your settings and paired devices.
-- **Controller rumble you can test.** Rumble is sent to the client within about 20 ms, and the Troubleshooting
-  page can buzz the controller directly so you can tell a game problem from a client problem.
+  you can reconnect, and TunaReceive reconnects by itself.
+- **A clear web interface.** A home page that shows what is streaming, who is playing and with which
+  controllers, which devices are paired and whether the virtual display is working, with an End session button.
+  Settings in plain words, with the technical ones tucked away. Pairing and permissions together on one Devices
+  page.
+- **Five colour themes**: Deep Sea, Coral Reef, Kelp Forest, Midnight and Golden Hour, in light and dark.
+  TunaReceive wears the PC's theme by default, or its own if you pick one. *Settings > General*.
+- **Updates itself.** When a new version is out, a banner offers *Update now*; TunaStream downloads it, checks it
+  against GitHub's published checksum and installs it, keeping your settings and paired devices.
+- **A log you can keep.** The Troubleshooting page shows the log and saves it as a file to attach to a bug report.
 - **Permissions for each device**, with one-click presets such as *Controller only*.
+- **Send files to the TV** from the home page; they arrive in TunaReceive's Downloads.
 - **Hardware encoding** on AMD, Intel and Nvidia GPUs, with a software fallback.
 - Clipboard sync, input-only mode, and commands that run when a device connects or disconnects.
 
@@ -59,8 +115,9 @@ client.
 
 ## Pair a device
 
-1. Install [Moonlight](https://moonlight-stream.org) on the device you want to play on. On Android,
-   [Artemis](https://github.com/ClassicOldSong/moonlight-android) adds control over the virtual display.
+1. Install a client on the device you want to play on. On Android TV, phones and tablets, use
+   [TunaReceive](https://github.com/bigtunafish9943/TunaReceive/releases/latest): everything under *Smooth on
+   Wi-Fi* and *Rumble that works* needs it. On other devices, [Moonlight](https://moonlight-stream.org) works.
 2. Add your PC in the client. It shows a PIN.
 3. In TunaStream, open **Devices**, enter that PIN and give the device a name.
 4. Pick **Desktop** or a game in the client.
