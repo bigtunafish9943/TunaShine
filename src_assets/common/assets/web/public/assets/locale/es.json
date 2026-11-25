@@ -1186,6 +1186,8 @@
   },
   "checklist": {
     "title": "Lista de pruebas",
+    "self_cheer": "Mostrar un ánimo de prueba en este PC",
+    "self_cheer_look": "Mira abajo a la derecha de la pantalla principal del PC: debería aparecer una tarjeta 👋 unos segundos.",
     "self_title": "Autocomprobación",
     "self_desc": "Lo que este PC puede comprobar por sí mismo. Un aviso explica qué no funcionará y por qué.",
     "self_loading": "Comprobando…",

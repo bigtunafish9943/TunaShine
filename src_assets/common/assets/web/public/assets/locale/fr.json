@@ -1186,6 +1186,8 @@
   },
   "checklist": {
     "title": "Liste de tests",
+    "self_cheer": "Afficher un encouragement de test sur ce PC",
+    "self_cheer_look": "Regardez en bas à droite de l'écran principal du PC : une carte 👋 doit s'afficher quelques secondes.",
     "self_title": "Autotest",
     "self_desc": "Ce que ce PC peut vérifier tout seul. Un avertissement explique ce qui ne marchera pas, et pourquoi.",
     "self_loading": "Vérification…",

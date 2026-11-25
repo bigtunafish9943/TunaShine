@@ -1186,6 +1186,8 @@
   },
   "checklist": {
     "title": "Test checklist",
+    "self_cheer": "Show a test cheer on this PC",
+    "self_cheer_look": "Look at the bottom right of the PC's main screen: a 👋 card should show for a few seconds.",
     "self_title": "Self-check",
     "self_desc": "What this PC can check by itself. A warning explains what won't work and why.",
     "self_loading": "Checking…",

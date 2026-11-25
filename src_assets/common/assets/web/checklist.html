@@ -98,6 +98,10 @@
         </li>
       </ul>
       <p class="small mb-0" v-else>{{ $t('checklist.self_loading') }}</p>
+      <div class="d-flex flex-wrap align-items-center gap-2 mt-2" v-if="selfChecks.length">
+        <button type="button" class="btn btn-sm btn-outline-secondary" @click="testCheer">{{ $t('checklist.self_cheer') }}</button>
+        <span class="small" role="status">{{ cheerTested ? $t('checklist.self_cheer_look') : '' }}</span>
+      </div>
     </section>
 
     <div class="check-summary">
@@ -194,6 +198,7 @@
           notes: {},
           error: '',
           selfChecks: [],
+          cheerTested: false,
         };
       },
       computed: {
@@ -220,6 +225,12 @@
           const notes = {};
           for (const [id, r] of Object.entries(this.results)) notes[id] = r.note || '';
           this.notes = notes;
+        },
+        async testCheer() {
+          try {
+            await fetch('./api/selfcheck/cheer', { credentials: 'include', method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+            this.cheerTested = true;
+          } catch (e) { /* nothing to show */ }
         },
         async loadSelfCheck() {
           try {

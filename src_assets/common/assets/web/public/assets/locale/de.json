@@ -1186,6 +1186,8 @@
   },
   "checklist": {
     "title": "Test-Checkliste",
+    "self_cheer": "Test-Anfeuerung auf diesem PC zeigen",
+    "self_cheer_look": "Schau unten rechts auf den Hauptbildschirm des PCs: Eine 👋-Karte sollte ein paar Sekunden erscheinen.",
     "self_title": "Selbsttest",
     "self_desc": "Was dieser PC selbst prüfen kann. Eine Warnung erklärt, was nicht geht und warum.",
     "self_loading": "Prüfe…",
