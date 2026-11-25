@@ -51,6 +51,7 @@
 #include "play_limits.h"
 #include "box_art.h"
 #include "captures.h"
+#include "receiver_settings.h"
 #include "settings_backup.h"
 #include "sound_board.h"
 #include "tv_messages.h"
@@ -2331,6 +2332,46 @@ namespace confighttp {
   }
 
   /**
+   * @brief TunaReceive's settings on each TV that has shared them: {"tvs": [...]}.
+   */
+  void getReceiverSettings(resp_https_t response, req_https_t request) {
+    if (!authenticate(response, request)) {
+      return;
+    }
+    nlohmann::json output_tree;
+    output_tree["status"] = true;
+    output_tree["tvs"] = receiver_settings::list();
+    send_response(response, output_tree);
+  }
+
+  /**
+   * @brief Change a TV's settings: {"uuid", "changes": {key: value or null}}.
+   */
+  void postReceiverSettings(resp_https_t response, req_https_t request) {
+    if (!validateContentType(response, request, "application/json") || !authenticate(response, request)) {
+      return;
+    }
+
+    print_req(request);
+
+    try {
+      std::stringstream ss;
+      ss << request->content.rdbuf();
+      auto input = nlohmann::json::parse(ss.str());
+      auto error = receiver_settings::change(input.value("uuid", ""), input.value("changes", nlohmann::json::object()));
+      if (!error.empty()) {
+        bad_request(response, request, error);
+        return;
+      }
+      nlohmann::json output_tree;
+      output_tree["status"] = true;
+      send_response(response, output_tree);
+    } catch (std::exception &e) {
+      bad_request(response, request, e.what());
+    }
+  }
+
+  /**
    * @brief Quit TunaStream.
    * @param response The HTTP response object.
    * @param request The HTTP request object.
@@ -2564,6 +2605,8 @@ namespace confighttp {
     server.resource["^/api/backup$"]["GET"] = getBackup;
     server.resource["^/api/restore$"]["POST"] = postRestore;
     server.resource["^/api/receiver-backups$"]["GET"] = getReceiverBackups;
+    server.resource["^/api/receiver-settings$"]["GET"] = getReceiverSettings;
+    server.resource["^/api/receiver-settings$"]["POST"] = postReceiverSettings;
     server.resource["^/api/quit$"]["POST"] = quit;
     server.resource["^/api/reset-display-device-persistence$"]["POST"] = resetDisplayDevicePersistence;
     server.resource["^/api/password$"]["POST"] = savePassword;
