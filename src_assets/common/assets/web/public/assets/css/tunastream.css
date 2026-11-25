@@ -1992,3 +1992,30 @@ html[data-ts-theme=summer][data-bs-theme=dark] {
 .home-playtime i {
     color: var(--ts-accent);
 }
+
+/* Devices > TV settings: one row per setting, the words on the left and the control on the right */
+.ts-tvset-section { margin-top: 1.5rem; }
+.ts-tvset-section h3 { font-size: 1.1rem; margin-bottom: 0.25rem; }
+.ts-tvset-row {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+  padding: 0.75rem 0.75rem;
+  border-top: 1px solid var(--bs-border-color);
+  border-left: 3px solid transparent;
+}
+.ts-tvset-row.ts-tvset-changed { border-left-color: var(--bs-warning); background: rgba(var(--bs-warning-rgb), 0.06); }
+.ts-tvset-text { flex: 1 1 auto; min-width: 0; }
+.ts-tvset-title { font-weight: 600; margin: 0; }
+.ts-tvset-summary { margin: 0.2rem 0 0; color: var(--bs-secondary-color); max-width: 70ch; }
+.ts-tvset-now, .ts-tvset-clash { margin: 0.25rem 0 0; font-size: 0.875rem; }
+.ts-tvset-clash { color: var(--bs-warning-text-emphasis); }
+.ts-tvset-control { flex: 0 0 16rem; display: flex; justify-content: flex-end; }
+.ts-tvset-control .form-switch .form-check-input { width: 2.75em; height: 1.4em; cursor: pointer; }
+.ts-tvset-control .form-select, .ts-tvset-control .input-group { width: 100%; }
+.ts-tvset-undo { font-size: inherit; color: inherit; vertical-align: baseline; }
+.ts-tvset-meta { margin-bottom: 0.5rem; }
+@media (max-width: 640px) {
+  .ts-tvset-row { flex-direction: column; gap: 0.5rem; }
+  .ts-tvset-control { flex-basis: auto; width: 100%; justify-content: flex-start; }
+}

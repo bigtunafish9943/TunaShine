@@ -198,6 +198,9 @@
               <span class="perm-badge" :class="'perm-' + permLevel(client.perm)">{{ $t('pin.perm_' + permLevel(client.perm)) }}</span>
             </div>
             <div v-if="client.connected" class="me-2 btn btn-warning" @click="disconnectClient(client.uuid)"><i class="fas fa-link-slash"></i></div>
+            <div v-if="tvFor(client.uuid)" class="me-2 btn btn-outline-primary" role="button" tabindex="0"
+                 :title="$t('tvset.open')" :aria-label="$t('tvset.open') + ': ' + client.name"
+                 @click="openTvSettings(client.uuid)" @keydown.enter="openTvSettings(client.uuid)"><i class="fas fa-tv"></i></div>
             <div class="me-2 btn btn-primary" @click="editClient(client)"><i class="fas fa-edit"></i></div>
             <div class="me-2 btn btn-danger" @click="unpairSingle(client.uuid)"><i class="fas fa-trash"></i></div>
           </div>
@@ -238,6 +241,73 @@
         </table>
         <button class="btn btn-primary" @click="savePlayLimits">{{ $t('pin.playtime_save') }}</button>
         <span class="ms-2 text-success" v-if="playLimitsSaved">{{ $t('pin.playtime_saved') }}</span>
+      </div>
+    </div>
+
+    <!-- TunaReceive's settings on each TV, changed from here -->
+    <div class="card my-4 w-100 ts-tvset" id="tv-settings">
+      <div class="card-body">
+        <h2>{{ $t('tvset.title') }}</h2>
+        <p>{{ $t('tvset.desc') }}</p>
+        <p v-if="!tvs.length" class="text-body-secondary"><em>{{ $t('tvset.none') }}</em></p>
+        <template v-else>
+          <div class="d-flex flex-wrap align-items-center gap-2 mb-3" v-if="tvs.length > 1">
+            <label for="tvset-device" class="form-label mb-0">{{ $t('tvset.which') }}</label>
+            <select id="tvset-device" class="form-select w-auto" v-model="tvUuid" @change="tvDraft = {}">
+              <option v-for="t in tvs" :key="t.uuid" :value="t.uuid">{{ t.device }}</option>
+            </select>
+          </div>
+          <template v-if="tv">
+            <p class="ts-tvset-meta">
+              <strong>{{ tv.device }}</strong>.
+              {{ $t('tvset.seen', { when: seenAgo(tv.seen) }) }}
+              <span v-if="tv.version">{{ $t('tvset.version', { version: tv.version }) }}</span>
+            </p>
+            <div class="alert alert-info py-2" v-if="tv.profile">{{ $t('tvset.profile', { profile: tv.profile }) }}</div>
+            <div class="alert alert-warning py-2" v-if="pendingCount">
+              {{ $t('tvset.waiting', { n: pendingCount }) }}
+            </div>
+
+            <section v-for="section in tvSections" :key="section.id" class="ts-tvset-section">
+              <h3>{{ $t('tvset.section_' + section.id) }}</h3>
+              <div v-for="s in section.items" :key="s.key" class="ts-tvset-row" :class="{ 'ts-tvset-changed': isChanged(s) }">
+                <div class="ts-tvset-text">
+                  <label :for="'tvset-' + s.key" class="ts-tvset-title">{{ s.title }}</label>
+                  <span class="badge text-bg-warning ms-2" v-if="tv.pending[s.key] !== undefined && tvDraft[s.key] === undefined">
+                    {{ $t('tvset.badge_waiting') }}
+                    <button type="button" class="btn btn-link btn-sm p-0 ms-1 ts-tvset-undo" @click="undoPending(s.key)">{{ $t('tvset.undo') }}</button>
+                  </span>
+                  <p class="ts-tvset-summary">{{ s.summary }}<template v-if="hasMore(s.key)"> {{ $t('tvset.more_' + s.key) }}</template></p>
+                  <p class="ts-tvset-now" v-if="isChanged(s)">{{ $t('tvset.now_on_tv', { value: shown(s, s.value) }) }}</p>
+                  <p class="ts-tvset-clash" v-if="clashWith(s)">{{ $t('tvset.clash', { other: clashWith(s) }) }}</p>
+                </div>
+                <div class="ts-tvset-control">
+                  <div class="form-check form-switch" v-if="s.type === 'bool'">
+                    <input class="form-check-input" type="checkbox" role="switch" :id="'tvset-' + s.key"
+                           :checked="current(s)" @change="setDraft(s, $event.target.checked)">
+                  </div>
+                  <select v-else-if="s.type === 'list'" class="form-select" :id="'tvset-' + s.key"
+                          :value="current(s)" @change="setDraft(s, $event.target.value)">
+                    <option v-if="!s.choices.some((c) => c.value === current(s))" :value="current(s)">{{ current(s) }}</option>
+                    <option v-for="c in s.choices" :key="c.value" :value="c.value">{{ c.label }}</option>
+                  </select>
+                  <div v-else-if="s.type === 'kbps'" class="input-group">
+                    <input type="number" class="form-control" :id="'tvset-' + s.key" min="0.5" max="300" step="0.5"
+                           :value="current(s) / 1000" @change="setDraft(s, Math.round(Number($event.target.value) * 2) * 500)">
+                    <span class="input-group-text">Mbps</span>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <div class="d-flex flex-wrap align-items-center gap-2 mt-3">
+              <button class="btn btn-primary" :disabled="!draftCount" @click="sendTvSettings">{{ $t('tvset.send', { n: draftCount }) }}</button>
+              <button class="btn btn-outline-secondary" v-if="draftCount" @click="tvDraft = {}">{{ $t('tvset.discard') }}</button>
+              <span class="text-success" v-if="tvSent">{{ $t('tvset.sent') }}</span>
+              <span class="text-danger" v-if="tvError">{{ tvError }}</span>
+            </div>
+          </template>
+        </template>
       </div>
     </div>
   </div>
@@ -405,6 +475,11 @@
       clients: [],
       playLimits: [],
       playLimitsSaved: false,
+      tvs: [],
+      tvUuid: '',
+      tvDraft: {},
+      tvSent: false,
+      tvError: '',
       showApplyMessage: false,
       unpairAllPressed: false,
       unpairAllStatus: null
@@ -424,6 +499,21 @@
     inject: ['i18n'],
     data,
     computed: {
+      tv() {
+        return this.tvs.find((t) => t.uuid === this.tvUuid) || null;
+      },
+      tvSections() {
+        if (!this.tv) return [];
+        const order = ['picture', 'sound', 'controller', 'tv'];
+        return order.map((id) => ({ id, items: this.tv.settings.filter((s) => s.section === id) }))
+          .filter((sec) => sec.items.length);
+      },
+      pendingCount() {
+        return this.tv ? Object.keys(this.tv.pending || {}).length : 0;
+      },
+      draftCount() {
+        return Object.keys(this.tvDraft).length;
+      },
       deepLink() {
         return encodeURI(`art://${this.hostAddr}:${this.hostPort}?pin=${this.otp}&passphrase=${this.passphrase}&name=${this.hostName}`);
       },
@@ -434,8 +524,110 @@
     created() {
       this.refreshClients();
       this.loadPlayLimits();
+      this.loadTvSettings();
+      // The TV checks in every 15 seconds while its games are on screen
+      this.tvTimer = setInterval(() => this.loadTvSettings(), 10000);
+    },
+    unmounted() {
+      clearInterval(this.tvTimer);
     },
     methods: {
+      async loadTvSettings() {
+        try {
+          const r = await fetch('./api/receiver-settings', { credentials: 'include' }).then((r) => r.json());
+          this.tvs = (r.tvs || []).sort((a, b) => (b.seen || 0) - (a.seen || 0));
+        } catch (e) {
+          this.tvs = [];
+        }
+        if (!this.tvs.some((t) => t.uuid === this.tvUuid)) {
+          this.tvUuid = this.tvs.length ? this.tvs[0].uuid : '';
+          this.tvDraft = {};
+        }
+      },
+      tvFor(uuid) {
+        return this.tvs.some((t) => t.uuid === uuid);
+      },
+      openTvSettings(uuid) {
+        if (this.tvUuid !== uuid) {
+          this.tvUuid = uuid;
+          this.tvDraft = {};
+        }
+        this.$nextTick(() => document.getElementById('tv-settings').scrollIntoView({ behavior: 'smooth' }));
+      },
+      seenAgo(seconds) {
+        if (!seconds) return this.i18n.t('tvset.seen_never');
+        const ago = Math.max(0, Math.round(Date.now() / 1000 - seconds));
+        if (ago < 60) return this.i18n.t('tvset.seen_now');
+        if (ago < 3600) return this.i18n.t('tvset.seen_minutes', { n: Math.round(ago / 60) });
+        return new Date(seconds * 1000).toLocaleString();
+      },
+      // What the page shows: your edit, else a change waiting for the TV, else what the TV has
+      current(s) {
+        if (this.tvDraft[s.key] !== undefined) return this.tvDraft[s.key];
+        const pending = this.tv.pending || {};
+        if (pending[s.key] !== undefined) return pending[s.key];
+        return s.value;
+      },
+      isChanged(s) {
+        return this.current(s) !== s.value;
+      },
+      shown(s, value) {
+        if (s.type === 'bool') return value ? this.i18n.t('tvset.on') : this.i18n.t('tvset.off');
+        if (s.type === 'kbps') return `${value / 1000} Mbps`;
+        const c = (s.choices || []).find((c) => c.value === value);
+        return c ? c.label : value;
+      },
+      setDraft(s, value) {
+        const draft = { ...this.tvDraft };
+        const pending = (this.tv.pending || {})[s.key];
+        // Back to what the TV has (or already waits for): nothing to send
+        if (value === (pending !== undefined ? pending : s.value)) {
+          delete draft[s.key];
+        } else {
+          draft[s.key] = value;
+        }
+        this.tvDraft = draft;
+        this.tvSent = false;
+        this.tvError = '';
+      },
+      hasMore(key) {
+        return this.i18n.te ? this.i18n.te('tvset.more_' + key) : this.i18n.t('tvset.more_' + key) !== 'tvset.more_' + key;
+      },
+      // Two controller shortcuts can't share buttons: the TV turns the other one off
+      clashWith(s) {
+        if (!s.key.startsWith('tuna_shortcut_')) return '';
+        const value = this.current(s);
+        if (value === 'OFF') return '';
+        const other = this.tv.settings.find((o) => o.key !== s.key && o.key.startsWith('tuna_shortcut_') && this.current(o) === value);
+        return other ? other.title : '';
+      },
+      async sendTvSettings() {
+        this.tvError = '';
+        try {
+          const r = await fetch('./api/receiver-settings', {
+            credentials: 'include', method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ uuid: this.tvUuid, changes: this.tvDraft }),
+          });
+          if (!r.ok) {
+            const body = await r.json().catch(() => ({}));
+            this.tvError = body.error || this.i18n.t('tvset.failed');
+            return;
+          }
+          this.tvDraft = {};
+          this.tvSent = true;
+          setTimeout(() => { this.tvSent = false; }, 6000);
+        } catch (e) {
+          this.tvError = this.i18n.t('tvset.failed');
+        }
+        this.loadTvSettings();
+      },
+      async undoPending(key) {
+        await fetch('./api/receiver-settings', {
+          credentials: 'include', method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ uuid: this.tvUuid, changes: { [key]: null } }),
+        }).catch(() => {});
+        this.loadTvSettings();
+      },
       async loadPlayLimits() {
         try {
           const r = await fetch('./api/play-limits', { credentials: 'include' }).then((r) => r.json());
@@ -472,7 +664,8 @@
         location.hash = currentTab;
         const clients = this.clients;
         const playLimits = this.playLimits;
-        Object.assign(this, data(), { clients, playLimits });
+        const { tvs, tvUuid } = this;
+        Object.assign(this, data(), { clients, playLimits, tvs, tvUuid });
         hostInfoCache = null;
         clearTimeout(resetOTPTimeout);
       },
