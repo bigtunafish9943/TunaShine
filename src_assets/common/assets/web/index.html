@@ -128,6 +128,9 @@
                 mbps: (player.health.bitrateKbps / 1000).toFixed(0),
                 fec: player.health.fecPercent || 0
               }) }}
+              <span class="d-block" v-if="player.health.splitFrames">
+                {{ $t('index.health_split') }}
+              </span>
               <span class="d-block" v-if="player.health.deviceView">
                 {{ $t('index.health_device_figures', {
                   loss: player.health.deviceView.lossPct.toFixed(1),

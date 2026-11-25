@@ -218,6 +218,11 @@ namespace video {
     virtual bool set_bitrate(int kbps) {
       return false;
     }
+
+    /// True when each frame is encoded in parts on more than one encoder chip at once.
+    virtual bool splits_frames() const {
+      return false;
+    }
   };
 
   // encoders

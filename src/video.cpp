@@ -421,6 +421,10 @@ namespace video {
       }
     }
 
+    bool splits_frames() const override {
+      return device && device->nvenc && device->nvenc->splits_frames();
+    }
+
     bool set_bitrate(int kbps) override {
       return device && device->nvenc && kbps > 0 && device->nvenc->set_bitrate(static_cast<uint32_t>(kbps));
     }
@@ -1995,6 +1999,14 @@ namespace video {
     auto invalidate_ref_frames_events = mail->event<std::pair<int64_t, int64_t>>(mail::invalidate_ref_frames);
     auto bitrate_events = mail->event<int>(mail::bitrate);
     auto picture_scale_events = mail->event<int>(mail::picture_scale);
+
+    // Tells the stream what the encoder is really doing: the picture size in use (percent, low
+    // byte) and whether frames are split across encoder chips (0x100). Sent whenever it changes.
+    auto encoder_info_events = mail->event<int>(mail::encoder_info);
+    auto report_encoder = [&]() {
+      encoder_info_events->raise(picture_scale | (session->splits_frames() ? 0x100 : 0));
+    };
+    report_encoder();
     bool bitrate_change_unsupported_logged = false;
 
     // A different picture size needs a different encoder, and starting one takes a moment. So the
@@ -2157,8 +2169,11 @@ namespace video {
               current_width = next_width;
               current_height = next_height;
               BOOST_LOG(info) << "Now encoding at "sv << current_width << 'x' << current_height;
+              report_encoder();
             } else {
               BOOST_LOG(warning) << "Couldn't start an encoder at "sv << next_width << 'x' << next_height << "; keeping "sv << current_width << 'x' << current_height;
+              // The device was told the new size when it asked; put the size really in use back
+              report_encoder();
             }
           }
 

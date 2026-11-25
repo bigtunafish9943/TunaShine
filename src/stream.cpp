@@ -379,6 +379,7 @@ namespace stream {
       safe::mail_raw_t::event_t<std::pair<int64_t, int64_t>> invalidate_ref_frames_events;
       safe::mail_raw_t::event_t<int> bitrate_events;
       safe::mail_raw_t::event_t<int> picture_scale_events;
+      safe::mail_raw_t::event_t<int> encoder_info_events;
 
       std::unique_ptr<platf::deinit_t> qos;
     } video;
@@ -453,6 +454,7 @@ namespace stream {
       std::atomic_int bitrate_kbps {0};  // current bitrate, once it has been changed mid-stream
       std::atomic_int fec_percent {0};  // error correction being added to each frame right now
       std::atomic_int picture_scale {100};  // picture size in percent of what the device asked for
+      std::atomic_bool split_frames {false};  // each frame is encoded on two encoder chips at once
 
       // What the device itself sees, as TunaReceive reports it every few seconds (guarded by lock)
       stream::session::device_view_t device_view;
@@ -1411,7 +1413,15 @@ namespace stream {
     out.bitrate_kbps = h.bitrate_kbps.load() > 0 ? h.bitrate_kbps.load() : session.config.monitor.bitrate;
     out.send_rate_mbps = h.send_rate_mbps.load();
     out.fec_percent = h.fec_percent.load();
+    // What the encoder reports it is doing outranks what was last asked of it
+    if (session.video.encoder_info_events && session.video.encoder_info_events->peek()) {
+      if (auto info = session.video.encoder_info_events->pop(0ms)) {
+        h.picture_scale = *info & 0xFF;
+        h.split_frames = (*info & 0x100) != 0;
+      }
+    }
     out.picture_scale = h.picture_scale.load();
+    out.split_frames = h.split_frames.load();
     if (h.device_view_at != std::chrono::steady_clock::time_point {} &&
         std::chrono::steady_clock::now() - h.device_view_at < 15s) {
       out.view = h.device_view;
@@ -2551,6 +2561,7 @@ namespace stream {
       session->video.invalidate_ref_frames_events = mail->event<std::pair<int64_t, int64_t>>(mail::invalidate_ref_frames);
       session->video.bitrate_events = mail->event<int>(mail::bitrate);
       session->video.picture_scale_events = mail->event<int>(mail::picture_scale);
+      session->video.encoder_info_events = mail->event<int>(mail::encoder_info);
       session->video.lowseq = 0;
       session->video.ping_payload = launch_session.av_ping_payload;
       if (config.encryptionFlagsEnabled & SS_ENC_VIDEO) {
