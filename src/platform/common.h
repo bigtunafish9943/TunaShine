@@ -971,14 +971,28 @@ namespace platf {
    * @brief Shared PC mode: the windows the app opens are kept on the stream's display for as
    *        long as it runs, and its sound is sent to the stream's sound device while everything
    *        else keeps playing on the PC's own speakers.
+   * @param home_display When the stream's screen is the main one: the PC's own screen, where new
+   *        windows of the person at the PC are moved back to.
    */
-  std::unique_ptr<window_herder_t> keep_app_on_stream(const std::string &display_name, bool include_steam);
+  std::unique_ptr<window_herder_t> keep_app_on_stream(const std::string &display_name, bool include_steam, const std::string &home_display = {});
 
   /// The sound device the stream captures in shared PC mode (Windows endpoint id), or empty.
   void set_stream_audio_device(const std::wstring &device_id);
 
   /// A streaming device's controller was used just now (shared PC mode gives the game focus back).
   void note_controller_input();
+
+  /**
+   * @brief Turn Windows' "Do not disturb" on while a stream runs, so notifications don't pop up
+   *        on the stream (they still collect in the notification centre).
+   * @details Turning it off only undoes what TunaStream did: if Do not disturb was already on, or the
+   *          person at the PC changed it during the stream, it is left alone. A mark in the config
+   *          folder lets the next start turn it off if TunaStream stopped while it was on.
+   */
+  void quiet_notifications(bool quiet);
+
+  /// At start up: turn Do not disturb off if TunaStream left it on.
+  void quiet_notifications_cleanup();
 
   std::string
   get_clipboard();

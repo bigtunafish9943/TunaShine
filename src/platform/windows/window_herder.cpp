@@ -20,6 +20,7 @@
 // standard includes
 #include <atomic>
 #include <chrono>
+#include <cmath>
 #include <algorithm>
 #include <iterator>
 #include <map>
@@ -39,6 +40,7 @@
 
 // local includes
 #include "misc.h"
+#include "src/config.h"
 #include "src/logging.h"
 #include "src/platform/common.h"
 #include "src/utility.h"
@@ -329,6 +331,37 @@ namespace platf {
       return launchers.count(exe) != 0;
     }
 
+    std::wstring class_of(HWND hwnd) {
+      wchar_t name[96] {};
+      GetClassNameW(hwnd, name, 96);
+      return name;
+    }
+
+    /**
+     * Windows' own shell (taskbar, Start, search, Alt+Tab, notification flyouts, the desktop) stays
+     * where Windows puts it. Its ordinary windows do move like any program's: File Explorer, the
+     * Run box, copy progress, Settings, Task Manager, and dialogs.
+     */
+    bool is_shell_surface(HWND hwnd, const std::wstring &exe) {
+      static const std::set<std::wstring> shell_programs {
+        L"startmenuexperiencehost.exe", L"searchhost.exe", L"searchapp.exe", L"shellexperiencehost.exe",
+        L"shellhost.exe", L"textinputhost.exe", L"lockapp.exe", L"widgets.exe", L"widgetboard.exe",
+        L"screenclippinghost.exe", L"snippingtool.exe",
+      };
+      if (shell_programs.count(exe)) {
+        return true;
+      }
+      const auto cls = class_of(hwnd);
+      if (cls == L"Windows.UI.Core.CoreWindow") {
+        return true;
+      }
+      if (exe == L"explorer.exe") {
+        // Of Explorer's windows, only folders, the Run box and copy progress are the person's
+        return cls != L"CabinetWClass" && cls != L"#32770" && cls != L"OperationStatusWindow";
+      }
+      return false;
+    }
+
     std::uint64_t to_u64(const FILETIME &time) {
       return (std::uint64_t(time.dwHighDateTime) << 32) | time.dwLowDateTime;
     }
@@ -366,8 +399,9 @@ namespace platf {
 
     class window_herder_impl_t: public window_herder_t {
     public:
-      window_herder_impl_t(std::wstring display, bool include_steam, bool shared):
+      window_herder_impl_t(std::wstring display, bool include_steam, bool shared, std::wstring home = {}):
           display {std::move(display)},
+          home_display {std::move(home)},
           include_steam {include_steam},
           shared {shared} {
         // Everything already on screen belongs to the person at the PC
@@ -410,6 +444,9 @@ namespace platf {
             if (monitor_rect(display, target)) {
               herd_once(target);
               if (shared) {
+                if (config::stream.shared_pc_borderless) {
+                  make_borderless(target);
+                }
                 return_focus(target);
               }
             }
@@ -417,7 +454,8 @@ namespace platf {
               next_audio = std::chrono::steady_clock::now() + 2s;
               route_sound(*audio);
             }
-            for (auto waited = 0ms; waited < poll_every && !stop; waited += 50ms) {
+            const auto wait = home_display.empty() ? poll_every : 150ms;
+            for (auto waited = 0ms; waited < wait && !stop; waited += 50ms) {
               std::this_thread::sleep_for(50ms);
             }
           }
@@ -435,6 +473,20 @@ namespace platf {
         if (com) {
           CoUninitialize();
         }
+      }
+
+      /// Where the person at the PC's windows go: the screen their mouse is on, or their main one
+      bool home_rect(const RECT &target, RECT &home) {
+        POINT cursor {};
+        if (GetCursorPos(&cursor) && !PtInRect(&target, cursor)) {
+          MONITORINFO info {};
+          info.cbSize = sizeof(info);
+          if (GetMonitorInfoW(MonitorFromPoint(cursor, MONITOR_DEFAULTTONEAREST), &info)) {
+            home = info.rcWork;
+            return true;
+          }
+        }
+        return monitor_rect(home_display, home);
       }
 
       /**
@@ -509,6 +561,101 @@ namespace platf {
         }
       }
 
+      /**
+       * Shared PC mode: a game set to "Windowed" in its own settings loses its border and fills the
+       * stream's screen, so it looks full screen on the TV without taking over a monitor (true
+       * full screen picks the PC's main monitor in many games). Only the app's own top-level
+       * window with a title bar and the screen's shape (16:9 on a 16:9 TV) is changed, once it has
+       * kept its size for 3 seconds, as games resize while they start; launchers, dialogs and
+       * settings windows are left alone. Nothing is done inside the game: it's the same as
+       * dragging the window, done by Windows.
+       */
+      void make_borderless(const RECT &target) {
+        constexpr std::int64_t STEADY_FOR_MS = 3000;
+        constexpr int MAX_TRIES = 2;  // a game that puts its border back is left as it wants
+        const auto now = steady_ms();
+        const LONG target_w = target.right - target.left;
+        const LONG target_h = target.bottom - target.top;
+        if (target_w <= 0 || target_h <= 0) {
+          return;
+        }
+        for (HWND hwnd : app_windows()) {
+          if (borderless_tries[hwnd] >= MAX_TRIES) {
+            continue;
+          }
+          RECT rect {};
+          GetWindowRect(hwnd, &rect);
+          POINT centre {(rect.left + rect.right) / 2, (rect.top + rect.bottom) / 2};
+          if (!PtInRect(&target, centre) || IsIconic(hwnd)) {
+            continue;
+          }
+          const LONG style = GetWindowLongW(hwnd, GWL_STYLE);
+          if ((style & WS_CAPTION) != WS_CAPTION || (style & WS_CHILD) || GetWindow(hwnd, GW_OWNER)) {
+            // Already borderless, or a dialog of another window
+            continue;
+          }
+          const auto cls = class_of(hwnd);
+          if (cls == L"#32770" || cls == L"ApplicationFrameWindow" || cls == L"CabinetWClass" ||
+              cls == L"ConsoleWindowClass" || cls == L"CASCADIA_HOSTING_WINDOW_CLASS") {
+            continue;
+          }
+          DWORD pid = 0;
+          GetWindowThreadProcessId(hwnd, &pid);
+          process_info_t proc;
+          if (!pid || pid == GetCurrentProcessId() || !process_info(pid, proc) || !belongs_to_stream(pid, proc) ||
+              is_launcher(proc.exe) || proc.exe.find(L"launcher") != std::wstring::npos ||
+              proc.exe.find(L"setup") != std::wstring::npos || proc.exe.find(L"crash") != std::wstring::npos) {
+            continue;
+          }
+          wchar_t title_buf[128] {};
+          GetWindowTextW(hwnd, title_buf, 128);
+          std::wstring title {title_buf};
+          std::wstring lower_title = title;
+          for (auto &c : lower_title) {
+            c = static_cast<wchar_t>(towlower(c));
+          }
+          if (lower_title.find(L"launcher") != std::wstring::npos || lower_title.find(L"setup") != std::wstring::npos ||
+              lower_title.find(L"configuration") != std::wstring::npos) {
+            continue;
+          }
+
+          // The picture inside the border has the screen's shape
+          RECT client {};
+          if (!GetClientRect(hwnd, &client) || client.right < 640 || client.bottom < 360) {
+            continue;
+          }
+          const double shape = double(client.right) / client.bottom;
+          const double screen = double(target_w) / target_h;
+          if (std::abs(shape - screen) / screen > 0.03) {
+            continue;
+          }
+
+          // Same size for a few seconds
+          auto &seen = borderless_seen[hwnd];
+          if (!EqualRect(&seen.first, &rect)) {
+            seen = {rect, now};
+            continue;
+          }
+          if (now - seen.second < STEADY_FOR_MS) {
+            continue;
+          }
+
+          ++borderless_tries[hwnd];
+          if (IsZoomed(hwnd)) {
+            ShowWindow(hwnd, SW_RESTORE);
+          }
+          SetWindowLongW(hwnd, GWL_STYLE, style & ~(WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU));
+          const LONG ex_style = GetWindowLongW(hwnd, GWL_EXSTYLE);
+          SetWindowLongW(hwnd, GWL_EXSTYLE, ex_style & ~(WS_EX_DLGMODALFRAME | WS_EX_CLIENTEDGE | WS_EX_STATICEDGE | WS_EX_WINDOWEDGE));
+          SetWindowPos(hwnd, nullptr, target.left, target.top, target_w, target_h,
+                       SWP_FRAMECHANGED | SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_NOACTIVATE);
+          GetWindowRect(hwnd, &seen.first);
+          seen.second = now;
+          BOOST_LOG(info) << "Shared PC mode: made ["sv << to_utf8(title) << "] ("sv << to_utf8(proc.exe)
+                          << ") borderless, filling the stream's screen"sv;
+        }
+      }
+
       /// Whether a process belongs to the streamed app rather than to the person at the PC
       bool belongs_to_stream(DWORD pid, const process_info_t &proc) {
         if (to_u64(proc.created) < launched_at) {
@@ -575,7 +722,8 @@ namespace platf {
           RECT rect {};
           GetWindowRect(hwnd, &rect);
           POINT centre {(rect.left + rect.right) / 2, (rect.top + rect.bottom) / 2};
-          if (PtInRect(&target, centre)) {
+          const bool on_stream = PtInRect(&target, centre);
+          if (on_stream && home_display.empty()) {
             continue;
           }
 
@@ -592,7 +740,32 @@ namespace platf {
             GetWindowTextW(hwnd, steam_title, 128);
             steam_window = std::wstring_view {steam_title}.find(L"Big Picture") != std::wstring_view::npos;
           }
-          if (!steam_window && !belongs_to_stream(pid, proc)) {
+          const bool stream_window = steam_window || belongs_to_stream(pid, proc);
+
+          if (on_stream) {
+            // The stream's screen is the main one, so the person at the PC's new windows open there:
+            // send them back to their own screen
+            if (stream_window || is_shell_surface(hwnd, proc.exe)) {
+              existing.insert(hwnd);
+              continue;
+            }
+            RECT home {};
+            if (!home_rect(target, home)) {
+              continue;
+            }
+            int &moves = move_count[hwnd];
+            if (moves >= max_moves_per_window) {
+              continue;
+            }
+            ++moves;
+            wchar_t title[128] {};
+            GetWindowTextW(hwnd, title, 128);
+            move_to(hwnd, home);
+            BOOST_LOG(info) << "Moved a window off the stream's screen, back to the PC's own: ["sv << to_utf8(title) << "] ("sv << to_utf8(proc.exe) << ')';
+            continue;
+          }
+
+          if (!stream_window) {
             // Opened by the person at the PC (from the taskbar, or a program already running)
             existing.insert(hwnd);
             continue;
@@ -612,6 +785,7 @@ namespace platf {
       }
 
       std::wstring display;
+      std::wstring home_display;  // the PC's own main screen, when the stream's is the main one
       bool include_steam;
       bool shared;
       std::int64_t next_focus_try_ms = 0;
@@ -621,6 +795,8 @@ namespace platf {
       std::uint64_t launched_at = 0;
       std::set<HWND> existing;
       std::map<HWND, int> move_count;
+      std::map<HWND, int> borderless_tries;  // windows made borderless (or tried)
+      std::map<HWND, std::pair<RECT, std::int64_t>> borderless_seen;  // last size, and since when
       std::atomic<bool> stop {false};
       std::thread worker;
     };
@@ -633,11 +809,11 @@ namespace platf {
     return std::make_unique<window_herder_impl_t>(from_utf8(display_name), include_steam, false);
   }
 
-  std::unique_ptr<window_herder_t> keep_app_on_stream(const std::string &display_name, bool include_steam) {
+  std::unique_ptr<window_herder_t> keep_app_on_stream(const std::string &display_name, bool include_steam, const std::string &home_display) {
     if (display_name.empty()) {
       return nullptr;
     }
-    return std::make_unique<window_herder_impl_t>(from_utf8(display_name), include_steam, true);
+    return std::make_unique<window_herder_impl_t>(from_utf8(display_name), include_steam, true, from_utf8(home_display));
   }
 
   void note_controller_input() {

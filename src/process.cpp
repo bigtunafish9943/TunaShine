@@ -435,7 +435,7 @@ namespace proc {
           // Windows picks its usual primary again once the virtual display is removed.
           // Shared PC mode leaves the PC's own screen as the main one; the app's windows are kept
           // on the stream's screen instead (see below)
-          if (config::video.virtual_display_primary && !config::stream.shared_pc) {
+          if (config::video.virtual_display_primary && (!config::stream.shared_pc || config::stream.shared_pc_tv_primary)) {
             // Remember what was primary so it can be handed back while nobody is streaming
             if (!primary_before_vdisplay.empty() && primary_before_vdisplay != vdisplayName) {
               this->previous_primary_display = platf::to_utf8(primary_before_vdisplay);
@@ -581,8 +581,18 @@ namespace proc {
       for (auto &cmd : _app.prep_cmds) {
         steam_app = steam_app || mentions_steam(cmd.do_cmd);
       }
-      _window_herder = config::stream.shared_pc ? platf::keep_app_on_stream(this->display_name, steam_app) :
+      // With the stream's screen as the main one, the person at the PC's new windows are sent back
+      // to the screen that was main before
+      // ("*" when the old main screen isn't known: the screen the mouse is on is used instead)
+      const auto home = !config::stream.shared_pc_tv_primary ? std::string {} :
+                        this->previous_primary_display.empty() ? std::string {"*"} : this->previous_primary_display;
+      _window_herder = config::stream.shared_pc ? platf::keep_app_on_stream(this->display_name, steam_app, home) :
                                                   platf::herd_new_windows(this->display_name, steam_app);
+    }
+
+    // No notification pop-ups on the stream (Settings > Do not disturb during streams)
+    if (config::stream.quiet_notifications) {
+      platf::quiet_notifications(true);
     }
 
     _app_prep_begin = std::begin(_app.prep_cmds);
@@ -762,7 +772,8 @@ namespace proc {
 #ifdef _WIN32
     // The primary display is handed back to the PC while nobody is streaming (see pause()).
     // Make the virtual display primary again now that a client is back.
-    if (this->virtual_display && config::video.virtual_display_primary && !config::stream.shared_pc && !this->display_name.empty()) {
+    if (this->virtual_display && config::video.virtual_display_primary &&
+        (!config::stream.shared_pc || config::stream.shared_pc_tv_primary) && !this->display_name.empty()) {
       auto vdisplay_name = platf::from_utf8(this->display_name);
       auto current_primary = VDISPLAY::getPrimaryDisplay();
       if (current_primary != vdisplay_name) {
@@ -786,6 +797,10 @@ namespace proc {
     // Normally already done by the resume request, before capture starts
     reclaim_primary_display();
     display_restore_failed = false;
+
+    if (config::stream.quiet_notifications) {
+      platf::quiet_notifications(true);
+    }
 
     if (config::tunastream.game_frame_limit && frame_limit_fps > 0) {
       platf::set_game_frame_limit(frame_limit_fps);
@@ -835,8 +850,15 @@ namespace proc {
   void proc_t::pause(bool connection_lost) {
     // Nobody is streaming now, so the PC's own frame rate limit applies again
     platf::set_game_frame_limit(0);
-    // ...and windows stay wherever the person at the PC puts them
-    _window_herder.reset();
+    // ...notifications pop up again...
+    platf::quiet_notifications(false);
+    // ...and windows stay wherever the person at the PC puts them. In shared PC mode the app's
+    // windows and sound stay with the stream's screen, so they are still there when the TV
+    // comes back (the game's processes were started before then, so a new watcher wouldn't
+    // know them)
+    if (!config::stream.shared_pc) {
+      _window_herder.reset();
+    }
 
     if (!running()) {
       BOOST_LOG(info) << "Session already stopped, do not run pause commands.";
@@ -963,6 +985,7 @@ namespace proc {
   void proc_t::terminate(bool immediate, bool needs_refresh) {
     ++session_generation;
     platf::set_game_frame_limit(0);
+    platf::quiet_notifications(false);
     _window_herder.reset();
     frame_limit_fps = 0;
     std::error_code ec;

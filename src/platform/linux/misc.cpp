@@ -367,11 +367,17 @@ std::string get_local_ip_for_gateway() {
   void set_game_frame_limit(int) {
   }
 
-  std::unique_ptr<window_herder_t> keep_app_on_stream(const std::string &, bool) {
+  std::unique_ptr<window_herder_t> keep_app_on_stream(const std::string &, bool, const std::string &) {
     return nullptr;
   }
 
   void set_stream_audio_device(const std::wstring &) {
+  }
+
+  void quiet_notifications(bool) {
+  }
+
+  void quiet_notifications_cleanup() {
   }
 
   void note_controller_input() {

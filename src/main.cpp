@@ -342,6 +342,8 @@ int main(int argc, char *argv[]) {
 
   // Daily play-time limits, with warnings on the TV
   play_limits::start();
+  // Do not disturb left on if TunaStream stopped during a stream
+  platf::quiet_notifications_cleanup();
 
   // If any of the following fail, we log an error and continue event though tunastream will not function correctly.
   // This allows access to the UI to fix configuration problems or view the logs.
