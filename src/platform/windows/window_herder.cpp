@@ -11,20 +11,30 @@
  * process started after the launch (the game and anything it starts) or, for a Steam app, to
  * Steam itself. Windows the person at the PC opens from programs that were already running are
  * left where they are.
+ *
+ * Shared PC mode keeps this up for as long as the app runs, since the PC's own screen stays the
+ * main one and games would otherwise open there. It also sends the app's sound to the stream's
+ * sound device while everything else keeps playing on the PC's speakers, using the per-app
+ * sound device setting Windows has had since 10 (version 1803).
  */
 // standard includes
 #include <atomic>
 #include <chrono>
 #include <algorithm>
+#include <iterator>
 #include <map>
+#include <mutex>
 #include <set>
 #include <string>
+#include <string_view>
 #include <thread>
 #include <vector>
 
 // platform includes
 #include <windows.h>
+#include <audiopolicy.h>
 #include <dwmapi.h>
+#include <mmdeviceapi.h>
 #include <tlhelp32.h>
 
 // local includes
@@ -37,6 +47,153 @@ using namespace std::literals;
 
 namespace platf {
   namespace {
+    std::mutex stream_audio_lock;
+    std::wstring stream_audio_device;  // endpoint id, as in {0.0.0.00000000}.{guid}
+
+    std::wstring current_stream_audio_device() {
+      std::lock_guard lg {stream_audio_lock};
+      return stream_audio_device;
+    }
+
+    /**
+     * Windows' per-app sound device setting (Settings > Sound > App volume and device preferences).
+     * The interface is undocumented and has two IDs depending on the Windows version; the layout
+     * is the same. SetPersistedDefaultAudioEndpoint is the 26th method, after IInspectable's six.
+     */
+    class app_audio_routing_t {
+    public:
+      app_audio_routing_t() {
+        combase = LoadLibraryExW(L"combase.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
+        if (!combase) {
+          return;
+        }
+        ro_get_activation_factory = (ro_get_activation_factory_t) GetProcAddress(combase, "RoGetActivationFactory");
+        windows_create_string = (windows_create_string_t) GetProcAddress(combase, "WindowsCreateString");
+        windows_delete_string = (windows_delete_string_t) GetProcAddress(combase, "WindowsDeleteString");
+        if (!ro_get_activation_factory || !windows_create_string || !windows_delete_string) {
+          return;
+        }
+        static const wchar_t class_name[] = L"Windows.Media.Internal.AudioPolicyConfig";
+        void *name = nullptr;
+        if (FAILED(windows_create_string(class_name, (UINT32) (std::size(class_name) - 1), &name))) {
+          return;
+        }
+        // Windows 10 21H2 and later, then earlier versions
+        static const GUID ids[] {
+          {0xab3d4648, 0xe242, 0x459f, {0xb0, 0x2f, 0x54, 0x1c, 0x70, 0x30, 0x63, 0x24}},
+          {0x2a59116d, 0x6c4f, 0x45e0, {0xa7, 0x4f, 0x70, 0x7e, 0x3f, 0xef, 0x92, 0x58}},
+        };
+        for (const auto &id : ids) {
+          if (SUCCEEDED(ro_get_activation_factory(name, id, &factory)) && factory) {
+            break;
+          }
+          factory = nullptr;
+        }
+        windows_delete_string(name);
+        if (!factory) {
+          BOOST_LOG(warning) << "Shared PC mode: this Windows can't send one app's sound elsewhere"sv;
+        }
+      }
+
+      ~app_audio_routing_t() {
+        if (factory) {
+          ((IUnknown *) factory)->Release();
+        }
+      }
+
+      explicit operator bool() const {
+        return factory != nullptr;
+      }
+
+      /// Send the process's sound to the device, or back to the PC's default when the id is empty
+      bool route(DWORD pid, const std::wstring &endpoint_id) {
+        if (!factory) {
+          return false;
+        }
+        void *device = nullptr;
+        if (!endpoint_id.empty()) {
+          // The form the setting expects: the endpoint's device interface path
+          const std::wstring path = L"\\\\?\\SWD#MMDEVAPI#" + endpoint_id + L"#{e6327cad-dcec-4949-ae8a-991e976a79d2}";
+          if (FAILED(windows_create_string(path.c_str(), (UINT32) path.size(), &device))) {
+            return false;
+          }
+        }
+        using set_t = HRESULT(STDMETHODCALLTYPE *)(void *, UINT32, EDataFlow, ERole, void *);
+        auto set = (set_t) (*(void ***) factory)[25];
+        const bool ok = SUCCEEDED(set(factory, (UINT32) pid, eRender, eConsole, device)) &&
+                        SUCCEEDED(set(factory, (UINT32) pid, eRender, eMultimedia, device));
+        if (device) {
+          windows_delete_string(device);
+        }
+        return ok;
+      }
+
+    private:
+      using ro_get_activation_factory_t = HRESULT(WINAPI *)(void *, REFIID, void **);
+      using windows_create_string_t = HRESULT(WINAPI *)(const wchar_t *, UINT32, void **);
+      using windows_delete_string_t = HRESULT(WINAPI *)(void *);
+      HMODULE combase = nullptr;
+      ro_get_activation_factory_t ro_get_activation_factory = nullptr;
+      windows_create_string_t windows_create_string = nullptr;
+      windows_delete_string_t windows_delete_string = nullptr;
+      void *factory = nullptr;
+    };
+
+    // Spelled out here: this file doesn't define the audio GUIDs itself
+    const GUID clsid_device_enumerator {0xBCDE0395, 0xE52F, 0x467C, {0x8E, 0x3D, 0xC4, 0x57, 0x92, 0x91, 0x69, 0x2E}};
+    const GUID iid_device_enumerator {0xA95664D2, 0x9614, 0x4F35, {0xA7, 0x46, 0xDE, 0x8D, 0xB6, 0x36, 0x17, 0xE6}};
+    const GUID iid_session_manager2 {0x77AA99A0, 0x1BD6, 0x484F, {0x8B, 0xC7, 0x2C, 0x65, 0x4C, 0x9A, 0x9B, 0x6F}};
+    const GUID iid_session_control2 {0xBFB7FF88, 0x7239, 0x4FC9, {0x8F, 0xA2, 0x07, 0xC9, 0x50, 0xBE, 0x9C, 0x6D}};
+
+    /// Processes playing sound right now, on any output device
+    std::set<DWORD> processes_with_sound() {
+      std::set<DWORD> pids;
+      IMMDeviceEnumerator *enumerator = nullptr;
+      if (FAILED(CoCreateInstance(clsid_device_enumerator, nullptr, CLSCTX_ALL, iid_device_enumerator, (void **) &enumerator))) {
+        return pids;
+      }
+      IMMDeviceCollection *devices = nullptr;
+      if (SUCCEEDED(enumerator->EnumAudioEndpoints(eRender, DEVICE_STATE_ACTIVE, &devices))) {
+        UINT count = 0;
+        devices->GetCount(&count);
+        for (UINT i = 0; i < count; ++i) {
+          IMMDevice *device = nullptr;
+          if (FAILED(devices->Item(i, &device))) {
+            continue;
+          }
+          IAudioSessionManager2 *manager = nullptr;
+          if (SUCCEEDED(device->Activate(iid_session_manager2, CLSCTX_ALL, nullptr, (void **) &manager))) {
+            IAudioSessionEnumerator *sessions = nullptr;
+            if (SUCCEEDED(manager->GetSessionEnumerator(&sessions))) {
+              int n = 0;
+              sessions->GetCount(&n);
+              for (int k = 0; k < n; ++k) {
+                IAudioSessionControl *control = nullptr;
+                if (FAILED(sessions->GetSession(k, &control))) {
+                  continue;
+                }
+                IAudioSessionControl2 *control2 = nullptr;
+                if (SUCCEEDED(control->QueryInterface(iid_session_control2, (void **) &control2))) {
+                  DWORD pid = 0;
+                  if (SUCCEEDED(control2->GetProcessId(&pid)) && pid) {
+                    pids.insert(pid);
+                  }
+                  control2->Release();
+                }
+                control->Release();
+              }
+              sessions->Release();
+            }
+            manager->Release();
+          }
+          device->Release();
+        }
+        devices->Release();
+      }
+      enumerator->Release();
+      return pids;
+    }
+
     // How long after the launch new windows are watched for. Games can take a while to start.
     constexpr auto watch_for = 3min;
     constexpr auto poll_every = 500ms;
@@ -155,6 +312,16 @@ namespace platf {
       return exe == L"steam.exe" || exe == L"steamwebhelper.exe";
     }
 
+    /// Programs that start games on the app's behalf, so what they start belongs to the stream
+    bool is_launcher(const std::wstring &exe) {
+      static const std::set<std::wstring> launchers {
+        L"steam.exe", L"epicgameslauncher.exe", L"eadesktop.exe", L"galaxyclient.exe", L"upc.exe",
+        L"battle.net.exe", L"amazon games ui.exe", L"playnite.desktopapp.exe", L"playnite.fullscreenapp.exe",
+        L"tunastream.exe", L"tunastreamsvc.exe", L"cmd.exe", L"powershell.exe", L"pwsh.exe", L"rundll32.exe",
+      };
+      return launchers.count(exe) != 0;
+    }
+
     std::uint64_t to_u64(const FILETIME &time) {
       return (std::uint64_t(time.dwHighDateTime) << 32) | time.dwLowDateTime;
     }
@@ -192,9 +359,10 @@ namespace platf {
 
     class window_herder_impl_t: public window_herder_t {
     public:
-      window_herder_impl_t(std::wstring display, bool include_steam):
+      window_herder_impl_t(std::wstring display, bool include_steam, bool shared):
           display {std::move(display)},
-          include_steam {include_steam} {
+          include_steam {include_steam},
+          shared {shared} {
         // Everything already on screen belongs to the person at the PC
         for (HWND hwnd : app_windows()) {
           existing.insert(hwnd);
@@ -219,15 +387,98 @@ namespace platf {
       void run() {
         // Windows belong to the signed-in user's desktop; this thread has to be on it to see them
         syncThreadDesktop();
+        const bool com = SUCCEEDED(CoInitializeEx(nullptr, COINIT_MULTITHREADED));
 
-        const auto until = std::chrono::steady_clock::now() + watch_for;
-        while (!stop && std::chrono::steady_clock::now() < until) {
-          RECT target {};
-          if (monitor_rect(display, target)) {
-            herd_once(target);
+        {
+          std::unique_ptr<app_audio_routing_t> audio;
+          if (shared) {
+            audio = std::make_unique<app_audio_routing_t>();
           }
-          for (auto waited = 0ms; waited < poll_every && !stop; waited += 50ms) {
-            std::this_thread::sleep_for(50ms);
+          auto next_audio = std::chrono::steady_clock::now();
+          const auto until = std::chrono::steady_clock::now() + watch_for;
+          // Shared PC mode watches for as long as the app runs: the PC's own screen stays the main
+          // one, so games would open there at any time
+          while (!stop && (shared || std::chrono::steady_clock::now() < until)) {
+            RECT target {};
+            if (monitor_rect(display, target)) {
+              herd_once(target);
+            }
+            if (audio && *audio && std::chrono::steady_clock::now() >= next_audio) {
+              next_audio = std::chrono::steady_clock::now() + 2s;
+              route_sound(*audio);
+            }
+            for (auto waited = 0ms; waited < poll_every && !stop; waited += 50ms) {
+              std::this_thread::sleep_for(50ms);
+            }
+          }
+
+          // Back to the PC's own speakers for everything that was sent to the stream
+          if (audio && *audio) {
+            for (DWORD pid : routed) {
+              audio->route(pid, {});
+            }
+            if (!routed.empty()) {
+              BOOST_LOG(info) << "Shared PC mode: sound of "sv << routed.size() << " program(s) back on the PC's own device"sv;
+            }
+          }
+        }
+        if (com) {
+          CoUninitialize();
+        }
+      }
+
+      /// Whether a process belongs to the streamed app rather than to the person at the PC
+      bool belongs_to_stream(DWORD pid, const process_info_t &proc) {
+        if (to_u64(proc.created) < launched_at) {
+          return false;
+        }
+        // Follow the chain of parents: a program the person at the PC already had open (the
+        // taskbar, a browser, a chat app) means it's theirs; a launcher or a process that has
+        // already exited (the app's own short-lived starter) means it's the stream's
+        DWORD current = pid;
+        for (int depth = 0; depth < 8; ++depth) {
+          DWORD parent_pid = parent_of(current);
+          process_info_t parent;
+          if (!parent_pid || !process_info(parent_pid, parent)) {
+            return true;
+          }
+          if (parent.exe == L"explorer.exe") {
+            return false;
+          }
+          if (is_launcher(parent.exe)) {
+            return true;
+          }
+          if (to_u64(parent.created) < launched_at) {
+            return false;
+          }
+          current = parent_pid;
+        }
+        return true;
+      }
+
+      void route_sound(app_audio_routing_t &audio) {
+        const auto device = current_stream_audio_device();
+        if (device.empty()) {
+          return;
+        }
+        for (DWORD pid : processes_with_sound()) {
+          if (routed.count(pid) || checked.count(pid) || pid == GetCurrentProcessId()) {
+            continue;
+          }
+          process_info_t proc;
+          if (!process_info(pid, proc)) {
+            continue;
+          }
+          if (!belongs_to_stream(pid, proc) || is_steam(proc.exe)) {
+            // Steam's own sounds are the person at the PC's too; leave them
+            checked.insert(pid);
+            continue;
+          }
+          if (audio.route(pid, device)) {
+            routed.insert(pid);
+            BOOST_LOG(info) << "Shared PC mode: "sv << to_utf8(proc.exe) << "'s sound goes to the stream"sv;
+          } else {
+            checked.insert(pid);
           }
         }
       }
@@ -252,20 +503,17 @@ namespace platf {
           if (!pid || !process_info(pid, proc)) {
             continue;
           }
-          const bool started_for_stream = to_u64(proc.created) >= launched_at;
-          if (!started_for_stream && !(include_steam && is_steam(proc.exe))) {
-            // Opened by a program that was already running: the person at the PC's, so leave it
+          bool steam_window = include_steam && is_steam(proc.exe);
+          if (steam_window && shared) {
+            // In shared PC mode the person at the PC may be using Steam too: only Big Picture goes
+            wchar_t steam_title[128] {};
+            GetWindowTextW(hwnd, steam_title, 128);
+            steam_window = std::wstring_view {steam_title}.find(L"Big Picture") != std::wstring_view::npos;
+          }
+          if (!steam_window && !belongs_to_stream(pid, proc)) {
+            // Opened by the person at the PC (from the taskbar, or a program already running)
             existing.insert(hwnd);
             continue;
-          }
-          if (started_for_stream && !is_steam(proc.exe)) {
-            // Started from the taskbar, Start menu or desktop: the person at the PC opened it
-            process_info_t parent;
-            DWORD parent_pid = parent_of(pid);
-            if (parent_pid && process_info(parent_pid, parent) && parent.exe == L"explorer.exe") {
-              existing.insert(hwnd);
-              continue;
-            }
           }
 
           int &moves = move_count[hwnd];
@@ -283,6 +531,9 @@ namespace platf {
 
       std::wstring display;
       bool include_steam;
+      bool shared;
+      std::set<DWORD> routed;  // processes whose sound was sent to the stream
+      std::set<DWORD> checked;  // processes looked at and left alone
       std::uint64_t launched_at = 0;
       std::set<HWND> existing;
       std::map<HWND, int> move_count;
@@ -295,6 +546,18 @@ namespace platf {
     if (display_name.empty()) {
       return nullptr;
     }
-    return std::make_unique<window_herder_impl_t>(from_utf8(display_name), include_steam);
+    return std::make_unique<window_herder_impl_t>(from_utf8(display_name), include_steam, false);
+  }
+
+  std::unique_ptr<window_herder_t> keep_app_on_stream(const std::string &display_name, bool include_steam) {
+    if (display_name.empty()) {
+      return nullptr;
+    }
+    return std::make_unique<window_herder_impl_t>(from_utf8(display_name), include_steam, true);
+  }
+
+  void set_stream_audio_device(const std::wstring &device_id) {
+    std::lock_guard lg {stream_audio_lock};
+    stream_audio_device = device_id;
   }
 }  // namespace platf

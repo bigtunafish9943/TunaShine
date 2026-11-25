@@ -542,6 +542,8 @@ namespace config {
 
     true,  // instant_replay
 
+    false,  // shared_pc
+
     0,  // video_send_rate (automatic)
 
     ENCRYPTION_MODE_NEVER,  // lan_encryption_mode
@@ -1294,6 +1296,7 @@ namespace config {
     int_between_f(vars, "fec_percentage", stream.fec_percentage, {1, 255});
     bool_f(vars, "adaptive_fec", stream.adaptive_fec);
     bool_f(vars, "instant_replay", stream.instant_replay);
+    bool_f(vars, "shared_pc", stream.shared_pc);
     int_between_f(vars, "video_send_rate", stream.video_send_rate, {0, 10000});
 
     map_int_int_f(vars, "keybindings"s, input.keybindings);

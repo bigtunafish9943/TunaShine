@@ -137,6 +137,14 @@ onMounted(() => {
     ></Checkbox>
   
 
+    <!-- Shared PC mode -->
+    <Checkbox class="mb-3"
+              id="shared_pc"
+              locale-prefix="config"
+              v-model="config.shared_pc"
+              default="false"
+    ></Checkbox>
+
     <!-- Seasonal themes -->
     <Checkbox class="mb-3"
               id="ui_theme_seasonal"

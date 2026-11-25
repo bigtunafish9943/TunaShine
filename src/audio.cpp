@@ -198,11 +198,19 @@ namespace audio {
 
     // Only the first to start a session may change the default sink
     if (!ref->sink_flag->exchange(true, std::memory_order_acquire)) {
-      // If the selected sink is different than the current one, change sinks.
-      ref->restore_sink = ref->sink.host != *sink;
-      if (ref->restore_sink) {
-        if (control->set_sink(*sink)) {
+      if (config::stream.shared_pc && ref->sink.host != *sink) {
+        // Shared PC mode: the PC keeps its own speakers; only the app's sound goes to the stream
+        ref->restore_sink = false;
+        if (control->use_sink_without_default(*sink)) {
           return;
+        }
+      } else {
+        // If the selected sink is different than the current one, change sinks.
+        ref->restore_sink = ref->sink.host != *sink;
+        if (ref->restore_sink) {
+          if (control->set_sink(*sink)) {
+            return;
+          }
         }
       }
     }

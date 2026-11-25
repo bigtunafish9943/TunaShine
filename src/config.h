@@ -179,6 +179,10 @@ namespace config {
     // Keep the last 30 seconds of each stream so they can be saved as a clip (View + L1 on the TV)
     bool instant_replay;
 
+    // Let the person at the PC keep using it: the PC's own screen stays the main one, and only the
+    // streamed app's sound goes to the stream
+    bool shared_pc;
+
     // Peak rate video packets are sent at, in Mbps; 0 picks one from the stream's bitrate
     int video_send_rate;
 

@@ -557,6 +557,15 @@ namespace platf {
   public:
     virtual int set_sink(const std::string &sink) = 0;
 
+    /**
+     * @brief Shared PC mode: get the sink ready and capture from it, without making it the PC's
+     *        default sound device. The stream's app is routed to it on its own (see herd_new_windows).
+     * @return 0 on success. Where this isn't supported it falls back to set_sink().
+     */
+    virtual int use_sink_without_default(const std::string &sink) {
+      return set_sink(sink);
+    }
+
     virtual std::unique_ptr<mic_t> microphone(const std::uint8_t *mapping, int channels, std::uint32_t sample_rate, std::uint32_t frame_size) = 0;
 
     /**
@@ -957,6 +966,16 @@ namespace platf {
    * @return The watcher, or nullptr where this isn't supported.
    */
   std::unique_ptr<window_herder_t> herd_new_windows(const std::string &display_name, bool include_steam);
+
+  /**
+   * @brief Shared PC mode: the windows the app opens are kept on the stream's display for as
+   *        long as it runs, and its sound is sent to the stream's sound device while everything
+   *        else keeps playing on the PC's own speakers.
+   */
+  std::unique_ptr<window_herder_t> keep_app_on_stream(const std::string &display_name, bool include_steam);
+
+  /// The sound device the stream captures in shared PC mode (Windows endpoint id), or empty.
+  void set_stream_audio_device(const std::wstring &device_id);
 
   std::string
   get_clipboard();

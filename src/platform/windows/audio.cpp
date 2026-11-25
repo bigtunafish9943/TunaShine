@@ -447,7 +447,7 @@ namespace platf::audio {
       return capture_e::ok;
     }
 
-    int init(std::uint32_t sample_rate, std::uint32_t frame_size, std::uint32_t channels_out) {
+    int init(std::uint32_t sample_rate, std::uint32_t frame_size, std::uint32_t channels_out, const std::wstring &capture_id = {}) {
       audio_event.reset(CreateEventA(nullptr, FALSE, FALSE, nullptr));
       if (!audio_event) {
         BOOST_LOG(error) << "Couldn't create Event handle"sv;
@@ -478,7 +478,17 @@ namespace platf::audio {
         return -1;
       }
 
-      auto device = default_device(device_enum);
+      // Shared PC mode captures the stream's own sound device rather than the PC's default
+      device_t device;
+      if (!capture_id.empty()) {
+        IMMDevice *by_id = nullptr;
+        if (SUCCEEDED(device_enum->GetDevice(capture_id.c_str(), &by_id))) {
+          device.reset(by_id);
+        }
+        ignore_default_changes = true;
+      } else {
+        device = default_device(device_enum);
+      }
       if (!device) {
         return -1;
       }
@@ -582,8 +592,8 @@ namespace platf::audio {
         std::uint32_t audio_sample_size;
       } block_aligned;
 
-      // Check if the default audio device has changed
-      if (endpt_notification.check_default_render_device_changed()) {
+      // Check if the default audio device has changed (which shared PC mode doesn't follow)
+      if (endpt_notification.check_default_render_device_changed() && !ignore_default_changes) {
         // Invoke the audio_control_t's callback if it wants one
         if (default_endpt_changed_cb) {
           (*default_endpt_changed_cb)();
@@ -680,6 +690,7 @@ namespace platf::audio {
     int channels;
 
     HANDLE mmcss_task_handle = nullptr;
+    bool ignore_default_changes = false;
   };
 
   class audio_control_t: public ::platf::audio_control_t {
@@ -764,7 +775,7 @@ namespace platf::audio {
     std::unique_ptr<mic_t> microphone(const std::uint8_t *mapping, int channels, std::uint32_t sample_rate, std::uint32_t frame_size) override {
       auto mic = std::make_unique<mic_wasapi_t>();
 
-      if (mic->init(sample_rate, frame_size, channels)) {
+      if (mic->init(sample_rate, frame_size, channels, capture_device_id)) {
         return nullptr;
       }
 
@@ -850,7 +861,20 @@ namespace platf::audio {
       return std::nullopt;
     }
 
+    int use_sink_without_default(const std::string &sink) override {
+      auto device_id = set_format(sink);
+      if (!device_id) {
+        // Not one of the virtual sinks: there is nothing to keep separate, so do the usual
+        return set_sink(sink);
+      }
+      capture_device_id = *device_id;
+      platf::set_stream_audio_device(*device_id);
+      BOOST_LOG(info) << "Shared PC mode: the PC keeps its own sound device; the streamed app's sound goes to the stream"sv;
+      return 0;
+    }
+
     int set_sink(const std::string &sink) override {
+      capture_device_id.clear();
       auto device_id = set_format(sink);
       if (!device_id) {
         return -1;
@@ -1149,6 +1173,7 @@ namespace platf::audio {
     policy_t policy;
     audio::device_enum_t device_enum;
     std::string assigned_sink;
+    std::wstring capture_device_id;  // shared PC mode: capture this device, not the default
   };
 }  // namespace platf::audio
 
