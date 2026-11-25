@@ -1299,8 +1299,8 @@
       },
       "watchlink": {
         "title": "Zuschau-Link",
-        "how": "Wähle auf der Seite „Zuschauen“ „Zuschau-Link teilen“ und öffne den kopierten Link auf einem anderen Gerät, das nicht angemeldet ist.",
-        "expect": "Dieses Gerät kann einen Tag lang ohne Passwort zuschauen und keine andere Seite öffnen. Der Link steht unter Passwort ändern > Zugriffstoken, und Entfernen macht ihn ungültig."
+        "how": "Wähle auf der Seite „Zuschauen“ „Zuschau-Link teilen“ und öffne den Link auf einem nicht angemeldeten Tablet. Öffne denselben Link auf einem zweiten Gerät. Öffne am nächsten Tag „Zuschauen“ wieder auf dem Tablet.",
+        "expect": "Das Tablet schaut ohne Passwort zu und kann keine andere Seite öffnen. Das zweite Gerät erfährt, dass der Link schon benutzt wurde. Am nächsten Tag geht es auf dem Tablet weiter, und unter Passwort ändern > Zugriffstoken steht es als täglich wechselnder Zuschau-Schlüssel; Entfernen beendet es."
       },
       "sharescreen": {
         "title": "Meinen Bildschirm teilen",
@@ -1356,7 +1356,7 @@
     "no_sound_here": "Nur zuschauen. Dieser Browser kann den Ton nicht abspielen; versuche Chrome oder Edge.",
     "share": "Zuschau-Link teilen",
     "share_name": "Zuschau-Link {when}",
-    "share_copied": "Link kopiert. Jeder in deinem Netzwerk kann damit einen Tag lang zuschauen; entfernen kannst du ihn jederzeit unter Passwort ändern > Zugriffstoken.",
+    "share_copied": "Link kopiert. Er funktioniert einmal, auf einem Gerät, innerhalb eines Tages. Danach schaut das Gerät mit einem eigenen Schlüssel weiter, der sich täglich ändert und nach einer Woche ohne Nutzung verfällt. Entfernen kannst du ihn jederzeit unter Passwort ändern > Zugriffstoken.",
     "share_copy_this": "Kopiere diesen Link:",
     "share_failed": "Der Link konnte nicht erstellt werden.",
     "watching_screen": "Du siehst den Bildschirm dieses PCs",
@@ -1369,11 +1369,16 @@
     "screen_start": "Meinen Bildschirm teilen",
     "screen_on": "Dein Bildschirm wird noch {minutes} Minuten geteilt.",
     "screen_stop": "Teilen beenden",
-    "screen_failed": "Das Teilen konnte nicht geändert werden."
+    "screen_failed": "Das Teilen konnte nicht geändert werden.",
+    "need_link": "Dieses Gerät kann noch nicht zuschauen. Öffne einen neuen Zuschau-Link von der Person, die teilt, oder melde dich an.",
+    "sign_in": "Anmelden",
+    "screen_which": "Welcher Bildschirm",
+    "screen_monitor": "Bildschirm {n}",
+    "screen_main": "Hauptbildschirm"
   },
   "tokens": {
     "title": "Zugriffstoken",
-    "desc": "Lass ein Skript, ein Stream Deck, Home Assistant oder einen geteilten Link ein paar Dinge ohne dein Passwort tun. Jedes Token darf nur, was du ankreuzt, und du kannst es jederzeit entfernen. Ein Token mit „Den Stream ansehen“ ergibt einen Link, den jeder in deinem Netzwerk zum Zuschauen öffnen kann.",
+    "desc": "Lass ein Skript, ein Stream Deck, Home Assistant oder einen KI-Assistenten ein paar Dinge ohne dein Passwort tun. Jedes Token darf nur, was du ankreuzt, und du kannst es jederzeit entfernen. Zum Zuschauen nimm stattdessen „Zuschau-Link teilen“ auf der Seite „Zuschauen“: Diese Links funktionieren einmal, und der Schlüssel des Geräts ändert sich täglich.",
     "token": "Token",
     "made": "{name} ist bereit.",
     "made_once": "Kopiere es jetzt: Es wird nicht noch einmal angezeigt.",
@@ -1391,6 +1396,9 @@
     "scope_messages": "Nachrichten und Töne an Fernseher senden",
     "scope_sessions": "Sitzungen beenden und mehr Spielzeit geben",
     "scope_launch": "Spiele starten",
+    "scope_logs": "Das Protokoll von TunaStream und von Fernsehern gesendete Protokolle lesen",
+    "agent_title": "Mit einem KI-Assistenten nutzen",
+    "agent_desc": "Claude Desktop, Claude Code und andere Assistenten mit MCP können TunaStream mit diesem Token als Werkzeug nutzen. Füge dies in die MCP-Einstellungen des Assistenten ein (bei Claude Desktop: Einstellungen > Entwickler > Konfiguration bearbeiten) und starte den Assistenten neu. Er kann nur, was dieses Token erlaubt.",
     "make": "Token erstellen",
     "none": "Noch keine Token.",
     "expires_on": "Bis {when}",
@@ -1398,6 +1406,8 @@
     "unused": "noch nicht genutzt",
     "remove": "Entfernen",
     "remove_confirm": "{name} entfernen? Alles, was es nutzt, funktioniert dann nicht mehr.",
-    "failed": "Das Token konnte nicht erstellt werden."
+    "failed": "Das Token konnte nicht erstellt werden.",
+    "kind_invite": "Zuschau-Link, noch nicht geöffnet",
+    "kind_rotating": "Zuschau-Schlüssel auf einem Gerät, ändert sich täglich"
   }
 }

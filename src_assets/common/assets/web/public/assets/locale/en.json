@@ -1299,8 +1299,8 @@
       },
       "watchlink": {
         "title": "Watch link",
-        "how": "On the Watch page, choose Share a watch link and open the copied link on another device that isn't signed in.",
-        "expect": "That device can watch without the password for a day, and can't open any other page. The link shows under Change Password > Access tokens, and removing it stops it working."
+        "how": "On the Watch page, choose Share a watch link and open the copied link on a tablet that isn't signed in. Open the same link again on a second device. The next day, open Watch on the tablet again.",
+        "expect": "The tablet watches without the password and can't open any other page. The second device is told the link was already used. The tablet keeps working the next day, and Change Password > Access tokens lists it as a watch key that changes daily; removing it stops it."
       },
       "sharescreen": {
         "title": "Share my screen",
@@ -1356,7 +1356,7 @@
     "no_sound_here": "Watch only. This browser can't play the sound; try Chrome or Edge.",
     "share": "Share a watch link",
     "share_name": "Watch link {when}",
-    "share_copied": "Link copied. Anyone on your network can watch with it for a day; remove it any time under Change Password > Access tokens.",
+    "share_copied": "Link copied. It works once, on one device, within a day. That device then keeps watching with its own key, which changes every day and stops working after a week unused. Remove it any time under Change Password > Access tokens.",
     "share_copy_this": "Copy this link:",
     "share_failed": "The link couldn't be made.",
     "watching_screen": "Watching this PC's screen",
@@ -1369,11 +1369,16 @@
     "screen_start": "Share my screen",
     "screen_on": "Your screen is shared for {minutes} more minutes.",
     "screen_stop": "Stop sharing",
-    "screen_failed": "Sharing couldn't be changed."
+    "screen_failed": "Sharing couldn't be changed.",
+    "need_link": "This device can't watch yet. Open a new watch link from the person who shares, or sign in.",
+    "sign_in": "Sign in",
+    "screen_which": "Which screen",
+    "screen_monitor": "Screen {n}",
+    "screen_main": "main"
   },
   "tokens": {
     "title": "Access tokens",
-    "desc": "Let a script, a Stream Deck, Home Assistant or a share link do a few things without your password. Each token can only do what you tick, and you can remove it any time. A token with Watch the stream makes a link anyone on your network can open to watch.",
+    "desc": "Let a script, a Stream Deck, Home Assistant or an AI assistant do a few things without your password. Each token can only do what you tick, and you can remove it any time. To let someone watch, use Share a watch link on the Watch page instead: those links work once and the device's key changes daily.",
     "token": "Token",
     "made": "{name} is ready.",
     "made_once": "Copy it now: it isn't shown again.",
@@ -1391,6 +1396,9 @@
     "scope_messages": "Send messages and sounds to TVs",
     "scope_sessions": "End sessions and give more play time",
     "scope_launch": "Start games",
+    "scope_logs": "Read TunaStream's log and logs sent from TVs",
+    "agent_title": "Use with an AI assistant",
+    "agent_desc": "Claude Desktop, Claude Code and other assistants that use MCP can run TunaStream as a tool with this token. Paste this into the assistant's MCP settings (for Claude Desktop: Settings > Developer > Edit Config), then restart the assistant. It can do only what this token allows.",
     "make": "Make token",
     "none": "No tokens yet.",
     "expires_on": "Until {when}",
@@ -1398,6 +1406,8 @@
     "unused": "not used yet",
     "remove": "Remove",
     "remove_confirm": "Remove {name}? Anything using it stops working.",
-    "failed": "The token couldn't be made."
+    "failed": "The token couldn't be made.",
+    "kind_invite": "watch link, not opened yet",
+    "kind_rotating": "watch key on a device, changes daily"
   }
 }

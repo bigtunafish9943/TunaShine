@@ -18,6 +18,7 @@
 #include "logging.h"
 #include "main.h"
 #include "library_sync.h"
+#include "mcp_bridge.h"
 #include "nvhttp.h"
 #include "play_limits.h"
 #include "process.h"
@@ -155,6 +156,11 @@ int main(int argc, char *argv[]) {
 
   setlocale(LC_ALL, "C");
 #endif
+
+  // "tunastream --mcp": tools for an AI assistant, over standard input and output
+  if (argc > 1 && std::string_view {argv[1]} == "--mcp") {
+    return mcp_bridge::run(argc, argv);
+  }
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"

@@ -1299,8 +1299,8 @@
       },
       "watchlink": {
         "title": "Lien pour regarder",
-        "how": "Sur la page Regarder, choisissez Partager un lien pour regarder et ouvrez le lien copié sur un autre appareil non connecté.",
-        "expect": "Cet appareil peut regarder sans mot de passe pendant un jour, sans pouvoir ouvrir d'autre page. Le lien figure dans Changer le mot de passe > Jetons d'accès, et le supprimer le désactive."
+        "how": "Sur la page Regarder, choisissez Partager un lien pour regarder et ouvrez le lien sur une tablette non connectée. Ouvrez le même lien sur un deuxième appareil. Le lendemain, rouvrez Regarder sur la tablette.",
+        "expect": "La tablette regarde sans mot de passe et ne peut ouvrir aucune autre page. Le deuxième appareil est prévenu que le lien a déjà servi. La tablette fonctionne encore le lendemain, et Changer le mot de passe > Jetons d'accès l'affiche comme clé qui change chaque jour ; la supprimer l'arrête."
       },
       "sharescreen": {
         "title": "Partager mon écran",
@@ -1356,7 +1356,7 @@
     "no_sound_here": "Regarder uniquement. Ce navigateur ne peut pas lire le son ; essayez Chrome ou Edge.",
     "share": "Partager un lien pour regarder",
     "share_name": "Lien pour regarder {when}",
-    "share_copied": "Lien copié. Toute personne sur votre réseau peut regarder avec pendant un jour ; retirez-le à tout moment dans Changer le mot de passe > Jetons d'accès.",
+    "share_copied": "Lien copié. Il fonctionne une fois, sur un appareil, pendant un jour. Cet appareil continue ensuite avec sa propre clé, qui change chaque jour et expire après une semaine sans utilisation. Supprimez-la quand vous voulez dans Changer le mot de passe > Jetons d'accès.",
     "share_copy_this": "Copiez ce lien :",
     "share_failed": "Le lien n'a pas pu être créé.",
     "watching_screen": "Vous regardez l'écran de ce PC",
@@ -1369,11 +1369,16 @@
     "screen_start": "Partager mon écran",
     "screen_on": "Votre écran est partagé encore {minutes} minutes.",
     "screen_stop": "Arrêter le partage",
-    "screen_failed": "Le partage n'a pas pu être modifié."
+    "screen_failed": "Le partage n'a pas pu être modifié.",
+    "need_link": "Cet appareil ne peut pas encore regarder. Ouvrez un nouveau lien pour regarder envoyé par la personne qui partage, ou connectez-vous.",
+    "sign_in": "Se connecter",
+    "screen_which": "Quel écran",
+    "screen_monitor": "Écran {n}",
+    "screen_main": "principal"
   },
   "tokens": {
     "title": "Jetons d'accès",
-    "desc": "Permettez à un script, un Stream Deck, Home Assistant ou un lien partagé de faire quelques actions sans votre mot de passe. Chaque jeton ne peut faire que ce que vous cochez, et vous pouvez le retirer à tout moment. Un jeton avec Regarder le stream donne un lien que toute personne sur votre réseau peut ouvrir pour regarder.",
+    "desc": "Permettez à un script, un Stream Deck, Home Assistant ou un assistant IA de faire certaines choses sans votre mot de passe. Chaque jeton ne peut faire que ce que vous cochez, et vous pouvez le supprimer à tout moment. Pour laisser quelqu'un regarder, utilisez plutôt Partager un lien pour regarder sur la page Regarder : ces liens ne fonctionnent qu'une fois et la clé de l'appareil change chaque jour.",
     "token": "Jeton",
     "made": "{name} est prêt.",
     "made_once": "Copiez-le maintenant : il ne sera plus affiché.",
@@ -1391,6 +1396,9 @@
     "scope_messages": "Envoyer des messages et des sons aux télés",
     "scope_sessions": "Terminer les sessions et donner plus de temps de jeu",
     "scope_launch": "Lancer des jeux",
+    "scope_logs": "Lire le journal de TunaStream et les journaux envoyés par les télés",
+    "agent_title": "Utiliser avec un assistant IA",
+    "agent_desc": "Claude Desktop, Claude Code et les autres assistants compatibles MCP peuvent utiliser TunaStream comme outil avec ce jeton. Collez ceci dans les réglages MCP de l'assistant (pour Claude Desktop : Réglages > Développeur > Modifier la configuration), puis redémarrez l'assistant. Il ne peut faire que ce que ce jeton permet.",
     "make": "Créer le jeton",
     "none": "Aucun jeton pour le moment.",
     "expires_on": "Jusqu'au {when}",
@@ -1398,6 +1406,8 @@
     "unused": "jamais utilisé",
     "remove": "Retirer",
     "remove_confirm": "Retirer {name} ? Ce qui l'utilise cessera de fonctionner.",
-    "failed": "Le jeton n'a pas pu être créé."
+    "failed": "Le jeton n'a pas pu être créé.",
+    "kind_invite": "lien pour regarder, pas encore ouvert",
+    "kind_rotating": "clé pour regarder sur un appareil, change chaque jour"
   }
 }

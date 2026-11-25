@@ -194,13 +194,24 @@ namespace confighttp {
       std::int64_t created = 0;
       std::int64_t expires = 0;  // 0: never
       std::int64_t last_used = 0;
+      // Watch links: the link is an invite that works once, for a day; the device that opens it
+      // gets its own key, which changes every day while it's used
+      bool invite = false;
+      bool rotating = false;
+      std::string prev_hash;  // the key before the last change, for a few minutes
+      std::int64_t prev_until = 0;
+      std::int64_t rotated = 0;
     };
+
+    constexpr std::int64_t ROTATE_EVERY = 86400;  // a watch key changes daily
+    constexpr std::int64_t ROTATING_LIFETIME = 7 * 86400;  // and stops working after a week unused
+    constexpr std::int64_t ROTATE_GRACE = 600;
 
     std::mutex lock;
     std::vector<token_t> tokens;
     bool loaded = false;
 
-    const std::vector<std::string> SCOPES {"status", "watch", "messages", "sessions", "launch"};
+    const std::vector<std::string> SCOPES {"status", "watch", "messages", "sessions", "launch", "logs"};
 
     std::filesystem::path file() {
       return platf::appdata() / "api_tokens.json";
@@ -218,7 +229,7 @@ namespace confighttp {
     void save() {
       nlohmann::json list = nlohmann::json::array();
       for (const auto &t : tokens) {
-        list.push_back({{"id", t.id}, {"name", t.name}, {"hash", t.hash}, {"scopes", t.scopes}, {"created", t.created}, {"expires", t.expires}, {"lastUsed", t.last_used}});
+        list.push_back({{"id", t.id}, {"name", t.name}, {"hash", t.hash}, {"scopes", t.scopes}, {"created", t.created}, {"expires", t.expires}, {"lastUsed", t.last_used}, {"invite", t.invite}, {"rotating", t.rotating}, {"prevHash", t.prev_hash}, {"prevUntil", t.prev_until}, {"rotated", t.rotated}});
       }
       std::error_code ec;
       const auto path = file();
@@ -254,6 +265,11 @@ namespace confighttp {
           t.created = j.value("created", (std::int64_t) 0);
           t.expires = j.value("expires", (std::int64_t) 0);
           t.last_used = j.value("lastUsed", (std::int64_t) 0);
+          t.invite = j.value("invite", false);
+          t.rotating = j.value("rotating", false);
+          t.prev_hash = j.value("prevHash", "");
+          t.prev_until = j.value("prevUntil", (std::int64_t) 0);
+          t.rotated = j.value("rotated", (std::int64_t) 0);
           if (!t.id.empty() && !t.hash.empty()) {
             tokens.push_back(std::move(t));
           }
@@ -269,12 +285,24 @@ namespace confighttp {
         if (path == "/api/watch/stream" || path == "/watch" || path == "/watch/") {
           return "watch";
         }
+        if (path == "/api/tokens/self") {
+          return "any";  // what a token may do, for agents (tunastream.exe --mcp)
+        }
+        if (path == "/api/logs" || path == "/api/receiver-logs" || path == "/api/receiver-log") {
+          return "logs";
+        }
         for (auto p : {"/api/status", "/api/clients/list", "/api/apps", "/api/recap", "/api/play-limits", "/api/captures", "/api/receiver-settings", "/api/sounds"}) {
           if (path == p) {
             return "status";
           }
         }
       } else if (method == "POST") {
+        if (path == "/api/watch/redeem") {
+          return "redeem";  // only an unused watch link
+        }
+        if (path == "/api/watch/rotate") {
+          return "rotate";  // only a device's watch key
+        }
         if (path == "/api/tv-message" || path == "/api/sounds/play") {
           return "messages";
         }
@@ -299,13 +327,21 @@ namespace confighttp {
       prepare();
       const auto now = now_s();
       for (auto &t : tokens) {
-        if (t.hash != hash) {
+        const bool previous = !t.prev_hash.empty() && t.prev_hash == hash && now < t.prev_until;
+        if (t.hash != hash && !previous) {
           continue;
         }
         if (t.expires && t.expires < now) {
           return false;
         }
-        bool ok = std::find(t.scopes.begin(), t.scopes.end(), scope) != t.scopes.end();
+        // A watch link only swaps itself for a key; only a key changes itself
+        if (t.invite || scope == "redeem") {
+          return t.invite && scope == "redeem";
+        }
+        if (scope == "rotate") {
+          return t.rotating && !previous;
+        }
+        bool ok = scope == "any" || std::find(t.scopes.begin(), t.scopes.end(), scope) != t.scopes.end();
         if (!ok && scope == "status" && path == "/api/status") {
           ok = std::find(t.scopes.begin(), t.scopes.end(), "watch") != t.scopes.end();
         }
@@ -931,13 +967,52 @@ namespace confighttp {
       std::lock_guard lg {api_tokens::lock};
       api_tokens::prepare();
       for (const auto &t : api_tokens::tokens) {
-        list.push_back({{"id", t.id}, {"name", t.name}, {"scopes", t.scopes}, {"created", t.created}, {"expires", t.expires}, {"lastUsed", t.last_used}});
+        if (t.expires && t.expires < api_tokens::now_s() && (t.invite || t.rotating)) {
+          continue;  // watch links and keys that ran out
+        }
+        list.push_back({{"id", t.id}, {"name", t.name}, {"scopes", t.scopes}, {"created", t.created}, {"expires", t.expires}, {"lastUsed", t.last_used}, {"invite", t.invite}, {"rotating", t.rotating}});
       }
     }
     nlohmann::json out;
     out["status"] = true;
     out["tokens"] = list;
     out["scopes"] = api_tokens::SCOPES;
+#ifdef _WIN32
+    // For connecting an AI assistant: "tunastream.exe --mcp" with a token
+    out["exePath"] = (platf::appdata().parent_path() / "tunastream.exe").string();
+#endif
+    send_response(response, out);
+  }
+
+  /**
+   * @brief GET /api/tokens/self: what the token this request carries may do, {"name", "scopes",
+   *        "expires"}. Signed in with the password, everything.
+   */
+  void getApiTokenSelf(resp_https_t response, req_https_t request) {
+    if (!authenticate(response, request)) {
+      return;
+    }
+    nlohmann::json out;
+    out["status"] = true;
+    const auto token = api_tokens::from_request(request);
+    if (token.empty()) {
+      out["name"] = "Signed in with the password";
+      out["scopes"] = api_tokens::SCOPES;
+      out["expires"] = 0;
+      send_response(response, out);
+      return;
+    }
+    const auto hash = api_tokens::hash_of(token);
+    std::lock_guard lg {api_tokens::lock};
+    api_tokens::prepare();
+    for (const auto &t : api_tokens::tokens) {
+      if (t.hash == hash) {
+        out["name"] = t.name;
+        out["scopes"] = t.scopes;
+        out["expires"] = t.expires;
+        break;
+      }
+    }
     send_response(response, out);
   }
 
@@ -1021,11 +1096,138 @@ namespace confighttp {
     }
   }
 
+  namespace watch_keys {
+    std::string read_body(req_https_t request) {
+      std::stringstream ss;
+      ss << request->content.rdbuf();
+      return ss.str();
+    }
+
+    /// Give this token a new secret; the old one keeps working for a few minutes. With the lock held.
+    std::string renew_locked(api_tokens::token_t &t, bool keep_previous) {
+      const std::string fresh = "tst_" + crypto::rand_alphabet(40);
+      const auto now = api_tokens::now_s();
+      if (keep_previous) {
+        t.prev_hash = t.hash;
+        t.prev_until = now + api_tokens::ROTATE_GRACE;
+      } else {
+        t.prev_hash.clear();
+        t.prev_until = 0;
+      }
+      t.hash = api_tokens::hash_of(fresh);
+      t.rotated = now;
+      t.expires = now + api_tokens::ROTATING_LIFETIME;
+      t.last_used = now;
+      api_tokens::save();
+      return fresh;
+    }
+  }  // namespace watch_keys
+
+  /**
+   * @brief POST /api/watch/invite {"name"}: a watch link to share. It works once, within a day:
+   *        the device that opens it gets its own watch key, which changes every day.
+   */
+  void postWatchInvite(resp_https_t response, req_https_t request) {
+    if (!validateContentType(response, request, "application/json") || !authenticate_owner(response, request)) {
+      return;
+    }
+    try {
+      auto input = nlohmann::json::parse(watch_keys::read_body(request));
+      api_tokens::token_t t;
+      t.name = input.value("name", std::string {"Watch link"});
+      if (t.name.size() > 60) {
+        t.name.resize(60);
+      }
+      t.scopes = {"watch"};
+      t.invite = true;
+      const std::string invite = "tst_" + crypto::rand_alphabet(40);
+      t.id = crypto::rand_alphabet(12);
+      t.hash = api_tokens::hash_of(invite);
+      t.created = api_tokens::now_s();
+      t.expires = t.created + 86400;
+      {
+        std::lock_guard lg {api_tokens::lock};
+        api_tokens::prepare();
+        // Old links nobody opened go first
+        std::erase_if(api_tokens::tokens, [&](const api_tokens::token_t &x) {
+          return x.expires && x.expires < t.created;
+        });
+        if (api_tokens::tokens.size() >= 50) {
+          bad_request(response, request, "There are 50 tokens and watch links already. Remove some under Change Password > Access tokens first.");
+          return;
+        }
+        api_tokens::tokens.push_back(t);
+        api_tokens::save();
+      }
+      BOOST_LOG(info) << "Watch link made: "sv << t.name;
+      nlohmann::json out;
+      out["status"] = true;
+      out["invite"] = invite;
+      send_response(response, out);
+    } catch (std::exception &e) {
+      bad_request(response, request, e.what());
+    }
+  }
+
+  /**
+   * @brief POST /api/watch/redeem with a watch link (Authorization: Bearer): the link stops
+   *        working, and this device gets its own watch key, {"key", "rotateAfter"}.
+   */
+  void postWatchRedeem(resp_https_t response, req_https_t request) {
+    if (!authenticate(response, request)) {
+      return;
+    }
+    const auto hash = api_tokens::hash_of(api_tokens::from_request(request));
+    std::lock_guard lg {api_tokens::lock};
+    api_tokens::prepare();
+    for (auto &t : api_tokens::tokens) {
+      if (t.hash == hash && t.invite) {
+        t.invite = false;
+        t.rotating = true;
+        const auto key = watch_keys::renew_locked(t, false);
+        BOOST_LOG(info) << "Watch link opened on a device: "sv << t.name;
+        nlohmann::json out;
+        out["status"] = true;
+        out["key"] = key;
+        out["rotateAfter"] = api_tokens::ROTATE_EVERY;
+        send_response(response, out);
+        return;
+      }
+    }
+    bad_request(response, request, "This watch link was already used or has expired.");
+  }
+
+  /**
+   * @brief POST /api/watch/rotate with a device's watch key: a new key for tomorrow, {"key",
+   *        "rotateAfter"}. The old key stops working a few minutes later.
+   */
+  void postWatchRotate(resp_https_t response, req_https_t request) {
+    if (!authenticate(response, request)) {
+      return;
+    }
+    const auto hash = api_tokens::hash_of(api_tokens::from_request(request));
+    std::lock_guard lg {api_tokens::lock};
+    api_tokens::prepare();
+    for (auto &t : api_tokens::tokens) {
+      if (t.hash == hash && t.rotating) {
+        nlohmann::json out;
+        out["status"] = true;
+        out["key"] = watch_keys::renew_locked(t, true);
+        out["rotateAfter"] = api_tokens::ROTATE_EVERY;
+        send_response(response, out);
+        return;
+      }
+    }
+    bad_request(response, request, "This device's watch key isn't valid any more. Ask for a new watch link.");
+  }
+
   /**
    * @brief The Watch page: the stream in a browser, to watch only.
    */
   void getWatchPage(resp_https_t response, req_https_t request) {
-    if (!authenticate(response, request, true)) {
+    // Open to the network like the sign-in page: it holds nothing, and what it shows needs the
+    // password, a watch link or a device's watch key
+    if (!checkIPOrigin(response, request)) {
       return;
     }
 
@@ -1047,6 +1249,7 @@ namespace confighttp {
       return;
     }
     auto out = watch::sharing();
+    out["monitors"] = watch::monitors();
     out["status"] = true;
     send_response(response, out);
   }
@@ -1068,7 +1271,7 @@ namespace confighttp {
         bad_request(response, request, "This PC's video encoder can't make a second picture at the same time. Sharing needs a graphics card encoder.");
         return;
       }
-      watch::share_screen(on, input.value("minutes", 120));
+      watch::share_screen(on, input.value("minutes", 120), input.value("monitor", std::string {}));
       auto out = watch::sharing();
       out["status"] = true;
       send_response(response, out);
@@ -3351,6 +3554,7 @@ namespace confighttp {
     server.resource["^/checklist/?$"]["GET"] = getChecklistPage;
     server.resource["^/watch/?$"]["GET"] = getWatchPage;
     server.resource["^/api/tokens$"]["GET"] = getApiTokens;
+    server.resource["^/api/tokens/self$"]["GET"] = getApiTokenSelf;
     server.resource["^/api/library-sync$"]["GET"] = getLibrarySync;
     server.resource["^/api/library-sync$"]["POST"] = postLibrarySync;
     server.resource["^/api/tokens$"]["POST"] = postApiToken;
@@ -3358,6 +3562,9 @@ namespace confighttp {
     server.resource["^/api/watch/stream$"]["GET"] = getWatchStream;
     server.resource["^/api/watch/share$"]["GET"] = getWatchShare;
     server.resource["^/api/watch/share$"]["POST"] = postWatchShare;
+    server.resource["^/api/watch/invite$"]["POST"] = postWatchInvite;
+    server.resource["^/api/watch/redeem$"]["POST"] = postWatchRedeem;
+    server.resource["^/api/watch/rotate$"]["POST"] = postWatchRotate;
     server.resource["^/api/checklist$"]["GET"] = getChecklist;
     server.resource["^/api/checklist$"]["POST"] = postChecklist;
     server.resource["^/api/cover$"]["GET"] = getCover;

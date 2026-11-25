@@ -1299,8 +1299,8 @@
       },
       "watchlink": {
         "title": "Enlace para ver",
-        "how": "En la página Ver, elige Compartir un enlace para ver y abre el enlace copiado en otro dispositivo sin sesión iniciada.",
-        "expect": "Ese dispositivo puede ver sin contraseña durante un día y no puede abrir otras páginas. El enlace aparece en Cambiar contraseña > Tokens de acceso, y al quitarlo deja de funcionar."
+        "how": "En la página Ver, elige Compartir un enlace para ver y abre el enlace en una tableta sin sesión iniciada. Abre el mismo enlace en un segundo dispositivo. Al día siguiente, vuelve a abrir Ver en la tableta.",
+        "expect": "La tableta mira sin contraseña y no puede abrir otras páginas. Al segundo dispositivo se le avisa de que el enlace ya se usó. La tableta sigue funcionando al día siguiente, y Cambiar contraseña > Tokens de acceso la muestra como clave que cambia cada día; al quitarla deja de funcionar."
       },
       "sharescreen": {
         "title": "Compartir mi pantalla",
@@ -1356,7 +1356,7 @@
     "no_sound_here": "Solo para ver. Este navegador no puede reproducir el sonido; prueba Chrome o Edge.",
     "share": "Compartir un enlace para ver",
     "share_name": "Enlace para ver {when}",
-    "share_copied": "Enlace copiado. Cualquiera en tu red puede mirar con él durante un día; quítalo cuando quieras en Cambiar contraseña > Tokens de acceso.",
+    "share_copied": "Enlace copiado. Funciona una vez, en un dispositivo, durante un día. Ese dispositivo sigue viendo con su propia clave, que cambia cada día y deja de funcionar tras una semana sin uso. Quítala cuando quieras en Cambiar contraseña > Tokens de acceso.",
     "share_copy_this": "Copia este enlace:",
     "share_failed": "No se pudo crear el enlace.",
     "watching_screen": "Viendo la pantalla de este PC",
@@ -1369,11 +1369,16 @@
     "screen_start": "Compartir mi pantalla",
     "screen_on": "Tu pantalla se comparte {minutes} minutos más.",
     "screen_stop": "Dejar de compartir",
-    "screen_failed": "No se pudo cambiar el uso compartido."
+    "screen_failed": "No se pudo cambiar el uso compartido.",
+    "need_link": "Este dispositivo aún no puede ver. Abre un nuevo enlace para ver de quien comparte, o inicia sesión.",
+    "sign_in": "Iniciar sesión",
+    "screen_which": "Qué pantalla",
+    "screen_monitor": "Pantalla {n}",
+    "screen_main": "principal"
   },
   "tokens": {
     "title": "Tokens de acceso",
-    "desc": "Deja que un script, un Stream Deck, Home Assistant o un enlace compartido hagan algunas cosas sin tu contraseña. Cada token solo puede hacer lo que marques y puedes quitarlo cuando quieras. Un token con Ver la transmisión da un enlace que cualquiera en tu red puede abrir para mirar.",
+    "desc": "Deja que un script, un Stream Deck, Home Assistant o un asistente de IA hagan algunas cosas sin tu contraseña. Cada token solo puede hacer lo que marques y puedes quitarlo cuando quieras. Para dejar que alguien mire, usa Compartir un enlace para ver en la página Ver: esos enlaces funcionan una vez y la clave del dispositivo cambia cada día.",
     "token": "Token",
     "made": "{name} está listo.",
     "made_once": "Cópialo ahora: no se vuelve a mostrar.",
@@ -1391,6 +1396,9 @@
     "scope_messages": "Enviar mensajes y sonidos a las teles",
     "scope_sessions": "Terminar sesiones y dar más tiempo de juego",
     "scope_launch": "Iniciar juegos",
+    "scope_logs": "Leer el registro de TunaStream y los registros enviados por las teles",
+    "agent_title": "Usar con un asistente de IA",
+    "agent_desc": "Claude Desktop, Claude Code y otros asistentes compatibles con MCP pueden usar TunaStream como herramienta con este token. Pega esto en los ajustes MCP del asistente (en Claude Desktop: Configuración > Desarrollador > Editar configuración) y reinicia el asistente. Solo puede hacer lo que permite este token.",
     "make": "Crear token",
     "none": "Todavía no hay tokens.",
     "expires_on": "Hasta el {when}",
@@ -1398,6 +1406,8 @@
     "unused": "sin usar todavía",
     "remove": "Quitar",
     "remove_confirm": "¿Quitar {name}? Lo que lo use dejará de funcionar.",
-    "failed": "No se pudo crear el token."
+    "failed": "No se pudo crear el token.",
+    "kind_invite": "enlace para ver, aún sin abrir",
+    "kind_rotating": "clave para ver en un dispositivo, cambia cada día"
   }
 }

@@ -64,6 +64,8 @@ namespace watch {
     std::atomic<std::int64_t> sharing_until {0};
     // A device is starting a stream: the PC's screen isn't shown for a moment
     std::atomic<std::int64_t> desktop_blocked_until {0};
+    // The screen to share (\\.\DISPLAYn); empty for the main one. With state_lock.
+    std::string shared_monitor;
 
     std::int64_t now_us() {
       return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
@@ -252,10 +254,18 @@ namespace watch {
       run->desktop = desktop;
 #ifdef _WIN32
       if (desktop && !proc::proc.running()) {
-        // The PC's main screen
-        auto primary = VDISPLAY::getPrimaryDisplay();
-        if (!primary.empty()) {
-          proc::proc.display_name = platf::to_utf8(primary);
+        // The screen chosen to share, if it's still there, or else the PC's main screen
+        std::string chosen;
+        for (const auto &m : monitors()) {
+          if (m.value("id", "") == shared_monitor) {
+            chosen = shared_monitor;
+          }
+        }
+        if (chosen.empty()) {
+          chosen = platf::to_utf8(VDISPLAY::getPrimaryDisplay());
+        }
+        if (!chosen.empty()) {
+          proc::proc.display_name = chosen;
         }
       }
 #endif
@@ -422,9 +432,66 @@ namespace watch {
     finish(std::move(done));
   }
 
-  void share_screen(bool on, int minutes) {
+  nlohmann::json monitors() {
+    nlohmann::json out = nlohmann::json::array();
+#ifdef _WIN32
+    struct found_t {
+      std::wstring device;
+      RECT rect;
+      bool primary;
+    };
+
+    std::vector<found_t> found;
+    EnumDisplayMonitors(nullptr, nullptr, [](HMONITOR monitor, HDC, LPRECT, LPARAM param) -> BOOL {
+      MONITORINFOEXW info {};
+      info.cbSize = sizeof(info);
+      if (GetMonitorInfoW(monitor, &info)) {
+        ((std::vector<found_t> *) param)->push_back({info.szDevice, info.rcMonitor, (info.dwFlags & MONITORINFOF_PRIMARY) != 0});
+      }
+      return TRUE;
+    }, (LPARAM) &found);
+    int n = 0;
+    for (const auto &f : found) {
+      // The monitor's own name ("DELL U2720Q"), when Windows knows it
+      DISPLAY_DEVICEW dd {};
+      dd.cb = sizeof(dd);
+      std::string model;
+      if (EnumDisplayDevicesW(f.device.c_str(), 0, &dd, 0)) {
+        model = platf::to_utf8(dd.DeviceString);
+      }
+      if (proc::proc.running() && proc::proc.virtual_display && platf::to_utf8(f.device) == proc::proc.display_name) {
+        continue;  // the TV's own screen while a game streams there
+      }
+      ++n;
+      out.push_back({
+        {"id", platf::to_utf8(f.device)},
+        {"number", n},
+        {"model", model},
+        {"width", f.rect.right - f.rect.left},
+        {"height", f.rect.bottom - f.rect.top},
+        {"main", f.primary},
+      });
+    }
+#endif
+    return out;
+  }
+
+  void share_screen(bool on, int minutes, const std::string &monitor) {
     if (on) {
       minutes = std::clamp(minutes, 1, 24 * 60);
+      // A different screen than viewers see now: they switch over
+      std::shared_ptr<run_t> done;
+      {
+        std::lock_guard lg {state_lock};
+        if (shared_monitor != monitor) {
+          shared_monitor = monitor;
+          if (running && running->desktop) {
+            end_viewers("Switching screens.");
+            done = take_locked();
+          }
+        }
+      }
+      finish(std::move(done));
       sharing_until = now_us() + (std::int64_t) minutes * 60'000'000;
       BOOST_LOG(info) << "Share my screen: on for "sv << minutes << " minutes"sv;
 #if defined TUNASTREAM_TRAY && TUNASTREAM_TRAY >= 1
@@ -460,6 +527,7 @@ namespace watch {
     std::lock_guard lg {state_lock};
     out["showingScreen"] = running && running->desktop;
     out["viewers"] = (int) viewer_list.size();
+    out["monitor"] = shared_monitor;
     return out;
   }
 }  // namespace watch

@@ -100,6 +100,7 @@ set(TUNASTREAM_TARGET_FILES
         "${CMAKE_SOURCE_DIR}/src/receiver_settings.cpp"
         "${CMAKE_SOURCE_DIR}/src/watch.cpp"
         "${CMAKE_SOURCE_DIR}/src/library_sync.cpp"
+        "${CMAKE_SOURCE_DIR}/src/mcp_bridge.cpp"
         "${CMAKE_SOURCE_DIR}/src/other_hosts.cpp"
         "${CMAKE_SOURCE_DIR}/src/pairing_backup.cpp"
         "${CMAKE_SOURCE_DIR}/src/file_outbox.cpp"

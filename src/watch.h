@@ -52,9 +52,15 @@ namespace watch {
   /// A device is starting a stream: stop showing the PC's own screen, so viewers follow the stream.
   void stop_desktop();
 
-  /// Share my screen: show the PC's own main screen to viewers while nobody streams, for a while.
-  void share_screen(bool on, int minutes);
+  /**
+   * @brief Share my screen: show one of the PC's own screens to viewers while nobody streams,
+   *        for a while. monitor is an id from monitors(); empty for the main screen.
+   */
+  void share_screen(bool on, int minutes, const std::string &monitor = {});
 
-  /// {"on", "minutesLeft", "showingScreen", "viewers"} for the home and watch pages.
+  /// {"on", "minutesLeft", "showingScreen", "viewers", "monitor"} for the home and watch pages.
   nlohmann::json sharing();
+
+  /// The PC's screens that can be shared: [{"id", "number", "model", "width", "height", "main"}].
+  nlohmann::json monitors();
 }  // namespace watch

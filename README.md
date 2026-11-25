@@ -98,8 +98,9 @@ and every step was tightened:
   *Settings > Shared PC*.
 - **Watch in a browser.** *Watch* on the home page shows the game being streamed, with its sound, on any laptop
   or phone on your network, view only and a moment behind the TV. *Share a watch link* gives someone else a link
-  that works for a day and opens nothing but the picture.
-- **Share my screen.** On the Watch page, choose to share the PC's own screen for an hour or a few, so someone can
+  that works once, within a day, and opens nothing but the picture. The device that opens it keeps watching
+  with its own key, which changes every day and stops working after a week unused.
+- **Share my screen.** On the Watch page, choose to share one of the PC's own screens for an hour or a few, so someone can
   watch you play at the desk on a tablet or phone. The home page and the tray say while it's on, a TV's stream takes
   over while it plays, and it turns itself off when the time is up.
 - **Do not disturb during streams** (on by default). Windows' notifications wait in the notification centre
@@ -122,7 +123,12 @@ and every step was tightened:
   away. Pairing and permissions together on one Devices page. Tick *Keep me signed in* to stay signed in for 15
   days, through restarts and updates; *Apply* brings the page back by itself once TunaStream has restarted.
 - **Access tokens** for scripts and home automation (*Change Password > Access tokens*): each can only do what
-  you tick (see what's playing, watch, send messages, end sessions, start games) and can be removed any time.
+  you tick (see what's playing, watch, send messages, end sessions, start games, read logs) and can be removed
+  any time.
+- **AI assistants.** `tunastream.exe --mcp` makes TunaStream a set of MCP tools for Claude Desktop, Claude Code
+  and other assistants: what's playing, the paired devices and the games, starting a game, ending a session,
+  more play time, a message on the TV, the play recap, and the PC's and TVs' logs. It uses an access token, so
+  an assistant can do only what the token allows; making a token shows the settings to paste in.
 - **Your last seven days.** The home page shows play time for each day, the most-played games and how smooth the
   streams were, with milestones as they're reached. The record stays on the PC.
 - **A reminder when a game runs slow.** When a game itself draws fewer than 59 frames a second, the home page
