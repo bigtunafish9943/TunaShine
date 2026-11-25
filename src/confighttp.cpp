@@ -899,6 +899,7 @@ namespace confighttp {
         {"sendRateMbps", h.send_rate_mbps},
         {"fecPercent", h.fec_percent},
         {"pictureScale", h.picture_scale},
+        {"splitFrames", h.split_frames},
         {"windowS", h.window_s},
       });
       if (h.view.known) {
