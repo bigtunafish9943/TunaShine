@@ -144,6 +144,10 @@
                   setting: Math.round(player.health.deviceView.settingKbps / 1000)
                 }) }}
               </span>
+              <span class="d-block" v-if="player.health.deviceView && player.health.deviceView.hdrPeakNits > 0">
+                {{ $t('index.health_hdr_peak', { nits: player.health.deviceView.hdrPeakNits }) }}
+                <a href="./help#hdr">{{ $t('index.health_hdr_link') }}</a>
+              </span>
               <span class="d-block" v-if="player.health.pictureScale && player.health.pictureScale < 100">
                 {{ $t('index.health_scaled', { pct: player.health.pictureScale }) }}
               </span>

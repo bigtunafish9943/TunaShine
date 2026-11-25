@@ -1783,6 +1783,7 @@ namespace nvhttp {
     view.latency_ms = (int) number("latency", 10000);
     view.kbps = (int) number("kbps", 1000000);
     view.setting_kbps = (int) number("setting", 1000000);
+    view.hdr_peak_nits = (int) number("hdrpeak", 10000);
 
     nlohmann::json out;
     auto session = rtsp_stream::find_session(named_cert_p->uuid);

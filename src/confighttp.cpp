@@ -1272,6 +1272,7 @@ namespace confighttp {
           {"latencyMs", h.view.latency_ms},
           {"kbps", h.view.kbps},
           {"settingKbps", h.view.setting_kbps},
+          {"hdrPeakNits", h.view.hdr_peak_nits},
         };
       }
     }

@@ -96,6 +96,7 @@ namespace stream {
       int latency_ms = 0;  ///< Average delay on the device from receiving a frame to showing it
       int kbps = 0;  ///< Bitrate the device is asking for, in the units of its own setting
       int setting_kbps = 0;  ///< The device's bitrate setting
+      int hdr_peak_nits = 0;  ///< The brightest the screen says it can show in HDR, 0 when unknown
     };
 
     /// How smoothly one client's stream is running, measured over the last few seconds.

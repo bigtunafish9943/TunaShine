@@ -612,6 +612,8 @@
     "highlights_button": "Make this week's highlights",
     "highlights_done": "Saved as {name}, with the last few seconds of each replay from this week.",
     "highlights_failed": "The highlights couldn't be made.",
+    "health_hdr_link": "Match HDR to the TV",
+    "health_hdr_peak": "The TV says it shows HDR up to about {nits} nits.",
     "battery_charging": "charging, {pct}%",
     "battery_level": "battery {pct}%",
     "controller_n": "Controller {n}",
