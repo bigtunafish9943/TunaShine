@@ -999,6 +999,33 @@ namespace confighttp {
   }
 
   /**
+   * @brief Wi-Fi networks this PC can hear, for the channel advice: GET /api/wifi?scan=1.
+   * @details The adapter is only asked to scan when nobody is streaming, since a scan briefly
+   *          takes the Wi-Fi off its channel.
+   */
+  void getWifi(resp_https_t response, req_https_t request) {
+    if (!authenticate(response, request)) {
+      return;
+    }
+
+    auto args = request->parse_query_string();
+    const bool asked = args.find("scan") != args.end();
+    const bool streaming = rtsp_stream::session_count() > 0;
+    const auto survey = platf::wifi_survey(asked && !streaming);
+    nlohmann::json networks = nlohmann::json::array();
+    for (const auto &n : survey.networks) {
+      networks.push_back({{"name", n.name}, {"channel", n.channel}, {"band", n.band}, {"signal", n.signal}, {"connected", n.connected}});
+    }
+    nlohmann::json output_tree;
+    output_tree["status"] = true;
+    output_tree["available"] = survey.available;
+    output_tree["scanned"] = asked && !streaming;
+    output_tree["streaming"] = streaming;
+    output_tree["networks"] = networks;
+    send_response(response, output_tree);
+  }
+
+  /**
    * @brief The sound board: {"sounds": [{"name", "builtIn"}], "maxBytes"}.
    */
   void getSounds(resp_https_t response, req_https_t request) {
@@ -2260,6 +2287,7 @@ namespace confighttp {
     server.resource["^/api/tv-message$"]["GET"] = getTvMessages;
     server.resource["^/api/sounds$"]["GET"] = getSounds;
     server.resource["^/api/captures$"]["GET"] = getCaptures;
+    server.resource["^/api/wifi$"]["GET"] = getWifi;
     server.resource["^/api/captures/file$"]["GET"] = getCaptureFile;
     server.resource["^/api/sounds$"]["POST"] = addSound;
     server.resource["^/api/sounds/delete$"]["POST"] = removeSound;

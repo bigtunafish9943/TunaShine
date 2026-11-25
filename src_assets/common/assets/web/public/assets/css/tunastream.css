@@ -1914,3 +1914,12 @@ html[data-ts-theme=summer][data-bs-theme=dark] {
     color: var(--bs-secondary-color);
     font-size: 0.8rem;
 }
+
+/* Troubleshooting: Wi-Fi channels */
+.ts-wifi-table {
+    max-width: 32rem;
+}
+
+.ts-wifi-best td {
+    font-weight: 600;
+}

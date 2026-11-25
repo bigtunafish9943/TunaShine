@@ -10,6 +10,7 @@
 #include <functional>
 #include <mutex>
 #include <string>
+#include <vector>
 
 // lib includes
 #include <boost/core/noncopyable.hpp>
@@ -898,6 +899,27 @@ namespace platf {
   };
 
   network_link_t network_link();
+
+  /// One Wi-Fi network this computer can hear.
+  struct wifi_network_t {
+    std::string name;  ///< Network name, empty when hidden
+    int channel = 0;
+    int band = 0;  ///< 2 (2.4 GHz), 5 or 6
+    int signal = 0;  ///< 0 to 100
+    bool connected = false;  ///< The network this computer is on
+  };
+
+  /// What a Wi-Fi scan found, for the channel advice on the Troubleshooting page.
+  struct wifi_survey_t {
+    bool available = false;  ///< False when this computer has no Wi-Fi adapter (or isn't Windows)
+    std::vector<wifi_network_t> networks;
+  };
+
+  /**
+   * @brief The Wi-Fi networks nearby, from the adapter's last scan.
+   * @param scan_first Ask the adapter to scan first (takes a few seconds). Never while streaming.
+   */
+  wifi_survey_t wifi_survey(bool scan_first);
 
   /// A folder of the signed-in user's, such as their Pictures folder.
   enum class user_folder_e {

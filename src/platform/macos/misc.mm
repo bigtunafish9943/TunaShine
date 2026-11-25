@@ -227,6 +227,10 @@ namespace platf {
     return nullptr;
   }
 
+  wifi_survey_t wifi_survey(bool) {
+    return {};
+  }
+
   std::filesystem::path user_folder(user_folder_e) {
     return {};
   }
