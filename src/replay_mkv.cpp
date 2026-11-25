@@ -598,6 +598,239 @@ namespace replay_mkv {
     return file;
   }
 
+  // ---------- Reading back ----------
+  namespace {
+    struct reader_t {
+      const bytes_t &data;
+      size_t pos;
+      size_t end;
+
+      bool done() const {
+        return pos >= end;
+      }
+
+      bool read_id(std::uint32_t &id) {
+        if (pos >= end) {
+          return false;
+        }
+        const auto first = data[pos];
+        int length = first & 0x80 ? 1 : first & 0x40 ? 2 : first & 0x20 ? 3 : first & 0x10 ? 4 : 0;
+        if (!length || pos + length > end) {
+          return false;
+        }
+        id = 0;
+        for (int i = 0; i < length; ++i) {
+          id = (id << 8) | data[pos++];
+        }
+        return true;
+      }
+
+      bool read_size(std::uint64_t &size) {
+        if (pos >= end) {
+          return false;
+        }
+        const auto first = data[pos];
+        int length = 1;
+        while (length <= 8 && !(first & (0x80 >> (length - 1)))) {
+          ++length;
+        }
+        if (length > 8 || pos + length > end) {
+          return false;
+        }
+        size = first & (0xFF >> length);
+        ++pos;
+        for (int i = 1; i < length; ++i) {
+          size = (size << 8) | data[pos++];
+        }
+        return true;
+      }
+
+      /// The next element: its id and where its body is
+      bool next(std::uint32_t &id, size_t &body, size_t &body_end) {
+        std::uint64_t size;
+        if (!read_id(id) || !read_size(size) || pos + size > end) {
+          return false;
+        }
+        body = pos;
+        body_end = pos + (size_t) size;
+        pos = body_end;
+        return true;
+      }
+    };
+
+    std::uint64_t read_uint(const bytes_t &data, size_t begin, size_t end) {
+      std::uint64_t v = 0;
+      for (size_t i = begin; i < end; ++i) {
+        v = (v << 8) | data[i];
+      }
+      return v;
+    }
+
+    bytes_t annex_b(const std::uint8_t *data, size_t size) {
+      bytes_t out;
+      out.reserve(size + 16);
+      size_t i = 0;
+      while (i + 4 <= size) {
+        const std::uint32_t length = (data[i] << 24) | (data[i + 1] << 16) | (data[i + 2] << 8) | data[i + 3];
+        i += 4;
+        if (i + length > size) {
+          break;
+        }
+        out.insert(out.end(), {0, 0, 0, 1});
+        out.insert(out.end(), data + i, data + i + length);
+        i += length;
+      }
+      return out;
+    }
+  }  // namespace
+
+  bool read(const std::string &path_utf8, clip_t &clip) {
+    const std::filesystem::path path {std::u8string(path_utf8.begin(), path_utf8.end())};
+    std::ifstream in(path, std::ios::binary);
+    if (!in) {
+      return false;
+    }
+    bytes_t data((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    reader_t top {data, 0, data.size()};
+    std::uint32_t id;
+    size_t body, body_end;
+    clip = {};
+    bool segment = false;
+    while (top.next(id, body, body_end)) {
+      if (id != SEGMENT) {
+        continue;
+      }
+      segment = true;
+      reader_t seg {data, body, body_end};
+      while (seg.next(id, body, body_end)) {
+        if (id == TRACKS) {
+          reader_t tracks {data, body, body_end};
+          while (tracks.next(id, body, body_end)) {
+            if (id != TRACK_ENTRY) {
+              continue;
+            }
+            reader_t entry {data, body, body_end};
+            std::uint64_t type = 0;
+            std::string codec;
+            while (entry.next(id, body, body_end)) {
+              if (id == TRACK_TYPE) {
+                type = read_uint(data, body, body_end);
+              } else if (id == CODEC_ID) {
+                codec.assign(data.begin() + body, data.begin() + body_end);
+              } else if (id == VIDEO) {
+                reader_t video {data, body, body_end};
+                while (video.next(id, body, body_end)) {
+                  if (id == PIXEL_WIDTH) {
+                    clip.width = (int) read_uint(data, body, body_end);
+                  } else if (id == PIXEL_HEIGHT) {
+                    clip.height = (int) read_uint(data, body, body_end);
+                  } else if (id == COLOUR) {
+                    clip.hdr = true;
+                  }
+                }
+              } else if (id == CODEC_PRIVATE && codec == "A_OPUS" && body_end - body >= 19) {
+                // OpusHead: channels, then the layout in Vorbis order, put back in Windows order
+                auto &layout = clip.audio_layout;
+                layout.channels = data[body + 9];
+                if (data[body + 18] != 0 && body_end - body >= 21 + (size_t) layout.channels) {
+                  layout.streams = data[body + 19];
+                  layout.coupled_streams = data[body + 20];
+                  static const int from_windows_6[6] {0, 2, 1, 4, 5, 3};
+                  static const int from_windows_8[8] {0, 2, 1, 6, 7, 4, 5, 3};
+                  const int *order = layout.channels == 6 ? from_windows_6 : layout.channels == 8 ? from_windows_8 : nullptr;
+                  for (int i = 0; i < layout.channels && i < 8; ++i) {
+                    layout.mapping[order && data[body + 18] == 1 ? order[i] : i] = data[body + 21 + i];
+                  }
+                } else {
+                  layout.streams = 1;
+                  layout.coupled_streams = layout.channels > 1 ? 1 : 0;
+                }
+              } else if (id == CODEC_PRIVATE && codec == "V_MPEGH/ISO/HEVC" && body_end - body > 22) {
+                // hvcC: chroma format at byte 16, luma bit depth at 17
+                clip.bit_depth = (data[body + 17] & 0x07) + 8;
+                clip.yuv444 = (data[body + 16] & 0x03) == 3;
+              }
+            }
+            if (type == 1) {
+              clip.codec = codec == "V_MPEG4/ISO/AVC" ? codec_e::h264 : codec == "V_AV1" ? codec_e::av1 : codec_e::hevc;
+            } else if (type == 2 && codec == "A_OPUS") {
+              clip.has_audio = true;
+            }
+          }
+        } else if (id == CLUSTER) {
+          reader_t cluster {data, body, body_end};
+          std::int64_t cluster_ms = 0;
+          while (cluster.next(id, body, body_end)) {
+            if (id == TIMESTAMP) {
+              cluster_ms = (std::int64_t) read_uint(data, body, body_end);
+            } else if (id == SIMPLE_BLOCK && body_end - body > 4) {
+              const int track = data[body] & 0x7F;
+              const auto relative = (std::int16_t) ((data[body + 1] << 8) | data[body + 2]);
+              const bool key = data[body + 3] & 0x80;
+              const auto *payload = data.data() + body + 4;
+              const auto payload_size = body_end - body - 4;
+              const std::int64_t us = (cluster_ms + relative) * 1000;
+              if (track == 1) {
+                bytes_t frame = clip.codec == codec_e::av1 ? bytes_t(payload, payload + payload_size) : annex_b(payload, payload_size);
+                clip.video.push_back({us, key, std::move(frame)});
+              } else if (track == 2) {
+                clip.audio.push_back({us, bytes_t(payload, payload + payload_size)});
+              }
+            }
+          }
+        }
+      }
+    }
+    return segment && !clip.video.empty() && clip.video.front().keyframe;
+  }
+
+  clip_t join(const std::vector<clip_t> &clips, int seconds_each) {
+    clip_t out;
+    if (clips.empty()) {
+      return out;
+    }
+    const auto &first = clips.front();
+    out.codec = first.codec;
+    out.width = first.width;
+    out.height = first.height;
+    out.hdr = first.hdr;
+    out.bit_depth = first.bit_depth;
+    out.yuv444 = first.yuv444;
+    out.has_audio = true;
+    out.audio_layout = first.audio_layout;
+    for (const auto &c : clips) {
+      out.has_audio = out.has_audio && c.has_audio && c.audio_layout.channels == first.audio_layout.channels;
+    }
+
+    std::int64_t offset = 0;  // where the next piece starts in the joined clip
+    for (const auto &c : clips) {
+      if (c.video.empty()) {
+        continue;
+      }
+      // Start at the last keyframe that leaves at least seconds_each before the end
+      const auto end_us = c.video.back().time_us;
+      size_t start = 0;
+      for (size_t i = 0; i < c.video.size(); ++i) {
+        if (c.video[i].keyframe && end_us - c.video[i].time_us >= (std::int64_t) seconds_each * 1000000) {
+          start = i;
+        }
+      }
+      const auto base = c.video[start].time_us;
+      for (size_t i = start; i < c.video.size(); ++i) {
+        out.video.push_back({c.video[i].time_us - base + offset, c.video[i].keyframe, c.video[i].data});
+      }
+      if (out.has_audio) {
+        for (const auto &a : c.audio) {
+          if (a.time_us >= base && a.time_us <= end_us) {
+            out.audio.push_back({a.time_us - base + offset, a.data});
+          }
+        }
+      }
+      offset += end_us - base + 33333;  // a frame's gap between pieces
+    }
+    return out;
+  }
+
   std::string write(const std::string &path_utf8, const clip_t &clip) {
     auto bytes = build(clip);
     if (bytes.empty()) {

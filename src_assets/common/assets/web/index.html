@@ -282,6 +282,13 @@
     <section class="home-captures" v-if="captures.length" aria-labelledby="captures-title">
       <h2 class="h5" id="captures-title">{{ $t('index.captures_title') }}</h2>
       <p class="home-captures-where">{{ $t('index.captures_where', { pictures: captureFolders.screenshots, videos: captureFolders.clips }) }}</p>
+      <div class="home-highlights" v-if="captures.some((c) => c.kind === 'clip')">
+        <button class="btn btn-outline-secondary btn-sm" :disabled="highlights.busy" @click="makeHighlights">
+          <span class="spinner-border spinner-border-sm me-1" v-if="highlights.busy" aria-hidden="true"></span>
+          <i class="fas fa-wand-magic-sparkles" aria-hidden="true" v-else></i> {{ $t('index.highlights_button') }}
+        </button>
+        <span class="home-message-status" :class="{ 'home-message-error': highlights.error }" v-if="highlights.status">{{ highlights.status }}</span>
+      </div>
       <ul class="home-captures-grid">
         <li v-for="c in captures.slice(0, 8)" :key="c.kind + c.name">
           <a :href="captureUrl(c)" target="_blank" rel="noopener" :title="c.name">
@@ -422,6 +429,7 @@
         phoneQr: '',
         phoneUrl: '',
         captures: [],
+        highlights: { busy: false, status: '', error: false },
         captureFolders: { screenshots: '', clips: '' },
         sounds: [],
         soundMaxBytes: 2097152,
@@ -600,6 +608,20 @@
           this.captureFolders = { screenshots: r.screenshotFolder || '', clips: r.clipFolder || '' };
         } catch (e) {
           this.captures = [];
+        }
+      },
+      /** Joins the end of each replay saved this week into one clip. */
+      async makeHighlights() {
+        this.highlights = { busy: true, status: this.$t('index.highlights_busy'), error: false };
+        try {
+          const r = await fetch('./api/highlights', {
+            credentials: 'include', method: 'POST', headers: { 'Content-Type': 'application/json' },
+          }).then((r) => r.json());
+          this.highlights = { busy: false, error: !r.status,
+                              status: r.status ? this.$t('index.highlights_done', { name: r.name }) : (r.error || this.$t('index.highlights_failed')) };
+          if (r.status) this.loadCaptures();
+        } catch (e) {
+          this.highlights = { busy: false, error: true, status: this.$t('index.highlights_failed') };
         }
       },
       captureUrl(c) {

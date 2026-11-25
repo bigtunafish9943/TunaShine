@@ -1966,3 +1966,15 @@ html[data-ts-theme=summer][data-bs-theme=dark] {
         flex-direction: column;
     }
 }
+
+.home-highlights {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    align-items: center;
+    margin-bottom: 0.9rem;
+}
+
+.home-highlights .home-message-status {
+    margin: 0;
+}

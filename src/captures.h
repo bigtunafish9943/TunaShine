@@ -41,6 +41,14 @@ namespace captures {
   /// The newest screenshots and clips, newest first.
   std::vector<capture_t> recent(size_t at_most);
 
+  /**
+   * @brief Join the end of each instant replay saved in the last seven days into one clip,
+   *        "Highlights <date>.mkv" in the clips folder.
+   * @param name Set to the new clip's file name.
+   * @return Empty on success, otherwise why not, in a sentence.
+   */
+  std::string make_highlights(std::string &name);
+
   /// The file of a screenshot or clip listed by recent(), if it is still there.
   std::filesystem::path file_for(const std::string &kind, const std::string &name);
 }  // namespace captures

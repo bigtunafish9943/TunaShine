@@ -1059,6 +1059,28 @@ namespace confighttp {
   }
 
   /**
+   * @brief Make this week's highlights from the instant replays saved: POST /api/highlights.
+   */
+  void postHighlights(resp_https_t response, req_https_t request) {
+    if (!validateContentType(response, request, "application/json") || !authenticate(response, request)) {
+      return;
+    }
+
+    print_req(request);
+
+    std::string name;
+    auto error = captures::make_highlights(name);
+    nlohmann::json output_tree;
+    output_tree["status"] = error.empty();
+    if (error.empty()) {
+      output_tree["name"] = name;
+    } else {
+      output_tree["error"] = error;
+    }
+    send_response(response, output_tree);
+  }
+
+  /**
    * @brief One screenshot or clip: GET /api/captures/file?kind=screenshot|clip&name=...
    */
   void getCaptureFile(resp_https_t response, req_https_t request) {
@@ -1076,7 +1098,7 @@ namespace confighttp {
     }
     auto ext = path.extension().string();
     std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
-    const char *type = ext == ".png" ? "image/png" : (ext == ".jpg" || ext == ".jpeg") ? "image/jpeg" : ext == ".mp4" ? "video/mp4" : "application/octet-stream";
+    const char *type = ext == ".png" ? "image/png" : (ext == ".jpg" || ext == ".jpeg") ? "image/jpeg" : ext == ".mp4" ? "video/mp4" : ext == ".mkv" ? "video/x-matroska" : "application/octet-stream";
     std::ifstream in(path, std::ios::binary);
     SimpleWeb::CaseInsensitiveMultimap headers;
     headers.emplace("Content-Type", type);
@@ -2459,6 +2481,7 @@ namespace confighttp {
     server.resource["^/api/captures$"]["GET"] = getCaptures;
     server.resource["^/api/wifi$"]["GET"] = getWifi;
     server.resource["^/api/captures/file$"]["GET"] = getCaptureFile;
+    server.resource["^/api/highlights$"]["POST"] = postHighlights;
     server.resource["^/api/sounds$"]["POST"] = addSound;
     server.resource["^/api/sounds/delete$"]["POST"] = removeSound;
     server.resource["^/api/update$"]["GET"] = getUpdate;

@@ -14,6 +14,7 @@
 
 // local includes
 #include "captures.h"
+#include "replay_mkv.h"
 #include "logging.h"
 #include "platform/common.h"
 
@@ -148,6 +149,66 @@ namespace captures {
       out.resize(at_most);
     }
     return out;
+  }
+
+  std::string make_highlights(std::string &name) {
+    constexpr int SECONDS_EACH = 6;
+    constexpr size_t MAX_PIECES = 8;
+    const auto dir = clip_dir();
+    const auto week_ago = std::chrono::system_clock::now() - std::chrono::hours(24 * 7);
+
+    // This week's replays (not earlier highlights), oldest first
+    std::vector<std::pair<fs::file_time_type, fs::path>> found;
+    std::error_code ec;
+    for (const auto &entry : fs::directory_iterator {dir, ec}) {
+      try {
+        const auto filename = to_utf8(entry.path().filename());
+        if (!entry.is_regular_file(ec) || entry.path().extension() != ".mkv" || filename.starts_with("Highlights")) {
+          continue;
+        }
+        const auto modified = entry.last_write_time(ec);
+        if (std::chrono::file_clock::to_sys(modified) < week_ago) {
+          continue;
+        }
+        found.emplace_back(modified, entry.path());
+      } catch (const std::exception &) {
+      }
+    }
+    if (found.empty()) {
+      return "No instant replays were saved in the last seven days. Press View + L1 on the TV during a game to save one.";
+    }
+    std::sort(found.begin(), found.end());
+    if (found.size() > MAX_PIECES) {
+      found.erase(found.begin(), found.end() - MAX_PIECES);
+    }
+
+    // Read one at a time and keep only its end, so the whole week isn't in memory at once
+    std::vector<replay_mkv::clip_t> pieces;
+    for (const auto &[when, path] : found) {
+      replay_mkv::clip_t clip;
+      if (!replay_mkv::read(to_utf8(path), clip)) {
+        continue;
+      }
+      if (!pieces.empty() && (clip.codec != pieces.front().codec || clip.width != pieces.front().width ||
+                              clip.height != pieces.front().height)) {
+        // A different picture size or codec can't go in the same clip; keep the newer kind
+        pieces.clear();
+      }
+      pieces.push_back(replay_mkv::join({clip}, SECONDS_EACH));
+    }
+    if (pieces.empty()) {
+      return "This week's replays couldn't be read.";
+    }
+    auto joined = replay_mkv::join(pieces, SECONDS_EACH);
+    pieces.clear();
+
+    fs::create_directories(dir, ec);
+    name = file_name("Highlights", ".mkv");
+    auto error = replay_mkv::write(to_utf8(dir / from_utf8(name)), joined);
+    if (error.empty()) {
+      BOOST_LOG(info) << "Highlights made from "sv << found.size() << " replays: "sv << name;
+    }
+    return error;
   }
 
   fs::path file_for(const std::string &kind, const std::string &name) {

@@ -57,4 +57,17 @@ namespace replay_mkv {
 
   /// The bytes of the file write() would make (for tests).
   std::vector<std::uint8_t> build(const clip_t &clip);
+
+  /**
+   * @brief Read back a clip written by write(), with frames in the form write() takes.
+   * @return False when the file isn't one TunaStream wrote.
+   */
+  bool read(const std::string &path_utf8, clip_t &clip);
+
+  /**
+   * @brief Join the last seconds of several clips into one, for the weekly highlights.
+   * @param clips Clips of the same codec and picture size, oldest first.
+   * @param seconds_each How much of the end of each to keep (from the keyframe before that point).
+   */
+  clip_t join(const std::vector<clip_t> &clips, int seconds_each);
 }  // namespace replay_mkv
