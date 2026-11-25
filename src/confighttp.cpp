@@ -901,6 +901,17 @@ namespace confighttp {
         {"pictureScale", h.picture_scale},
         {"windowS", h.window_s},
       });
+      if (h.view.known) {
+        streams.back()["deviceView"] = {
+          {"lossPct", h.view.loss_pct},
+          {"slowPct", h.view.slow_pct},
+          {"fps", h.view.fps},
+          {"decodeMs", h.view.decode_ms},
+          {"latencyMs", h.view.latency_ms},
+          {"kbps", h.view.kbps},
+          {"settingKbps", h.view.setting_kbps},
+        };
+      }
     }
     output_tree["streams"] = streams;
 

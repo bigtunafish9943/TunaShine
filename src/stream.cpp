@@ -453,6 +453,10 @@ namespace stream {
       std::atomic_int bitrate_kbps {0};  // current bitrate, once it has been changed mid-stream
       std::atomic_int fec_percent {0};  // error correction being added to each frame right now
       std::atomic_int picture_scale {100};  // picture size in percent of what the device asked for
+
+      // What the device itself sees, as TunaReceive reports it every few seconds (guarded by lock)
+      stream::session::device_view_t device_view;
+      std::chrono::steady_clock::time_point device_view_at;
     } health;
 
     // Times the client asked for lost video to be repaired or resent
@@ -1408,6 +1412,11 @@ namespace stream {
     out.send_rate_mbps = h.send_rate_mbps.load();
     out.fec_percent = h.fec_percent.load();
     out.picture_scale = h.picture_scale.load();
+    if (h.device_view_at != std::chrono::steady_clock::time_point {} &&
+        std::chrono::steady_clock::now() - h.device_view_at < 15s) {
+      out.view = h.device_view;
+      out.view.known = true;
+    }
 
     if (h.samples.size() < 2) {
       return out;
@@ -2307,6 +2316,12 @@ namespace stream {
         return (int) ((std::int64_t) clamped * configured / asked);
       }
       return clamped;
+    }
+
+    void set_device_view(session_t &session, const device_view_t &view) {
+      std::lock_guard lg {session.health.lock};
+      session.health.device_view = view;
+      session.health.device_view_at = std::chrono::steady_clock::now();
     }
 
     int set_picture_scale(session_t &session, int percent) {
