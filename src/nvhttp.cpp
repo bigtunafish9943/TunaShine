@@ -31,6 +31,7 @@
 #include "globals.h"
 #include "httpcommon.h"
 #include "logging.h"
+#include "confighttp.h"
 #include "network.h"
 #include "nvhttp.h"
 #include "box_art.h"
@@ -1913,6 +1914,22 @@ namespace nvhttp {
   }
 
   /**
+   * Watch on the TV: GET /tuna/watch gives this paired device a watch key for the PC's Watch
+   * stream (view only), {"key", "port"}: the web page's port, with the same certificate as here.
+   */
+  void tunaWatch(resp_https_t response, req_https_t request) {
+    print_req<TunaStreamHTTPS>(request);
+    auto named_cert_p = get_verified_cert(request);
+    nlohmann::json out;
+    out["key"] = confighttp::device_watch_key(named_cert_p->uuid, named_cert_p->name);
+    out["port"] = net::map_port(confighttp::PORT_HTTPS);
+    SimpleWeb::CaseInsensitiveMultimap headers;
+    headers.emplace("Content-Type", "application/json");
+    response->write(SimpleWeb::StatusCode::success_ok, out.dump(), headers);
+    response->close_connection_after_response = true;
+  }
+
+  /**
    * Instant replay: GET /tuna/replay saves the last 30 seconds of this device's stream as a clip in
    * the signed-in user's Videos\TunaStream folder. Answers {"saved", "name"} or {"saved": false, "reason"}.
    */
@@ -2288,6 +2305,7 @@ namespace nvhttp {
     https_server.resource["^/tuna/recap$"]["GET"] = tunaRecap;
     https_server.resource["^/tuna/screenshot$"]["POST"] = tunaScreenshot;
     https_server.resource["^/tuna/log$"]["POST"] = tunaLog;
+    https_server.resource["^/tuna/watch$"]["GET"] = tunaWatch;
     https_server.resource["^/tuna/replay$"]["GET"] = tunaReplay;
     https_server.resource["^/tuna/settings$"]["POST"] = tunaSettings;
     https_server.resource["^/tuna/backup$"]["POST"] = tunaBackupSave;

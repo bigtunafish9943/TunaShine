@@ -20,6 +20,12 @@ namespace confighttp {
   constexpr auto PORT_HTTPS = 1;
   constexpr auto SESSION_EXPIRE_DURATION = 24h * 15;
   void start();
+
+  /**
+   * @brief A watch key for a paired device (TunaReceive's Watch): it can only watch, works for a
+   *        week, and replaces the device's previous one. Listed under Access tokens.
+   */
+  std::string device_watch_key(const std::string &device_uuid, const std::string &device_name);
 }  // namespace confighttp
 
 // mime types map

@@ -1236,6 +1236,24 @@ namespace confighttp {
     }
   }  // namespace watch_keys
 
+  std::string device_watch_key(const std::string &device_uuid, const std::string &device_name) {
+    const std::string tag = "device:" + device_uuid;
+    std::lock_guard lg {api_tokens::lock};
+    api_tokens::prepare();
+    std::erase_if(api_tokens::tokens, [&](const api_tokens::token_t &t) {
+      return t.parent == tag;
+    });
+    api_tokens::token_t t;
+    t.id = crypto::rand_alphabet(12);
+    t.name = device_name;
+    t.scopes = {"watch"};
+    t.rotating = true;
+    t.parent = tag;
+    t.created = api_tokens::now_s();
+    api_tokens::tokens.push_back(t);
+    return watch_keys::renew_locked(api_tokens::tokens.back(), false);
+  }
+
   /**
    * @brief POST /api/watch/invite {"name"}: a watch link to share. It works once, within a day:
    *        the device that opens it gets its own watch key, which changes every day.
