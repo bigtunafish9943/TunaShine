@@ -971,8 +971,10 @@ namespace platf {
    * @brief Shared PC mode: the windows the app opens are kept on the stream's display for as
    *        long as it runs, and its sound is sent to the stream's sound device while everything
    *        else keeps playing on the PC's own speakers.
+   * @param home_display When the stream's screen is the main one: the PC's own screen, where new
+   *        windows of the person at the PC are moved back to.
    */
-  std::unique_ptr<window_herder_t> keep_app_on_stream(const std::string &display_name, bool include_steam);
+  std::unique_ptr<window_herder_t> keep_app_on_stream(const std::string &display_name, bool include_steam, const std::string &home_display = {});
 
   /// The sound device the stream captures in shared PC mode (Windows endpoint id), or empty.
   void set_stream_audio_device(const std::wstring &device_id);

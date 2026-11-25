@@ -182,6 +182,9 @@ namespace config {
     // Let the person at the PC keep using it: the PC's own screen stays the main one, and only the
     // streamed app's sound goes to the stream
     bool shared_pc;
+    // Shared PC: make the stream's screen the main one (games open there), and move the person at the
+    // PC's new windows back to their own monitors
+    bool shared_pc_tv_primary;
 
     // Peak rate video packets are sent at, in Mbps; 0 picks one from the stream's bitrate
     int video_send_rate;

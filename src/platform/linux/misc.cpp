@@ -367,7 +367,7 @@ std::string get_local_ip_for_gateway() {
   void set_game_frame_limit(int) {
   }
 
-  std::unique_ptr<window_herder_t> keep_app_on_stream(const std::string &, bool) {
+  std::unique_ptr<window_herder_t> keep_app_on_stream(const std::string &, bool, const std::string &) {
     return nullptr;
   }
 

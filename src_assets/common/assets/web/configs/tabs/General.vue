@@ -145,6 +145,15 @@ onMounted(() => {
               default="true"
     ></Checkbox>
 
+    <!-- Shared PC: which screen is the main one -->
+    <Checkbox class="mb-3"
+              id="shared_pc_tv_primary"
+              locale-prefix="config"
+              v-model="config.shared_pc_tv_primary"
+              default="false"
+              v-if="config.shared_pc !== 'disabled'"
+    ></Checkbox>
+
     <!-- Seasonal themes -->
     <Checkbox class="mb-3"
               id="ui_theme_seasonal"

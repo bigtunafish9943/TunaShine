@@ -366,8 +366,9 @@ namespace platf {
 
     class window_herder_impl_t: public window_herder_t {
     public:
-      window_herder_impl_t(std::wstring display, bool include_steam, bool shared):
+      window_herder_impl_t(std::wstring display, bool include_steam, bool shared, std::wstring home = {}):
           display {std::move(display)},
+          home_display {std::move(home)},
           include_steam {include_steam},
           shared {shared} {
         // Everything already on screen belongs to the person at the PC
@@ -435,6 +436,20 @@ namespace platf {
         if (com) {
           CoUninitialize();
         }
+      }
+
+      /// Where the person at the PC's windows go: the screen their mouse is on, or their main one
+      bool home_rect(const RECT &target, RECT &home) {
+        POINT cursor {};
+        if (GetCursorPos(&cursor) && !PtInRect(&target, cursor)) {
+          MONITORINFO info {};
+          info.cbSize = sizeof(info);
+          if (GetMonitorInfoW(MonitorFromPoint(cursor, MONITOR_DEFAULTTONEAREST), &info)) {
+            home = info.rcWork;
+            return true;
+          }
+        }
+        return monitor_rect(home_display, home);
       }
 
       /**
@@ -575,7 +590,8 @@ namespace platf {
           RECT rect {};
           GetWindowRect(hwnd, &rect);
           POINT centre {(rect.left + rect.right) / 2, (rect.top + rect.bottom) / 2};
-          if (PtInRect(&target, centre)) {
+          const bool on_stream = PtInRect(&target, centre);
+          if (on_stream && home_display.empty()) {
             continue;
           }
 
@@ -592,7 +608,32 @@ namespace platf {
             GetWindowTextW(hwnd, steam_title, 128);
             steam_window = std::wstring_view {steam_title}.find(L"Big Picture") != std::wstring_view::npos;
           }
-          if (!steam_window && !belongs_to_stream(pid, proc)) {
+          const bool stream_window = steam_window || belongs_to_stream(pid, proc);
+
+          if (on_stream) {
+            // The stream's screen is the main one, so the person at the PC's new windows open there:
+            // send them back to their own screen
+            if (stream_window) {
+              existing.insert(hwnd);
+              continue;
+            }
+            RECT home {};
+            if (!home_rect(target, home)) {
+              continue;
+            }
+            int &moves = move_count[hwnd];
+            if (moves >= max_moves_per_window) {
+              continue;
+            }
+            ++moves;
+            wchar_t title[128] {};
+            GetWindowTextW(hwnd, title, 128);
+            move_to(hwnd, home);
+            BOOST_LOG(info) << "Moved a window off the stream's screen, back to the PC's own: ["sv << to_utf8(title) << "] ("sv << to_utf8(proc.exe) << ')';
+            continue;
+          }
+
+          if (!stream_window) {
             // Opened by the person at the PC (from the taskbar, or a program already running)
             existing.insert(hwnd);
             continue;
@@ -612,6 +653,7 @@ namespace platf {
       }
 
       std::wstring display;
+      std::wstring home_display;  // the PC's own main screen, when the stream's is the main one
       bool include_steam;
       bool shared;
       std::int64_t next_focus_try_ms = 0;
@@ -633,11 +675,11 @@ namespace platf {
     return std::make_unique<window_herder_impl_t>(from_utf8(display_name), include_steam, false);
   }
 
-  std::unique_ptr<window_herder_t> keep_app_on_stream(const std::string &display_name, bool include_steam) {
+  std::unique_ptr<window_herder_t> keep_app_on_stream(const std::string &display_name, bool include_steam, const std::string &home_display) {
     if (display_name.empty()) {
       return nullptr;
     }
-    return std::make_unique<window_herder_impl_t>(from_utf8(display_name), include_steam, true);
+    return std::make_unique<window_herder_impl_t>(from_utf8(display_name), include_steam, true, from_utf8(home_display));
   }
 
   void note_controller_input() {

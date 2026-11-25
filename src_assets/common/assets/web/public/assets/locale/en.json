@@ -297,6 +297,8 @@
     "fallback_mode_error": "Invalid fallback mode. Format: [Width]x[Height]x[FPS]",
     "ui_theme_seasonal": "Seasonal themes",
     "ui_theme_seasonal_desc": "Halloween colours in October, autumn in November, winter from December to mid-January and summer in July and August, then back to your theme. TunaReceive follows when it matches the PC.",
+    "shared_pc_tv_primary": "Shared PC: make the TV's screen the main one",
+    "shared_pc_tv_primary_desc": "Games then open on the TV by themselves, at the TV's resolution, which suits games that insist on full screen on the main display. New windows you open that land on the TV's screen are moved to the screen your mouse is on. Windows still shows its notifications, the main taskbar's clock and some system prompts on the main screen, so they appear on the TV.",
     "shared_pc": "Shared PC: keep using this PC while someone streams",
     "shared_pc_desc": "Your monitor stays the main screen, so your windows, taskbar and notifications stay with you; only the streamed game's windows go to the TV. Only the game's sound goes to the stream, and your sound stays on your speakers. Your mouse can't wander onto the TV's screen. Windows still has one keyboard focus: clicking your own windows can make some games pause or stop reading the controller. When the controller is in use and you haven't touched your mouse or keyboard for 8 seconds, the game gets focus back by itself; typing or moving your mouse always comes first.",
     "instant_replay": "Instant replay: keep the last 30 seconds of each stream",
