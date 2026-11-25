@@ -569,7 +569,20 @@
     "privacy_mode": "Privatmodus: Monitore dieses PCs ausschalten, während jemand streamt",
     "privacy_mode_desc": "Nur der eigene Bildschirm des Streams bleibt an, sodass niemand im Raum sieht, was am PC gespielt wird. Die Monitore gehen wieder an, so angeordnet wie vorher, wenn der Stream endet oder der Fernseher die Verbindung trennt. Im Modus „Geteilter PC“ nicht verfügbar, da du die Monitore dort nutzt. Bleiben sie je aus, drücke Windows + P und wähle „Erweitern“.",
     "game_vsync_off": "V-Sync in Spielen während des Streamens ausschalten",
-    "game_vsync_off_desc": "Da die Begrenzung die Spiele taktet, bringt das Warten auf den Bildschirm nur Verzögerung: Das spart bis zu ein Bild. NVIDIA-Grafikkarten; deine eigene Einstellung kommt zurück, wenn das Streamen endet. Schalte es aus, wenn ein Spiel auf dem Fernseher Tearing zeigt."
+    "game_vsync_off_desc": "Da die Begrenzung die Spiele taktet, bringt das Warten auf den Bildschirm nur Verzögerung: Das spart bis zu ein Bild. NVIDIA-Grafikkarten; deine eigene Einstellung kommt zurück, wenn das Streamen endet. Schalte es aus, wenn ein Spiel auf dem Fernseher Tearing zeigt.",
+    "tab_everyday": "Alltag",
+    "everyday_intro": "Die Einstellungen, die am häufigsten geändert werden, an einem Ort. Alles hier steht auch auf seinem eigenen Reiter, zusammen mit dem Rest.",
+    "everyday_screen": "Der Bildschirm des Streams",
+    "everyday_smooth": "Flüssigkeit",
+    "everyday_games": "Spiele und Geräte",
+    "everyday_apps": "Spiele, und sie synchron halten",
+    "everyday_devices": "Geräte und Einstellungen des Fernsehers",
+    "everyday_watch": "Den Stream in diesem Browser ansehen",
+    "everyday_fix": "Wenn etwas nicht stimmt",
+    "everyday_repair": "Virtuellen Bildschirm reparieren",
+    "everyday_restart": "TunaStream neu starten",
+    "everyday_logs": "Protokolle von Fernsehern",
+    "everyday_checklist": "Test-Checkliste"
   },
   "index": {
     "controller_hint": "Als was Spiele diesen Controller sehen. Die meisten PC-Spiele lassen nur einen Xbox-360-Controller vibrieren; ändere es unter Einstellungen > Eingabe > Emulierter Gamepad-Typ.",

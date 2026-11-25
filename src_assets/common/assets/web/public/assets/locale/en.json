@@ -574,7 +574,20 @@
     "privacy_mode": "Privacy mode: turn this PC's monitors off while someone streams",
     "privacy_mode_desc": "Only the stream's own screen stays on, so nobody in the room sees what's being played on the PC. The monitors come back on, as they were arranged, when the stream ends or the TV disconnects. Not available in Shared PC mode, where you're using the monitors. If they ever stay off, press Windows + P and pick Extend.",
     "game_vsync_off": "Turn Vertical Sync off in games while streaming",
-    "game_vsync_off_desc": "With the cap pacing games, waiting for the screen only adds delay: this takes away up to a frame. NVIDIA graphics cards; your own setting comes back when streaming stops. Turn off if a game shows tearing on the TV."
+    "game_vsync_off_desc": "With the cap pacing games, waiting for the screen only adds delay: this takes away up to a frame. NVIDIA graphics cards; your own setting comes back when streaming stops. Turn off if a game shows tearing on the TV.",
+    "tab_everyday": "Everyday",
+    "everyday_intro": "The settings people change most, in one place. Everything here is also on its own tab, with the rest.",
+    "everyday_screen": "The stream's screen",
+    "everyday_smooth": "Smoothness",
+    "everyday_games": "Games and devices",
+    "everyday_apps": "Games, and keeping them in sync",
+    "everyday_devices": "Devices and TV settings",
+    "everyday_watch": "Watch the stream in this browser",
+    "everyday_fix": "If something is wrong",
+    "everyday_repair": "Repair the virtual screen",
+    "everyday_restart": "Restart TunaStream",
+    "everyday_logs": "Logs sent from TVs",
+    "everyday_checklist": "Test checklist"
   },
   "index": {
     "controller_hint": "What games see this controller as. Most PC games only rumble an Xbox 360 controller; change it under Configuration > Input > Emulated Gamepad Type.",

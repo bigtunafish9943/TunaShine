@@ -569,7 +569,20 @@
     "privacy_mode": "Mode confidentialité : éteindre les écrans de ce PC pendant un stream",
     "privacy_mode_desc": "Seul l'écran propre au stream reste allumé, pour que personne dans la pièce ne voie ce qui est joué sur le PC. Les écrans se rallument, dans leur disposition d'origine, à la fin du stream ou quand la télé se déconnecte. Indisponible en mode PC partagé, où vous utilisez les écrans. S'ils restent éteints, appuyez sur Windows + P et choisissez Étendre.",
     "game_vsync_off": "Désactiver la V-Sync dans les jeux pendant le stream",
-    "game_vsync_off_desc": "Comme la limite cadence les jeux, attendre l'écran n'ajoute que de la latence : cela retire jusqu'à une image. Cartes graphiques NVIDIA ; votre réglage revient à la fin du stream. Désactivez si un jeu présente du tearing sur la télé."
+    "game_vsync_off_desc": "Comme la limite cadence les jeux, attendre l'écran n'ajoute que de la latence : cela retire jusqu'à une image. Cartes graphiques NVIDIA ; votre réglage revient à la fin du stream. Désactivez si un jeu présente du tearing sur la télé.",
+    "tab_everyday": "Au quotidien",
+    "everyday_intro": "Les réglages qu'on change le plus, au même endroit. Tout ce qui est ici se trouve aussi dans son propre onglet, avec le reste.",
+    "everyday_screen": "L'écran du stream",
+    "everyday_smooth": "Fluidité",
+    "everyday_games": "Jeux et appareils",
+    "everyday_apps": "Les jeux, et leur synchronisation",
+    "everyday_devices": "Appareils et réglages de la télé",
+    "everyday_watch": "Regarder le stream dans ce navigateur",
+    "everyday_fix": "Si quelque chose ne va pas",
+    "everyday_repair": "Réparer l'écran virtuel",
+    "everyday_restart": "Redémarrer TunaStream",
+    "everyday_logs": "Journaux envoyés par les télés",
+    "everyday_checklist": "Liste de tests"
   },
   "index": {
     "controller_hint": "Ce que les jeux voient de cette manette. La plupart des jeux PC ne font vibrer qu'une manette Xbox 360 ; changez-le dans Réglages > Entrées > Type de manette émulée.",

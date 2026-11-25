@@ -569,7 +569,20 @@
     "privacy_mode": "Modo privacidad: apagar los monitores de este PC mientras alguien transmite",
     "privacy_mode_desc": "Solo la pantalla propia de la transmisión sigue encendida, para que nadie en la habitación vea lo que se juega en el PC. Los monitores se vuelven a encender, con su disposición de antes, cuando termina la transmisión o la tele se desconecta. No está disponible en modo PC compartido, donde usas los monitores. Si alguna vez se quedan apagados, pulsa Windows + P y elige Extender.",
     "game_vsync_off": "Desactivar la V-Sync en los juegos durante la transmisión",
-    "game_vsync_off_desc": "Como el límite marca el ritmo de los juegos, esperar a la pantalla solo añade retraso: esto quita hasta una imagen. Tarjetas gráficas NVIDIA; tu ajuste vuelve al terminar la transmisión. Desactívalo si un juego muestra tearing en la tele."
+    "game_vsync_off_desc": "Como el límite marca el ritmo de los juegos, esperar a la pantalla solo añade retraso: esto quita hasta una imagen. Tarjetas gráficas NVIDIA; tu ajuste vuelve al terminar la transmisión. Desactívalo si un juego muestra tearing en la tele.",
+    "tab_everyday": "Día a día",
+    "everyday_intro": "Los ajustes que más se cambian, en un solo sitio. Todo lo que hay aquí está también en su propia pestaña, con el resto.",
+    "everyday_screen": "La pantalla de la transmisión",
+    "everyday_smooth": "Fluidez",
+    "everyday_games": "Juegos y dispositivos",
+    "everyday_apps": "Los juegos, y mantenerlos sincronizados",
+    "everyday_devices": "Dispositivos y configuración de la tele",
+    "everyday_watch": "Ver la transmisión en este navegador",
+    "everyday_fix": "Si algo va mal",
+    "everyday_repair": "Reparar la pantalla virtual",
+    "everyday_restart": "Reiniciar TunaStream",
+    "everyday_logs": "Registros enviados por las teles",
+    "everyday_checklist": "Lista de pruebas"
   },
   "index": {
     "controller_hint": "Cómo ven los juegos este mando. La mayoría de juegos de PC solo hacen vibrar un mando de Xbox 360; cámbialo en Configuración > Entrada > Tipo de mando emulado.",
