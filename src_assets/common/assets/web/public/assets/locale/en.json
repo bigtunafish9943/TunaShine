@@ -751,6 +751,7 @@
     "whatsnew_since": "Since {version}, the version this browser last saw:",
     "whatsnew_ok": "Got it",
     "watch": "Watch",
+    "sharing_who": "Watching: {names}",
     "sharing_on": "Your screen is being shared with browsers watching, for {minutes} more minutes ({viewers} watching now).",
     "sharing_stop": "Stop sharing"
   },
