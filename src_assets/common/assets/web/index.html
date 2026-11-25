@@ -25,7 +25,8 @@
     <!-- Share my screen is on: never unnoticed -->
     <div class="alert alert-warning d-flex flex-wrap align-items-center gap-2" v-if="sharing && sharing.on" role="status">
       <i class="fas fa-tower-broadcast" aria-hidden="true"></i>
-      <span class="flex-grow-1">{{ $t('index.sharing_on', { minutes: sharing.minutesLeft, viewers: sharing.viewers }) }}</span>
+      <span class="flex-grow-1">{{ $t('index.sharing_on', { minutes: sharing.minutesLeft, viewers: sharing.viewers }) }}
+        <span v-if="watcherNames.length"><br>{{ $t('index.sharing_who', { names: watcherNames.join(', ') }) }}</span></span>
       <a class="btn btn-sm btn-outline-dark" href="./watch">{{ $t('index.watch') }}</a>
       <button type="button" class="btn btn-sm btn-dark" @click="stopSharing">{{ $t('index.sharing_stop') }}</button>
     </div>
@@ -443,6 +444,7 @@
         hostName: "",
         currentAppName: "",
         sharing: null,
+        watcherNames: [],
         pausedOnStreamScreen: false,
         displayRestoreFailed: false,
         otherHosts: [],
@@ -1028,6 +1030,13 @@
           const controllers = (status && status.controllers) || [];
           this.vdisplayFailed = !!(status && status.vdisplayFailed);
           this.sharing = (status && status.sharingScreen) || null;
+          if (this.sharing && this.sharing.on && this.sharing.viewers > 0) {
+            fetch("./api/watch/viewers", { credentials: 'include' }).then((r) => r.ok ? r.json() : null)
+              .then((v) => { this.watcherNames = ((v && v.viewers) || []).map((x) => x.name) })
+              .catch(() => {});
+          } else {
+            this.watcherNames = [];
+          }
           this.network = (status && status.network) || null;
           if (status && status.vdisplayStatus !== undefined) {
             this.vdisplayStatus = status.vdisplayStatus;

@@ -746,6 +746,7 @@
     "whatsnew_since": "Depuis la version {version}, la dernière vue par ce navigateur :",
     "whatsnew_ok": "Compris",
     "watch": "Regarder",
+    "sharing_who": "Regardent : {names}",
     "sharing_on": "Votre écran est partagé avec les navigateurs qui regardent, encore {minutes} minutes ({viewers} regardent en ce moment).",
     "sharing_stop": "Arrêter le partage"
   },
