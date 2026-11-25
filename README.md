@@ -83,6 +83,11 @@ and every step was tightened:
   controllers, which devices are paired and whether the virtual display is working, with an End session button.
   Settings in plain words, with the technical ones tucked away. Pairing and permissions together on one Devices
   page.
+- **Your last seven days.** The home page shows play time for each day, the most-played games and how smooth the
+  streams were. The record stays on the PC.
+- **Game covers from Steam.** Steam games added as apps get their cover on the client's game tiles: a custom cover
+  you set in your Steam library first, then the one Steam shows, fetched by itself.
+- **Controller batteries** on the home page next to each controller, in red when one is low.
 - **Five colour themes**: Deep Sea, Coral Reef, Kelp Forest, Midnight and Golden Hour, in light and dark.
   TunaReceive wears the PC's theme by default, or its own if you pick one. *Settings > General*.
 - **Updates itself.** When a new version is out, a banner offers *Update now*; TunaStream downloads it, checks it
