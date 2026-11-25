@@ -1,0 +1,67 @@
+# One-time clean-up: removes old releases, tags and branches whose history still carries commits
+# from before the history was tidied, so GitHub stops listing those authors as contributors.
+# Each name below is checked first: it is only deleted if its history has an author other than
+# Claude or the renamed upstream import commit. The newest release is never deleted.
+name: Remove old history
+
+on:
+  push:
+    branches: [claude/windows-build]
+    paths: [.github/workflows/remove-old-history.yml]
+
+permissions:
+  contents: write
+
+jobs:
+  remove:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Remove old releases, tags and branches
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAGS: "v0.1.36 v0.1.45 v0.1.51 v0.1.55 v0.1.60 v0.1.63 v0.1.71 v0.1.75 v0.1.79 v0.1.81"
+          BRANCHES: "claude/split-frame"
+        run: |
+          set -euo pipefail
+          git fetch --quiet --tags --force origin '+refs/heads/*:refs/remotes/origin/*'
+          latest=$(gh release view --json tagName -q .tagName)
+          echo "Newest release: $latest (kept)"
+
+          # True when a ref's history has an author other than Claude or the renamed import commit
+          dirty() {
+            git log "$1" --format='%ae' | grep -v -x -e 'noreply@anthropic.com' -e 'upstream-contributors@[a-z]*\.invalid' | grep -q .
+          }
+
+          echo "--- Plan"
+          for t in $TAGS; do
+            if [ "$t" = "$latest" ]; then echo "keep $t: newest release"; continue; fi
+            if ! git rev-parse -q --verify "refs/tags/$t" >/dev/null; then echo "skip $t: no such tag"; continue; fi
+            if dirty "refs/tags/$t"; then echo "delete tag $t"; else echo "keep $t: history is already clean"; fi
+          done
+          for b in $BRANCHES; do
+            if ! git rev-parse -q --verify "refs/remotes/origin/$b" >/dev/null; then echo "skip branch $b: not found"; continue; fi
+            if dirty "refs/remotes/origin/$b"; then echo "delete branch $b"; else echo "keep branch $b: history is already clean"; fi
+          done
+
+          echo "--- Doing it"
+          for t in $TAGS; do
+            [ "$t" = "$latest" ] && continue
+            git rev-parse -q --verify "refs/tags/$t" >/dev/null || continue
+            dirty "refs/tags/$t" || continue
+            if gh release view "$t" >/dev/null 2>&1; then
+              gh release delete "$t" --yes --cleanup-tag
+            else
+              git push --quiet origin --delete "refs/tags/$t"
+            fi
+            echo "deleted $t"
+          done
+          for b in $BRANCHES; do
+            git rev-parse -q --verify "refs/remotes/origin/$b" >/dev/null || continue
+            dirty "refs/remotes/origin/$b" || continue
+            git push --quiet origin --delete "$b"
+            echo "deleted branch $b"
+          done
