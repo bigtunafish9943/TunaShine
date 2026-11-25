@@ -832,6 +832,7 @@
     "logs": "Logs",
     "logs_desc": "What TunaStream has been doing, newest at the bottom.",
     "logs_find": "Find…",
+    "logs_save": "Save log file",
     "quit_tunastream": "Quit TunaStream",
     "quit_tunastream_confirm": "Quit TunaStream? Devices won't be able to stream until it's started again from the Start menu.",
     "quit_tunastream_desc": "Stops TunaStream and ends any stream. Start it again from the Start menu.",
