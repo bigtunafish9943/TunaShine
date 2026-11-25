@@ -23,6 +23,7 @@
 #include <algorithm>
 #include <atomic>
 #include <condition_variable>
+#include <cstring>
 #include <deque>
 #include <filesystem>
 #include <fstream>
@@ -52,6 +53,7 @@
   #include "platform/windows/app_sound.h"
   #include "platform/windows/cheer_overlay.h"
   #include "platform/windows/misc.h"
+  #include "platform/windows/user_helper.h"
   #include "platform/windows/virtual_display.h"
 #endif
 
@@ -320,7 +322,7 @@ namespace watch {
       constexpr int FRAME = 480;  // 10 ms, as the usual watch sound
       std::vector<float> pending;
       std::vector<unsigned char> packet(4000);
-      auto started = platf::sound_without(pid, [&](const float *samples, std::size_t frames) {
+      auto encode = [&](const float *samples, std::size_t frames) {
         pending.insert(pending.end(), samples, samples + frames * 2);
         std::size_t used = 0;
         while (pending.size() - used >= (std::size_t) FRAME * 2) {
@@ -331,7 +333,33 @@ namespace watch {
           }
         }
         pending.erase(pending.begin(), pending.begin() + (std::ptrdiff_t) used);
-      }, stopping);
+      };
+      bool started = false;
+      if (platf::is_running_as_system()) {
+        // Windows does this for the signed-in user, like any app: a helper running as them does it
+        if (auto helper = platf::start_user_helper("sound", std::to_wstring(pid))) {
+          started = true;
+          BOOST_LOG(info) << "Game sound only: through the helper in the user's session"sv;
+          std::vector<char> raw(48000 * 8 / 50);  // 20 ms
+          std::size_t carry = 0;
+          std::size_t got = 0;
+          while (!stopping.load() && helper->read(raw.data() + carry, raw.size() - carry, got, stopping)) {
+            const std::size_t have = carry + got;
+            const std::size_t frames = have / 8;
+            encode((const float *) raw.data(), frames);
+            carry = have - frames * 8;
+            std::memmove(raw.data(), raw.data() + frames * 8, carry);
+          }
+          // The helper couldn't capture (older Windows): the usual sound instead
+          DWORD code = 0;
+          if (!stopping.load() && WaitForSingleObject(helper->process, 1000) == WAIT_OBJECT_0 && GetExitCodeProcess(helper->process, &code) && code == 4) {
+            BOOST_LOG(warning) << "Game sound only: the helper couldn't capture; viewers hear everything"sv;
+            started = false;
+          }
+        }
+      } else {
+        started = platf::sound_without(pid, encode, stopping);
+      }
       opus_encoder_destroy(enc);
       return started;
     }
