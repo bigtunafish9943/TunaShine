@@ -223,6 +223,10 @@
         <div class="live-chips">
           <span class="live-chip" v-if="p.health">{{ $t('live.mbps', { mbps: Math.round(p.health.bitrateKbps / 1000) }) }}</span>
           <span class="live-chip" v-if="p.health && p.health.deviceView">{{ $t('live.delay', { ms: p.health.deviceView.latencyMs }) }}</span>
+          <span class="live-chip" v-if="playLeft(p.device) !== null">
+            <i class="fas fa-hourglass-half" aria-hidden="true"></i> {{ $t('live.left', { left: minutesText(playLeft(p.device)) }) }}
+          </span>
+          <button type="button" class="live-chip btn btn-sm btn-outline-secondary" v-if="playLeft(p.device) !== null" @click="extendPlay(p.device)">{{ $t('live.extend') }}</button>
           <span class="live-chip" v-for="c in p.controllers" :key="c.controller" :class="{ 'live-chip-low': c.battery >= 0 && c.battery <= 15 && !c.charging }">
             <i class="fas fa-gamepad" aria-hidden="true"></i>
             {{ c.battery >= 0 ? (c.charging ? $t('live.battery_charging', { pct: c.battery }) : $t('live.battery', { pct: c.battery })) : $t('live.controller', { n: c.controller + 1 }) }}
@@ -290,6 +294,8 @@
           status: '',
           week: null,
           timer: null,
+          playLimits: [],
+          ticks: 0,
         };
       },
       computed: {
@@ -305,8 +311,11 @@
         this.refresh();
         this.loadSounds();
         this.loadWeek();
+        this.loadPlayLimits();
         this.timer = setInterval(() => {
-          if (!document.hidden) this.refresh();
+          if (document.hidden) return;
+          this.refresh();
+          if (++this.ticks % 5 === 0) this.loadPlayLimits();
         }, 2000);
       },
       methods: {
@@ -338,6 +347,30 @@
           const list = this.history[p.device] || [];
           const top = Math.max(p.health ? p.health.targetFps : 60, ...list, 1);
           return list.map((v, i) => `${(i / Math.max(1, list.length - 1)) * 120},${40 - (v / top) * 38}`).join(' ');
+        },
+        async loadPlayLimits() {
+          try {
+            const r = await fetch('./api/play-limits', { credentials: 'include' }).then((r) => r.json());
+            this.playLimits = r.devices || [];
+          } catch (e) {
+            this.playLimits = [];
+          }
+        },
+        playLeft(device) {
+          const d = this.playLimits.find((x) => x.name === device);
+          return d && d.leftSeconds >= 0 ? d.leftSeconds : null;
+        },
+        minutesText(seconds) {
+          const m = Math.round(seconds / 60);
+          return m >= 60 ? this.$t('index.recap_hours_minutes', { h: Math.floor(m / 60), m: m % 60 }) : this.$t('index.recap_minutes', { m });
+        },
+        async extendPlay(device) {
+          await fetch('./api/play-limits/extend', {
+            credentials: 'include', method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ device, minutes: 15 }),
+          }).catch(() => {});
+          this.status = this.$t('live.extended');
+          this.loadPlayLimits();
         },
         async loadSounds() {
           try {

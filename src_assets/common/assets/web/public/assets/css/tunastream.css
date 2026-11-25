@@ -1978,3 +1978,17 @@ html[data-ts-theme=summer][data-bs-theme=dark] {
 .home-highlights .home-message-status {
     margin: 0;
 }
+
+/* Devices: daily play time */
+.ts-playtime-input {
+    max-width: 6.5rem;
+}
+
+.home-playtime {
+    color: var(--bs-secondary-color);
+    font-size: 0.9rem;
+}
+
+.home-playtime i {
+    color: var(--ts-accent);
+}

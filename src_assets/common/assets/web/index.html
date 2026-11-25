@@ -110,6 +110,12 @@
               {{ $t(c.charging ? 'index.battery_charging' : 'index.battery_level', { pct: c.battery }) }}
             </span>
           </span>
+          <!-- Today's play time, when the device has a limit -->
+          <span class="home-playtime" v-if="playLeft(player.device) !== null">
+            <i class="fas fa-hourglass-half" aria-hidden="true"></i>
+            {{ $t('index.playtime_left', { left: playTime(playLeft(player.device)) }) }}
+            <button type="button" class="btn btn-sm btn-link p-0 ms-1" @click="extendPlay(player.device)">{{ $t('index.playtime_extend') }}</button>
+          </span>
           <!-- How smoothly the stream is running, and what to do about it -->
           <div class="home-health" v-if="player.health">
             <template v-for="v in [healthVerdict(player.health)]">
@@ -432,6 +438,7 @@
         recapTimer: null,
         phoneQr: '',
         phoneUrl: '',
+        playLimits: [],
         captures: [],
         highlights: { busy: false, status: '', error: false },
         captureFolders: { screenshots: '', clips: '' },
@@ -467,12 +474,14 @@
           if (!document.hidden && !this.ending) this.loadStatus();
         }, 5000);
         this.makePhoneQr(config.lanAddress);
+        this.loadPlayLimits();
         this.loadRecap();
         this.loadSounds();
         this.loadCaptures();
         this.recapTimer = setInterval(() => {
           if (!document.hidden) this.loadRecap();
           if (!document.hidden) this.loadCaptures();
+          if (!document.hidden) this.loadPlayLimits();
         }, 60000);
         console.log("Version: ", this.version.version)
         const latest = await fetch("https://api.github.com/repos/bigtunafish9943/TunaStream/releases/latest").then((r) => r.ok ? r.json() : null);
@@ -604,6 +613,26 @@
         } catch (e) {
           this.phoneQr = '';
         }
+      },
+      async loadPlayLimits() {
+        try {
+          const r = await fetch('./api/play-limits', { credentials: 'include' }).then((r) => r.json());
+          this.playLimits = r.devices || [];
+        } catch (e) {
+          this.playLimits = [];
+        }
+      },
+      /** Seconds of play left today for a device with a limit, otherwise null */
+      playLeft(device) {
+        const d = this.playLimits.find((x) => x.name === device);
+        return d && d.leftSeconds >= 0 ? d.leftSeconds : null;
+      },
+      async extendPlay(device) {
+        await fetch('./api/play-limits/extend', {
+          credentials: 'include', method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ device, minutes: 15 }),
+        }).catch(() => {});
+        this.loadPlayLimits();
       },
       async loadCaptures() {
         try {

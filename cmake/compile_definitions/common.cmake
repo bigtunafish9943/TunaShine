@@ -90,6 +90,7 @@ set(TUNASTREAM_TARGET_FILES
         "${CMAKE_SOURCE_DIR}/src/game_library.cpp"
         "${CMAKE_SOURCE_DIR}/src/box_art.cpp"
         "${CMAKE_SOURCE_DIR}/src/play_history.cpp"
+        "${CMAKE_SOURCE_DIR}/src/play_limits.cpp"
         "${CMAKE_SOURCE_DIR}/src/tv_messages.cpp"
         "${CMAKE_SOURCE_DIR}/src/sound_board.cpp"
         "${CMAKE_SOURCE_DIR}/src/captures.cpp"

@@ -207,6 +207,39 @@
         <div class="list-group-item p-3 text-center"><em>{{ $t('pin.unpair_single_no_devices') }}</em></div>
       </ul>
     </div>
+
+    <!-- Daily play time for each device -->
+    <div class="card my-4 w-100 ts-playtime" v-if="playLimits.length">
+      <div class="card-body">
+        <h2 id="play-time">{{ $t('pin.playtime_title') }}</h2>
+        <p>{{ $t('pin.playtime_desc') }}</p>
+        <table class="table align-middle">
+          <thead>
+            <tr>
+              <th>{{ $t('pin.playtime_device') }}</th>
+              <th>{{ $t('pin.playtime_weekday') }}</th>
+              <th>{{ $t('pin.playtime_weekend') }}</th>
+              <th>{{ $t('pin.playtime_today') }}</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="d in playLimits" :key="d.name">
+              <td>{{ d.name }}</td>
+              <td><input type="number" min="0" max="1440" step="15" class="form-control form-control-sm ts-playtime-input" v-model.number="d.weekday" :aria-label="$t('pin.playtime_weekday') + ' ' + d.name"></td>
+              <td><input type="number" min="0" max="1440" step="15" class="form-control form-control-sm ts-playtime-input" v-model.number="d.weekend" :aria-label="$t('pin.playtime_weekend') + ' ' + d.name"></td>
+              <td>
+                {{ playMinutes(d.usedSeconds) }}
+                <span class="text-body-secondary" v-if="d.leftSeconds >= 0">({{ $t('pin.playtime_left', { left: playMinutes(d.leftSeconds) }) }})</span>
+              </td>
+              <td><button type="button" class="btn btn-sm btn-outline-secondary" v-if="d.leftSeconds >= 0" @click="extendPlay(d.name)">{{ $t('pin.playtime_extend') }}</button></td>
+            </tr>
+          </tbody>
+        </table>
+        <button class="btn btn-primary" @click="savePlayLimits">{{ $t('pin.playtime_save') }}</button>
+        <span class="ms-2 text-success" v-if="playLimitsSaved">{{ $t('pin.playtime_saved') }}</span>
+      </div>
+    </div>
   </div>
 </body>
 
@@ -370,6 +403,8 @@
       hostName: '',
       permissionGroups,
       clients: [],
+      playLimits: [],
+      playLimitsSaved: false,
       showApplyMessage: false,
       unpairAllPressed: false,
       unpairAllStatus: null
@@ -398,12 +433,46 @@
     },
     created() {
       this.refreshClients();
+      this.loadPlayLimits();
     },
     methods: {
+      async loadPlayLimits() {
+        try {
+          const r = await fetch('./api/play-limits', { credentials: 'include' }).then((r) => r.json());
+          this.playLimits = r.devices || [];
+        } catch (e) {
+          this.playLimits = [];
+        }
+      },
+      playMinutes(seconds) {
+        const m = Math.round(seconds / 60);
+        return m >= 60 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${m} min`;
+      },
+      async savePlayLimits() {
+        const devices = {};
+        for (const d of this.playLimits) {
+          devices[d.name] = { weekday: Number(d.weekday) || 0, weekend: Number(d.weekend) || 0 };
+        }
+        await fetch('./api/play-limits', {
+          credentials: 'include', method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ devices }),
+        }).catch(() => {});
+        this.playLimitsSaved = true;
+        setTimeout(() => { this.playLimitsSaved = false; }, 3000);
+        this.loadPlayLimits();
+      },
+      async extendPlay(name) {
+        await fetch('./api/play-limits/extend', {
+          credentials: 'include', method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ device: name, minutes: 15 }),
+        }).catch(() => {});
+        this.loadPlayLimits();
+      },
       switchTab(currentTab) {
         location.hash = currentTab;
         const clients = this.clients;
-        Object.assign(this, data(), { clients });
+        const playLimits = this.playLimits;
+        Object.assign(this, data(), { clients, playLimits });
         hostInfoCache = null;
         clearTimeout(resetOTPTimeout);
       },

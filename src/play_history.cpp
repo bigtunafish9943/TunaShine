@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <ctime>
 #include <filesystem>
 #include <fstream>
 #include <map>
@@ -125,6 +126,38 @@ namespace play_history {
       save_json(totals_file(), totals);
     }
   }  // namespace
+
+  std::int64_t seconds_today(const std::string &device) {
+    const auto now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+    std::tm local {};
+  #ifdef _WIN32
+    localtime_s(&local, &now);
+  #else
+    localtime_r(&now, &local);
+  #endif
+    local.tm_hour = 0;
+    local.tm_min = 0;
+    local.tm_sec = 0;
+    const std::int64_t midnight = std::mktime(&local);
+    nlohmann::json data;
+    {
+      std::lock_guard lg {lock};
+      data = load();
+    }
+    std::int64_t total = 0;
+    for (const auto &entry : data) {
+      if (entry.value("device", "") != device) {
+        continue;
+      }
+      const auto started = entry.value("started", (std::int64_t) 0);
+      const auto seconds = (std::int64_t) entry.value("seconds", 0);
+      // Only the part after midnight counts for today
+      if (started + seconds > midnight) {
+        total += seconds - std::max<std::int64_t>(0, midnight - started);
+      }
+    }
+    return total;
+  }
 
   nlohmann::json milestones() {
     std::lock_guard lg {lock};

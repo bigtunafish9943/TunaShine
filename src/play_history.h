@@ -39,6 +39,9 @@ namespace play_history {
    */
   nlohmann::json recap(int days, int utc_offset_minutes);
 
+  /// Seconds this device has streamed today (local time), from finished streams.
+  std::int64_t seconds_today(const std::string &device);
+
   /// Milestones reached, newest first: [{"id", "at"}] (at: seconds since 1970).
   nlohmann::json milestones();
 

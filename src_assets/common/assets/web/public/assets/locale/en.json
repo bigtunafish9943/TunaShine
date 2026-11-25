@@ -614,6 +614,8 @@
     "highlights_failed": "The highlights couldn't be made.",
     "health_hdr_link": "Match HDR to the TV",
     "health_hdr_peak": "The TV says it shows HDR up to about {nits} nits.",
+    "playtime_extend": "+15 min",
+    "playtime_left": "{left} of play left today",
     "battery_charging": "charging, {pct}%",
     "battery_level": "battery {pct}%",
     "controller_n": "Controller {n}",
@@ -747,6 +749,16 @@
     "launch": "Launch Apps"
   },
   "pin": {
+    "playtime_desc": "A daily limit for each device, in minutes; leave it at 0 for none. The TV is warned at 10, 5 and 1 minute left, then the game closes, and the device can't start another stream until tomorrow, unless you give it more time here or on the home page.",
+    "playtime_device": "Device",
+    "playtime_extend": "+15 min today",
+    "playtime_left": "{left} left",
+    "playtime_save": "Save play time",
+    "playtime_saved": "Saved.",
+    "playtime_title": "Daily play time",
+    "playtime_today": "Today",
+    "playtime_weekday": "School days (min)",
+    "playtime_weekend": "Weekends (min)",
     "allow_client_commands": "Allow client commands",
     "allow_client_commands_desc": "Allow client commands to be executed when connecting to this device.",
     "always_use_virtual_display": "Always create virtual display",
@@ -987,6 +999,9 @@
     "login_success": "This page will reload soon."
   },
   "live": {
+    "extend": "+15 min",
+    "extended": "15 more minutes given for today.",
+    "left": "{left} left today",
     "battery": "Controller {pct}%",
     "battery_charging": "Controller charging, {pct}%",
     "controller": "Controller {n}",

@@ -122,6 +122,7 @@ namespace stream {
       double slow_game_fps;  ///< Average frame rate over those minutes
       int width;  ///< Picture size the device asked for
       int height;
+      double running_s;  ///< Seconds since the stream's first frame
     };
 
     /// Health of every running stream.

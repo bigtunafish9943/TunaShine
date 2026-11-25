@@ -48,6 +48,7 @@
 #include "file_outbox.h"
 #include "pairing_backup.h"
 #include "play_history.h"
+#include "play_limits.h"
 #include "box_art.h"
 #include "captures.h"
 #include "settings_backup.h"
@@ -1131,6 +1132,66 @@ namespace confighttp {
     output_tree["streaming"] = streaming;
     output_tree["networks"] = networks;
     send_response(response, output_tree);
+  }
+
+  /**
+   * @brief Play-time limits: GET lists every device with its limits and today's time.
+   */
+  void getPlayLimits(resp_https_t response, req_https_t request) {
+    if (!authenticate(response, request)) {
+      return;
+    }
+
+    nlohmann::json output_tree;
+    output_tree["status"] = true;
+    output_tree["devices"] = play_limits::status();
+    send_response(response, output_tree);
+  }
+
+  /**
+   * @brief Set the limits: {"devices": {"<name>": {"weekday": minutes, "weekend": minutes}}}.
+   */
+  void postPlayLimits(resp_https_t response, req_https_t request) {
+    if (!validateContentType(response, request, "application/json") || !authenticate(response, request)) {
+      return;
+    }
+
+    print_req(request);
+
+    try {
+      std::stringstream ss;
+      ss << request->content.rdbuf();
+      auto input = nlohmann::json::parse(ss.str());
+      play_limits::set_limits(input.value("devices", nlohmann::json::object()));
+      nlohmann::json output_tree;
+      output_tree["status"] = true;
+      send_response(response, output_tree);
+    } catch (std::exception &e) {
+      bad_request(response, request, e.what());
+    }
+  }
+
+  /**
+   * @brief Give a device more time today: {"device", "minutes"}.
+   */
+  void postPlayExtend(resp_https_t response, req_https_t request) {
+    if (!validateContentType(response, request, "application/json") || !authenticate(response, request)) {
+      return;
+    }
+
+    print_req(request);
+
+    try {
+      std::stringstream ss;
+      ss << request->content.rdbuf();
+      auto input = nlohmann::json::parse(ss.str());
+      play_limits::extend(input.value("device", ""), input.value("minutes", 15));
+      nlohmann::json output_tree;
+      output_tree["status"] = true;
+      send_response(response, output_tree);
+    } catch (std::exception &e) {
+      bad_request(response, request, e.what());
+    }
   }
 
   /**
@@ -2479,6 +2540,9 @@ namespace confighttp {
     server.resource["^/api/tv-message$"]["POST"] = postTvMessage;
     server.resource["^/api/tv-message$"]["GET"] = getTvMessages;
     server.resource["^/api/sounds$"]["GET"] = getSounds;
+    server.resource["^/api/play-limits$"]["GET"] = getPlayLimits;
+    server.resource["^/api/play-limits$"]["POST"] = postPlayLimits;
+    server.resource["^/api/play-limits/extend$"]["POST"] = postPlayExtend;
     server.resource["^/api/captures$"]["GET"] = getCaptures;
     server.resource["^/api/wifi$"]["GET"] = getWifi;
     server.resource["^/api/captures/file$"]["GET"] = getCaptureFile;

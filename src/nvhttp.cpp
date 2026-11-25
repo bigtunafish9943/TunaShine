@@ -36,6 +36,7 @@
 #include "box_art.h"
 #include "captures.h"
 #include "play_history.h"
+#include "play_limits.h"
 #include "settings_backup.h"
 #include "sound_board.h"
 #include "tv_messages.h"
@@ -1210,6 +1211,14 @@ namespace nvhttp {
 
       return;
     }
+    // A device that has used up today's play time can't start another stream
+    if (std::string why; !play_limits::may_stream(named_cert_p->name, why)) {
+      BOOST_LOG(info) << "Stream refused for "sv << named_cert_p->name << ": "sv << why;
+      tree.put("root.resume", 0);
+      tree.put("root.<xmlattr>.status_code", 403);
+      tree.put("root.<xmlattr>.status_message", why);
+      return;
+    }
     if (
       args.find("rikey"s) == std::end(args) ||
       args.find("rikeyid"s) == std::end(args) ||
@@ -1393,6 +1402,13 @@ namespace nvhttp {
       tree.put("root.<xmlattr>.status_code", 403);
       tree.put("root.<xmlattr>.status_message", "Permission denied");
 
+      return;
+    }
+    if (std::string why; !play_limits::may_stream(named_cert_p->name, why)) {
+      BOOST_LOG(info) << "Stream refused for "sv << named_cert_p->name << ": "sv << why;
+      tree.put("root.resume", 0);
+      tree.put("root.<xmlattr>.status_code", 403);
+      tree.put("root.<xmlattr>.status_message", why);
       return;
     }
 

@@ -1442,6 +1442,9 @@ namespace stream {
     out.slow_game_fps = h.slow_game_minutes ? h.slow_game_fps_sum / h.slow_game_minutes : 0;
     out.width = session.config.monitor.width;
     out.height = session.config.monitor.height;
+    if (h.first_frame != std::chrono::steady_clock::time_point {}) {
+      out.running_s = std::chrono::duration<double>(std::chrono::steady_clock::now() - h.first_frame).count();
+    }
     out.split_frames = h.split_frames.load();
     if (h.device_view_at != std::chrono::steady_clock::time_point {} &&
         std::chrono::steady_clock::now() - h.device_view_at < 15s) {
