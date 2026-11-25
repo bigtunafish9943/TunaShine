@@ -441,7 +441,7 @@ namespace proc {
             } else if (VDISPLAY::setPrimaryDisplay(vdisplayName.c_str())) {
               BOOST_LOG(info) << "Virtual Display set as the primary display";
             } else {
-              BOOST_LOG(warning) << "Couldn't set the Virtual Display as the primary display";
+              BOOST_LOG(warning) << "Couldn't set the Virtual Display as the primary display: " << VDISPLAY::lastPrimaryDisplayError();
             }
           }
 
@@ -766,7 +766,7 @@ namespace proc {
         if (VDISPLAY::setPrimaryDisplay(vdisplay_name.c_str())) {
           BOOST_LOG(info) << "Virtual Display set as the primary display again";
         } else {
-          BOOST_LOG(warning) << "Couldn't set the Virtual Display as the primary display again";
+          BOOST_LOG(warning) << "Couldn't set the Virtual Display as the primary display again: " << VDISPLAY::lastPrimaryDisplayError();
         }
       }
     }
@@ -881,7 +881,7 @@ namespace proc {
           BOOST_LOG(info) << "Primary display handed back to " << this->previous_primary_display;
           display_restore_failed = false;
         } else {
-          BOOST_LOG(warning) << "Couldn't hand the primary display back to " << this->previous_primary_display;
+          BOOST_LOG(warning) << "Couldn't hand the primary display back to " << this->previous_primary_display << ": " << VDISPLAY::lastPrimaryDisplayError();
           display_restore_failed = true;
         }
       }

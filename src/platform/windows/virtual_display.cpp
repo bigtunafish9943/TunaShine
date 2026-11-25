@@ -2,6 +2,8 @@
 #include <windows.h>
 #include <iostream>
 #include <vector>
+#include <string>
+#include <string_view>
 #include <setupapi.h>
 #include <initguid.h>
 #include <combaseapi.h>
@@ -328,60 +330,155 @@ std::wstring getPrimaryDisplay() {
 	return primaryDeviceName;
 }
 
-bool setPrimaryDisplay(const wchar_t* primaryDeviceName) {
-	DEVMODEW primaryDevMode{};
-	if (!getDeviceSettings(primaryDeviceName, primaryDevMode)) {
-		return false;
-	};
+namespace {
+	std::string primaryDisplayError;
 
-	int offset_x = primaryDevMode.dmPosition.x;
-	int offset_y = primaryDevMode.dmPosition.y;
+	void setPrimaryError(const char* step, long code) {
+		primaryDisplayError = std::string(step) + " (error " + std::to_string(code) + ")";
+	}
 
-	LONG result;
+	/**
+	 * Make a display primary with the display configuration API, which moves every display in
+	 * one step. The display that is to be primary is moved to (0, 0) and the others keep their
+	 * places around it.
+	 */
+	bool setPrimaryDisplayConfig(const wchar_t* primaryDeviceName) {
+		UINT32 pathCount = 0;
+		UINT32 modeCount = 0;
+		LONG result = GetDisplayConfigBufferSizes(QDC_ONLY_ACTIVE_PATHS, &pathCount, &modeCount);
+		if (result != ERROR_SUCCESS) {
+			setPrimaryError("GetDisplayConfigBufferSizes failed", result);
+			return false;
+		}
+		std::vector<DISPLAYCONFIG_PATH_INFO> paths(pathCount);
+		std::vector<DISPLAYCONFIG_MODE_INFO> modes(modeCount);
+		result = QueryDisplayConfig(QDC_ONLY_ACTIVE_PATHS, &pathCount, paths.data(), &modeCount, modes.data(), nullptr);
+		if (result != ERROR_SUCCESS) {
+			setPrimaryError("QueryDisplayConfig failed", result);
+			return false;
+		}
+		paths.resize(pathCount);
+		modes.resize(modeCount);
 
-	DISPLAY_DEVICEW displayDevice;
-	displayDevice.cb = sizeof(DISPLAY_DEVICEA);
-	int device_index = 0;
-
-	while (EnumDisplayDevicesW(NULL, device_index, &displayDevice, 0)) {
-		device_index++;
-		if (!(displayDevice.StateFlags & DISPLAY_DEVICE_ACTIVE)) {
-			continue;
+		// The source mode of the display that is to be primary holds its desktop position
+		const DISPLAYCONFIG_SOURCE_MODE* primarySource = nullptr;
+		for (const auto& path : paths) {
+			DISPLAYCONFIG_SOURCE_DEVICE_NAME sourceName = {};
+			sourceName.header.type = DISPLAYCONFIG_DEVICE_INFO_GET_SOURCE_NAME;
+			sourceName.header.size = sizeof(sourceName);
+			sourceName.header.adapterId = path.sourceInfo.adapterId;
+			sourceName.header.id = path.sourceInfo.id;
+			if (DisplayConfigGetDeviceInfo(&sourceName.header) != ERROR_SUCCESS) {
+				continue;
+			}
+			if (std::wstring_view(primaryDeviceName) != sourceName.viewGdiDeviceName) {
+				continue;
+			}
+			const UINT32 index = path.sourceInfo.modeInfoIdx;
+			if (index != DISPLAYCONFIG_PATH_MODE_IDX_INVALID && index < modes.size() &&
+			    modes[index].infoType == DISPLAYCONFIG_MODE_INFO_TYPE_SOURCE) {
+				primarySource = &modes[index].sourceMode;
+			}
+			break;
+		}
+		if (!primarySource) {
+			setPrimaryError("the display is not in the active display configuration", ERROR_NOT_FOUND);
+			return false;
 		}
 
-		DEVMODEW devMode{};
-		if (getDeviceSettings(displayDevice.DeviceName, devMode)) {
-			devMode.dmPosition.x -= offset_x;
-			devMode.dmPosition.y -= offset_y;
-			devMode.dmFields = DM_POSITION;
-
-			result = ChangeDisplaySettingsExW(displayDevice.DeviceName, &devMode, NULL, CDS_UPDATEREGISTRY | CDS_NORESET, NULL);
-			if (result != DISP_CHANGE_SUCCESSFUL) {
-				wprintf(L"[SUDOVDA] Changing config for display %ls failed!\n\n", displayDevice.DeviceName);
-				return false;
+		const POINTL offset = primarySource->position;
+		if (offset.x == 0 && offset.y == 0) {
+			return true;
+		}
+		for (auto& mode : modes) {
+			if (mode.infoType == DISPLAYCONFIG_MODE_INFO_TYPE_SOURCE) {
+				mode.sourceMode.position.x -= offset.x;
+				mode.sourceMode.position.y -= offset.y;
 			}
 		}
+
+		result = SetDisplayConfig(pathCount, paths.data(), modeCount, modes.data(),
+			SDC_APPLY | SDC_USE_SUPPLIED_DISPLAY_CONFIG | SDC_SAVE_TO_DATABASE | SDC_ALLOW_CHANGES);
+		if (result != ERROR_SUCCESS) {
+			setPrimaryError("SetDisplayConfig failed", result);
+			return false;
+		}
+		return true;
 	}
 
-	// Update primary device's config to ensure it's primary
-	primaryDevMode.dmPosition.x = 0;
-	primaryDevMode.dmPosition.y = 0;
-	primaryDevMode.dmFields = DM_POSITION;
-	result = ChangeDisplaySettingsExW(primaryDeviceName, &primaryDevMode, NULL, CDS_UPDATEREGISTRY | CDS_NORESET | CDS_SET_PRIMARY, NULL);
-	if (result != DISP_CHANGE_SUCCESSFUL) {
-		wprintf(L"[SUDOVDA] Changing config for primary display %ls failed!\n\n", primaryDeviceName);
-		return false;
+	/** The older way, one display at a time, kept for setups the configuration API turns down. */
+	bool setPrimaryDisplayLegacy(const wchar_t* primaryDeviceName) {
+		DEVMODEW primaryDevMode{};
+		if (!getDeviceSettings(primaryDeviceName, primaryDevMode)) {
+			setPrimaryError("EnumDisplaySettings failed for the display", GetLastError());
+			return false;
+		}
+
+		int offset_x = primaryDevMode.dmPosition.x;
+		int offset_y = primaryDevMode.dmPosition.y;
+
+		LONG result;
+
+		DISPLAY_DEVICEW displayDevice{};
+		displayDevice.cb = sizeof(DISPLAY_DEVICEW);
+		int device_index = 0;
+
+		while (EnumDisplayDevicesW(NULL, device_index, &displayDevice, 0)) {
+			device_index++;
+			if (!(displayDevice.StateFlags & DISPLAY_DEVICE_ACTIVE)) {
+				continue;
+			}
+
+			DEVMODEW devMode{};
+			if (getDeviceSettings(displayDevice.DeviceName, devMode)) {
+				devMode.dmPosition.x -= offset_x;
+				devMode.dmPosition.y -= offset_y;
+				devMode.dmFields = DM_POSITION;
+
+				result = ChangeDisplaySettingsExW(displayDevice.DeviceName, &devMode, NULL, CDS_UPDATEREGISTRY | CDS_NORESET, NULL);
+				if (result != DISP_CHANGE_SUCCESSFUL) {
+					setPrimaryError("moving another display failed", result);
+					return false;
+				}
+			}
+		}
+
+		// Update primary device's config to ensure it's primary
+		primaryDevMode.dmPosition.x = 0;
+		primaryDevMode.dmPosition.y = 0;
+		primaryDevMode.dmFields = DM_POSITION;
+		result = ChangeDisplaySettingsExW(primaryDeviceName, &primaryDevMode, NULL, CDS_UPDATEREGISTRY | CDS_NORESET | CDS_SET_PRIMARY, NULL);
+		if (result != DISP_CHANGE_SUCCESSFUL) {
+			setPrimaryError("marking the display primary failed", result);
+			return false;
+		}
+
+		result = ChangeDisplaySettingsExW(NULL, NULL, NULL, 0, NULL);
+		if (result != DISP_CHANGE_SUCCESSFUL) {
+			setPrimaryError("applying the new layout failed", result);
+			return false;
+		}
+
+		return true;
 	}
+}  // namespace
 
-	wprintf(L"[SUDOVDA] Applying primary display %ls ...\n\n", primaryDeviceName);
+const std::string& lastPrimaryDisplayError() {
+	return primaryDisplayError;
+}
 
-	result = ChangeDisplaySettingsExW(NULL, NULL, NULL, 0, NULL);
-	if (result != DISP_CHANGE_SUCCESSFUL) {
-		wprintf(L"[SUDOVDA] Applying display coinfig failed!\n\n");
-		return false;
+bool setPrimaryDisplay(const wchar_t* primaryDeviceName) {
+	primaryDisplayError.clear();
+	if (setPrimaryDisplayConfig(primaryDeviceName)) {
+		return true;
 	}
-
-	return true;
+	const std::string first = primaryDisplayError;
+	if (setPrimaryDisplayLegacy(primaryDeviceName)) {
+		primaryDisplayError.clear();
+		return true;
+	}
+	primaryDisplayError = first + "; then " + primaryDisplayError;
+	return false;
 }
 
 bool findDisplayIds(const wchar_t* displayName, LUID& adapterId, uint32_t& targetId) {
