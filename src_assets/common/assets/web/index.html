@@ -22,12 +22,20 @@
       <a class="btn btn-danger" href="./troubleshooting#logs">{{ $t('index.view_logs') }}</a>
     </div>
 
+    <!-- Share my screen is on: never unnoticed -->
+    <div class="alert alert-warning d-flex flex-wrap align-items-center gap-2" v-if="sharing && sharing.on" role="status">
+      <i class="fas fa-tower-broadcast" aria-hidden="true"></i>
+      <span class="flex-grow-1">{{ $t('index.sharing_on', { minutes: sharing.minutesLeft, viewers: sharing.viewers }) }}</span>
+      <a class="btn btn-sm btn-outline-dark" href="./watch">{{ $t('index.watch') }}</a>
+      <button type="button" class="btn btn-sm btn-dark" @click="stopSharing">{{ $t('index.sharing_stop') }}</button>
+    </div>
+
     <!-- Status -->
     <dl class="home-status my-4">
       <div class="home-status-item">
         <dt>{{ $t('index.status_streaming') }}</dt>
         <dd>{{ currentAppName || $t('index.streaming_nothing') }}</dd>
-        <a v-if="currentAppName" class="btn btn-sm btn-outline-primary me-2" href="./watch">
+        <a v-if="currentAppName || (sharing && sharing.on)" class="btn btn-sm btn-outline-primary me-2" href="./watch">
           <i class="fas fa-eye" aria-hidden="true"></i> {{ $t('index.watch') }}
         </a>
         <button v-if="currentAppName" type="button" class="btn btn-sm btn-danger me-2" :disabled="ending" @click="endSession">
@@ -434,6 +442,7 @@
         vdisplayStatus: 0,
         hostName: "",
         currentAppName: "",
+        sharing: null,
         pausedOnStreamScreen: false,
         displayRestoreFailed: false,
         otherHosts: [],
@@ -924,6 +933,19 @@
         await this.loadStatus();
         this.continuing = false;
       },
+      async stopSharing() {
+        try {
+          const r = await fetch("./api/watch/share", {
+            credentials: 'include',
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ on: false }),
+          }).then((r) => r.json())
+          this.sharing = r
+        } catch (e) {
+          console.error(e);
+        }
+      },
       async endSession() {
         if (!confirm(this.$t('index.end_session_confirm', { app: this.currentAppName }))) {
           return;
@@ -1005,6 +1027,7 @@
           const status = await fetch("./api/status").then((r) => r.ok ? r.json() : null);
           const controllers = (status && status.controllers) || [];
           this.vdisplayFailed = !!(status && status.vdisplayFailed);
+          this.sharing = (status && status.sharingScreen) || null;
           this.network = (status && status.network) || null;
           if (status && status.vdisplayStatus !== undefined) {
             this.vdisplayStatus = status.vdisplayStatus;

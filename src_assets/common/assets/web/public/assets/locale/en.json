@@ -750,7 +750,9 @@
     "whatsnew_title": "What's new in {version}",
     "whatsnew_since": "Since {version}, the version this browser last saw:",
     "whatsnew_ok": "Got it",
-    "watch": "Watch"
+    "watch": "Watch",
+    "sharing_on": "Your screen is being shared with browsers watching, for {minutes} more minutes ({viewers} watching now).",
+    "sharing_stop": "Stop sharing"
   },
   "login": {
     "save_password": "Remember Password",
@@ -1300,6 +1302,11 @@
         "how": "On the Watch page, choose Share a watch link and open the copied link on another device that isn't signed in.",
         "expect": "That device can watch without the password for a day, and can't open any other page. The link shows under Change Password > Access tokens, and removing it stops it working."
       },
+      "sharescreen": {
+        "title": "Share my screen",
+        "how": "With no TV streaming, open Watch on the PC, choose Share my screen for 1 hour, and open a watch link on a tablet. Then start a stream on the TV, end it, and finally choose Stop sharing.",
+        "expect": "The tablet shows the PC's main screen with sound; the home page and the tray say it's being shared. When the TV streams the tablet shows the TV's game, then the PC's screen again. After Stop sharing the tablet waits."
+      },
       "signin": {
         "title": "Keep me signed in",
         "how": "Sign out, then sign in with Keep me signed in turned on. Close the browser and open the dashboard again. Repeat with it turned off.",
@@ -1351,7 +1358,18 @@
     "share_name": "Watch link {when}",
     "share_copied": "Link copied. Anyone on your network can watch with it for a day; remove it any time under Change Password > Access tokens.",
     "share_copy_this": "Copy this link:",
-    "share_failed": "The link couldn't be made."
+    "share_failed": "The link couldn't be made.",
+    "watching_screen": "Watching this PC's screen",
+    "screen_title": "Share my screen",
+    "screen_desc": "While no TV is streaming, browsers watching (with this page or a watch link) see this PC's main screen and hear its sound. When a TV starts streaming they see its game instead. It turns itself off after the time you choose.",
+    "screen_for": "Share for",
+    "screen_1h": "For 1 hour",
+    "screen_2h": "For 2 hours",
+    "screen_4h": "For 4 hours",
+    "screen_start": "Share my screen",
+    "screen_on": "Your screen is shared for {minutes} more minutes.",
+    "screen_stop": "Stop sharing",
+    "screen_failed": "Sharing couldn't be changed."
   },
   "tokens": {
     "title": "Access tokens",

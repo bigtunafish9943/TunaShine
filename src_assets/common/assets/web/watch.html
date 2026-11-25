@@ -70,6 +70,14 @@
       border: 0;
     }
 
+    .watch-share {
+      margin-top: 1rem;
+      padding: 0.75rem 1rem;
+      border: 1px solid var(--bs-border-color);
+      border-radius: 0.5rem;
+      max-width: 40rem;
+    }
+
     .watch-status {
       position: absolute;
       inset: 0;
@@ -124,7 +132,8 @@
         <img src="./images/logo-tunastream-45.png" alt="">
         TunaStream
       </a>
-      <span class="watch-title" v-if="app">{{ $t('watch.watching') }} <b>{{ app }}</b></span>
+      <span class="watch-title" v-if="showingScreen">{{ $t('watch.watching_screen') }}</span>
+      <span class="watch-title" v-else-if="app">{{ $t('watch.watching') }} <b>{{ app }}</b></span>
       <span class="watch-title" v-else>{{ $t('watch.title') }}</span>
     </div>
 
@@ -152,6 +161,28 @@
       <span class="small" role="status" v-if="shareStatus">{{ shareStatus }}</span>
       <span class="watch-note">{{ audioSupported ? $t('watch.note') : $t('watch.no_sound_here') }}</span>
     </div>
+
+    <!-- Share my screen: only with the password, never from a watch link -->
+    <section class="watch-share" v-if="!token && sharing" aria-labelledby="share-title">
+      <h2 class="h6" id="share-title"><i class="fas fa-tower-broadcast" aria-hidden="true"></i> {{ $t('watch.screen_title') }}</h2>
+      <template v-if="sharing.on">
+        <p class="mb-2">{{ $t('watch.screen_on', { minutes: sharing.minutesLeft }) }}</p>
+        <button type="button" class="btn btn-sm btn-danger" @click="setSharing(false)" :disabled="sharingBusy">{{ $t('watch.screen_stop') }}</button>
+      </template>
+      <template v-else>
+        <p class="mb-2">{{ $t('watch.screen_desc') }}</p>
+        <div class="d-flex flex-wrap gap-2 align-items-center">
+          <label class="visually-hidden" for="share-minutes">{{ $t('watch.screen_for') }}</label>
+          <select id="share-minutes" class="form-select form-select-sm w-auto" v-model.number="shareMinutes">
+            <option :value="60">{{ $t('watch.screen_1h') }}</option>
+            <option :value="120">{{ $t('watch.screen_2h') }}</option>
+            <option :value="240">{{ $t('watch.screen_4h') }}</option>
+          </select>
+          <button type="button" class="btn btn-sm btn-primary" @click="setSharing(true)" :disabled="sharingBusy">{{ $t('watch.screen_start') }}</button>
+        </div>
+      </template>
+      <p class="small text-danger mt-2 mb-0" v-if="sharingError" role="alert">{{ sharingError }}</p>
+    </section>
   </main>
 
   <script type="module">
@@ -187,6 +218,11 @@
           // Opened from a shared watch link: its token signs the page's requests
           token: new URLSearchParams(location.search).get('token') || '',
           shareStatus: '',
+          sharing: null,
+          sharingBusy: false,
+          sharingError: '',
+          shareMinutes: 120,
+          showingScreen: false,
         }
       },
       computed: {
@@ -243,7 +279,28 @@
           try {
             const s = await fetch('./api/status', { credentials: 'include', headers: this.authHeaders() }).then((r) => r.ok ? r.json() : null)
             this.app = (s && s.app) || ''
+            this.showingScreen = !!(s && s.sharingScreen && s.sharingScreen.showingScreen)
+            if (!this.token) this.sharing = (s && s.sharingScreen) || null
           } catch (e) { /* keep the last name */ }
+        },
+        async setSharing(on) {
+          this.sharingBusy = true
+          this.sharingError = ''
+          try {
+            const r = await fetch('./api/watch/share', {
+              credentials: 'include', method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ on, minutes: this.shareMinutes }),
+            }).then((r) => r.json())
+            if (r.status === false) throw new Error(r.error || '')
+            this.sharing = r
+            this.showingScreen = false
+            if (on && this.state !== 'playing') {
+              this.connect()
+            }
+          } catch (e) {
+            this.sharingError = e.message || this.$t('watch.screen_failed')
+          }
+          this.sharingBusy = false
         },
         retryLater(ms) {
           if (!this.stopped) setTimeout(() => this.connect(), ms)

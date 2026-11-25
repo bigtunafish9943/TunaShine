@@ -745,7 +745,9 @@
     "whatsnew_title": "Neu in {version}",
     "whatsnew_since": "Seit {version}, der Version, die dieser Browser zuletzt gesehen hat:",
     "whatsnew_ok": "Verstanden",
-    "watch": "Zuschauen"
+    "watch": "Zuschauen",
+    "sharing_on": "Dein Bildschirm wird noch {minutes} Minuten mit zuschauenden Browsern geteilt ({viewers} schauen gerade zu).",
+    "sharing_stop": "Teilen beenden"
   },
   "navbar": {
     "applications": "Apps",
@@ -1300,6 +1302,11 @@
         "how": "Wähle auf der Seite „Zuschauen“ „Zuschau-Link teilen“ und öffne den kopierten Link auf einem anderen Gerät, das nicht angemeldet ist.",
         "expect": "Dieses Gerät kann einen Tag lang ohne Passwort zuschauen und keine andere Seite öffnen. Der Link steht unter Passwort ändern > Zugriffstoken, und Entfernen macht ihn ungültig."
       },
+      "sharescreen": {
+        "title": "Meinen Bildschirm teilen",
+        "how": "Öffne, während kein Fernseher streamt, am PC „Zuschauen“, teile deinen Bildschirm für 1 Stunde und öffne einen Zuschau-Link auf einem Tablet. Starte dann einen Stream am Fernseher, beende ihn und wähle zum Schluss „Teilen beenden“.",
+        "expect": "Das Tablet zeigt den Hauptbildschirm des PCs mit Ton; Startseite und Infobereich zeigen, dass geteilt wird. Streamt der Fernseher, zeigt das Tablet dessen Spiel, danach wieder den PC-Bildschirm. Nach „Teilen beenden“ wartet das Tablet."
+      },
       "signin": {
         "title": "Angemeldet bleiben",
         "how": "Melde dich ab und mit eingeschaltetem „Angemeldet bleiben“ wieder an. Schließ den Browser und öffne das Dashboard erneut. Wiederhole es ausgeschaltet.",
@@ -1351,7 +1358,18 @@
     "share_name": "Zuschau-Link {when}",
     "share_copied": "Link kopiert. Jeder in deinem Netzwerk kann damit einen Tag lang zuschauen; entfernen kannst du ihn jederzeit unter Passwort ändern > Zugriffstoken.",
     "share_copy_this": "Kopiere diesen Link:",
-    "share_failed": "Der Link konnte nicht erstellt werden."
+    "share_failed": "Der Link konnte nicht erstellt werden.",
+    "watching_screen": "Du siehst den Bildschirm dieses PCs",
+    "screen_title": "Meinen Bildschirm teilen",
+    "screen_desc": "Solange kein Fernseher streamt, sehen zuschauende Browser (über diese Seite oder einen Zuschau-Link) den Hauptbildschirm dieses PCs und hören seinen Ton. Startet ein Fernseher einen Stream, sehen sie stattdessen dessen Spiel. Nach der gewählten Zeit schaltet es sich selbst aus.",
+    "screen_for": "Teilen für",
+    "screen_1h": "1 Stunde lang",
+    "screen_2h": "2 Stunden lang",
+    "screen_4h": "4 Stunden lang",
+    "screen_start": "Meinen Bildschirm teilen",
+    "screen_on": "Dein Bildschirm wird noch {minutes} Minuten geteilt.",
+    "screen_stop": "Teilen beenden",
+    "screen_failed": "Das Teilen konnte nicht geändert werden."
   },
   "tokens": {
     "title": "Zugriffstoken",

@@ -82,6 +82,9 @@ namespace system_tray {
   void update_tray_paired(std::string device_name);
 
   void update_tray_client_connected(std::string client_name);
+
+  /// Share my screen turned on or off: a notification, so it's never on unnoticed.
+  void update_tray_sharing(bool on);
   /**
    * @brief Initializes and runs the system tray in a separate thread.
    * @return 0 if initialization was successful, non-zero otherwise.

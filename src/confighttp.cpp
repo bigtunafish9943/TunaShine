@@ -1040,6 +1040,44 @@ namespace confighttp {
   }
 
   /**
+   * @brief GET /api/watch/share: Share my screen's state, {"on", "minutesLeft", "showingScreen", "viewers"}.
+   */
+  void getWatchShare(resp_https_t response, req_https_t request) {
+    if (!authenticate_owner(response, request)) {
+      return;
+    }
+    auto out = watch::sharing();
+    out["status"] = true;
+    send_response(response, out);
+  }
+
+  /**
+   * @brief POST /api/watch/share: {"on": true, "minutes": 120} shows this PC's own screen to
+   *        browsers watching while nobody streams; {"on": false} stops. Only with the password.
+   */
+  void postWatchShare(resp_https_t response, req_https_t request) {
+    if (!validateContentType(response, request, "application/json") || !authenticate_owner(response, request)) {
+      return;
+    }
+    try {
+      std::stringstream ss;
+      ss << request->content.rdbuf();
+      auto input = nlohmann::json::parse(ss.str());
+      const bool on = input.value("on", false);
+      if (on && !video::parallel_encoding()) {
+        bad_request(response, request, "This PC's video encoder can't make a second picture at the same time. Sharing needs a graphics card encoder.");
+        return;
+      }
+      watch::share_screen(on, input.value("minutes", 120));
+      auto out = watch::sharing();
+      out["status"] = true;
+      send_response(response, out);
+    } catch (std::exception &e) {
+      bad_request(response, request, e.what());
+    }
+  }
+
+  /**
    * @brief GET /api/watch/stream: the stream for the Watch page, as one long response of short
    *        messages (see watch.cpp). Ends when the stream does, or the browser goes away.
    */
@@ -1910,6 +1948,7 @@ namespace confighttp {
     output_tree["app"] = proc::proc.get_last_run_app_name();
     // Browsers watching the stream from the Watch page
     output_tree["watchers"] = watch::viewers();
+    output_tree["sharingScreen"] = watch::sharing();
     output_tree["sessions"] = rtsp_stream::session_count();
     output_tree["version"] = PROJECT_VERSION;
     nlohmann::json controllers = nlohmann::json::array();
@@ -3317,6 +3356,8 @@ namespace confighttp {
     server.resource["^/api/tokens$"]["POST"] = postApiToken;
     server.resource["^/api/tokens/delete$"]["POST"] = postApiTokenDelete;
     server.resource["^/api/watch/stream$"]["GET"] = getWatchStream;
+    server.resource["^/api/watch/share$"]["GET"] = getWatchShare;
+    server.resource["^/api/watch/share$"]["POST"] = postWatchShare;
     server.resource["^/api/checklist$"]["GET"] = getChecklist;
     server.resource["^/api/checklist$"]["POST"] = postChecklist;
     server.resource["^/api/cover$"]["GET"] = getCover;

@@ -12,7 +12,12 @@
  * payload. Numbers are little-endian.
  *
  * Watching starts with the first viewer, stops a little after the last one leaves, and stops at
- * once when a device's stream ends, so a viewer never sees the PC's own screen.
+ * once when a device's stream ends, so a viewer never sees the PC's own screen by accident.
+ *
+ * Share my screen: the owner can also choose to show the PC's own main screen while no device is
+ * streaming (to let someone watch them play at the desk). It turns itself off after the time they
+ * chose. When a device starts streaming, viewers move over to that stream, and back to the PC's
+ * screen when it ends.
  */
 // standard includes
 #include <algorithm>
@@ -30,9 +35,16 @@
 #include "audio.h"
 #include "globals.h"
 #include "logging.h"
+#include "process.h"
 #include "rtsp.h"
+#include "system_tray.h"
 #include "video.h"
 #include "watch.h"
+
+#ifdef _WIN32
+  #include "platform/windows/misc.h"
+  #include "platform/windows/virtual_display.h"
+#endif
 
 using namespace std::literals;
 
@@ -47,6 +59,11 @@ namespace watch {
     constexpr auto LINGER = 15s;
 
     char channel_marker;
+
+    // Share my screen: on until this time (steady clock, microseconds), 0 when off
+    std::atomic<std::int64_t> sharing_until {0};
+    // A device is starting a stream: the PC's screen isn't shown for a moment
+    std::atomic<std::int64_t> desktop_blocked_until {0};
 
     std::int64_t now_us() {
       return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
@@ -78,6 +95,11 @@ namespace watch {
   };
 
   namespace {
+    bool sharing_now() {
+      const auto until = sharing_until.load();
+      return until != 0 && now_us() < until;
+    }
+
     std::mutex state_lock;
     std::list<std::shared_ptr<viewer_t>> viewer_list;
     std::string info_message;
@@ -89,6 +111,7 @@ namespace watch {
       std::thread audio_thread;
       std::thread pump_thread;
       std::atomic_bool stopping {false};
+      bool desktop = false;  ///< showing the PC's own screen (Share my screen), not a device's stream
     };
 
     std::shared_ptr<run_t> running;
@@ -187,6 +210,10 @@ namespace watch {
       if (run->pump_thread.joinable()) {
         run->pump_thread.join();
       }
+      if (run->desktop && !proc::proc.running()) {
+        // The capture remembers the screen it used; nobody is streaming, so forget it
+        proc::proc.display_name.clear();
+      }
       BOOST_LOG(info) << "Stopped watching in the browser"sv;
     }
 
@@ -206,8 +233,13 @@ namespace watch {
       if (running) {
         return true;
       }
-      if (rtsp_stream::session_count() == 0) {
+      const bool desktop = rtsp_stream::session_count() == 0;
+      if (desktop && !sharing_now()) {
         error = "Nobody is streaming right now. Watching starts when a device is playing.";
+        return false;
+      }
+      if (desktop && now_us() < desktop_blocked_until.load()) {
+        error = "A device is starting a stream. Watching follows it in a moment.";
         return false;
       }
       if (!video::parallel_encoding()) {
@@ -217,6 +249,16 @@ namespace watch {
 
       auto run = std::make_shared<run_t>();
       run->mail = std::make_shared<safe::mail_raw_t>();
+      run->desktop = desktop;
+#ifdef _WIN32
+      if (desktop && !proc::proc.running()) {
+        // The PC's main screen
+        auto primary = VDISPLAY::getPrimaryDisplay();
+        if (!primary.empty()) {
+          proc::proc.display_name = platf::to_utf8(primary);
+        }
+      }
+#endif
 
       video::config_t config {};
       config.width = WIDTH;
@@ -251,7 +293,7 @@ namespace watch {
       nlohmann::json details {{"width", WIDTH}, {"height", HEIGHT}, {"codec", "h264"}, {"audio", "opus"}, {"sampleRate", 48000}, {"channels", 2}};
       info_message = message('I', false, now_us(), details.dump());
       running = std::move(run);
-      BOOST_LOG(info) << "Watching in the browser: encoding "sv << WIDTH << 'x' << HEIGHT << " H.264 for viewers"sv;
+      BOOST_LOG(info) << "Watching in the browser: encoding "sv << WIDTH << 'x' << HEIGHT << " H.264 for viewers"sv << (desktop ? " (this PC's screen)"sv : ""sv);
       return true;
     }
 
@@ -271,8 +313,11 @@ namespace watch {
           }
           if (viewer_list.empty() && now_us() - last_viewer_left > std::chrono::duration_cast<std::chrono::microseconds>(LINGER).count()) {
             done = take_locked();
-          } else if (rtsp_stream::session_count() == 0) {
+          } else if (!mine->desktop && rtsp_stream::session_count() == 0) {
             end_viewers("The stream ended.");
+            done = take_locked();
+          } else if (mine->desktop && !sharing_now()) {
+            end_viewers("Screen sharing stopped.");
             done = take_locked();
           }
         }
@@ -361,5 +406,60 @@ namespace watch {
   int viewers() {
     std::lock_guard lg {state_lock};
     return (int) viewer_list.size();
+  }
+
+  void stop_desktop() {
+    desktop_blocked_until = now_us() + std::chrono::duration_cast<std::chrono::microseconds>(15s).count();
+    std::shared_ptr<run_t> done;
+    {
+      std::lock_guard lg {state_lock};
+      if (!running || !running->desktop) {
+        return;
+      }
+      end_viewers("A device started streaming.");
+      done = take_locked();
+    }
+    finish(std::move(done));
+  }
+
+  void share_screen(bool on, int minutes) {
+    if (on) {
+      minutes = std::clamp(minutes, 1, 24 * 60);
+      sharing_until = now_us() + (std::int64_t) minutes * 60'000'000;
+      BOOST_LOG(info) << "Share my screen: on for "sv << minutes << " minutes"sv;
+#if defined TUNASTREAM_TRAY && TUNASTREAM_TRAY >= 1
+      system_tray::update_tray_sharing(true);
+#endif
+    } else {
+      const bool was_on = sharing_now();
+      sharing_until = 0;
+      BOOST_LOG(info) << "Share my screen: off"sv;
+#if defined TUNASTREAM_TRAY && TUNASTREAM_TRAY >= 1
+      if (was_on) {
+        system_tray::update_tray_sharing(false);
+      }
+#endif
+      // Viewers of the PC's screen stop now, not at the next check
+      std::shared_ptr<run_t> done;
+      {
+        std::lock_guard lg {state_lock};
+        if (running && running->desktop) {
+          end_viewers("Screen sharing stopped.");
+          done = take_locked();
+        }
+      }
+      finish(std::move(done));
+    }
+  }
+
+  nlohmann::json sharing() {
+    nlohmann::json out;
+    const bool on = sharing_now();
+    out["on"] = on;
+    out["minutesLeft"] = on ? (int) ((sharing_until.load() - now_us() + 59'999'999) / 60'000'000) : 0;
+    std::lock_guard lg {state_lock};
+    out["showingScreen"] = running && running->desktop;
+    out["viewers"] = (int) viewer_list.size();
+    return out;
   }
 }  // namespace watch

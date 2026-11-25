@@ -2583,6 +2583,9 @@ namespace stream {
     }
 
     int start(session_t &session, const std::string &addr_string) {
+      // Browsers watching the PC's own screen (Share my screen) follow this stream instead
+      watch::stop_desktop();
+
       session.input = input::alloc(session.mail, session.device_name);
 
       session.broadcast_ref = broadcast.ref();

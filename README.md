@@ -99,6 +99,9 @@ and every step was tightened:
 - **Watch in a browser.** *Watch* on the home page shows the game being streamed, with its sound, on any laptop
   or phone on your network, view only and a moment behind the TV. *Share a watch link* gives someone else a link
   that works for a day and opens nothing but the picture.
+- **Share my screen.** On the Watch page, choose to share the PC's own screen for an hour or a few, so someone can
+  watch you play at the desk on a tablet or phone. The home page and the tray say while it's on, a TV's stream takes
+  over while it plays, and it turns itself off when the time is up.
 - **Do not disturb during streams** (on by default). Windows' notifications wait in the notification centre
   instead of popping up over the game.
 - **Privacy mode** (off unless turned on, with Shared PC off). The PC's own monitors go dark while a TV streams,

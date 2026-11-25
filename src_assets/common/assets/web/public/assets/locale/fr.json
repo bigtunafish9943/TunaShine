@@ -745,7 +745,9 @@
     "whatsnew_title": "Nouveautés de la version {version}",
     "whatsnew_since": "Depuis la version {version}, la dernière vue par ce navigateur :",
     "whatsnew_ok": "Compris",
-    "watch": "Regarder"
+    "watch": "Regarder",
+    "sharing_on": "Votre écran est partagé avec les navigateurs qui regardent, encore {minutes} minutes ({viewers} regardent en ce moment).",
+    "sharing_stop": "Arrêter le partage"
   },
   "navbar": {
     "applications": "Apps",
@@ -1300,6 +1302,11 @@
         "how": "Sur la page Regarder, choisissez Partager un lien pour regarder et ouvrez le lien copié sur un autre appareil non connecté.",
         "expect": "Cet appareil peut regarder sans mot de passe pendant un jour, sans pouvoir ouvrir d'autre page. Le lien figure dans Changer le mot de passe > Jetons d'accès, et le supprimer le désactive."
       },
+      "sharescreen": {
+        "title": "Partager mon écran",
+        "how": "Sans stream sur la télé, ouvrez Regarder sur le PC, partagez votre écran pendant 1 heure et ouvrez un lien pour regarder sur une tablette. Lancez ensuite un stream sur la télé, terminez-le, puis choisissez Arrêter le partage.",
+        "expect": "La tablette montre l'écran principal du PC avec le son ; l'accueil et la zone de notification indiquent le partage. Pendant le stream de la télé, la tablette montre son jeu, puis de nouveau l'écran du PC. Après Arrêter le partage, la tablette attend."
+      },
       "signin": {
         "title": "Rester connecté",
         "how": "Déconnectez-vous puis reconnectez-vous avec Rester connecté activé. Fermez le navigateur et rouvrez le tableau de bord. Recommencez en le désactivant.",
@@ -1351,7 +1358,18 @@
     "share_name": "Lien pour regarder {when}",
     "share_copied": "Lien copié. Toute personne sur votre réseau peut regarder avec pendant un jour ; retirez-le à tout moment dans Changer le mot de passe > Jetons d'accès.",
     "share_copy_this": "Copiez ce lien :",
-    "share_failed": "Le lien n'a pas pu être créé."
+    "share_failed": "Le lien n'a pas pu être créé.",
+    "watching_screen": "Vous regardez l'écran de ce PC",
+    "screen_title": "Partager mon écran",
+    "screen_desc": "Tant qu'aucune télé ne streame, les navigateurs qui regardent (avec cette page ou un lien pour regarder) voient l'écran principal de ce PC et entendent son son. Quand une télé lance un stream, ils voient son jeu à la place. Le partage s'arrête tout seul après la durée choisie.",
+    "screen_for": "Partager pendant",
+    "screen_1h": "Pendant 1 heure",
+    "screen_2h": "Pendant 2 heures",
+    "screen_4h": "Pendant 4 heures",
+    "screen_start": "Partager mon écran",
+    "screen_on": "Votre écran est partagé encore {minutes} minutes.",
+    "screen_stop": "Arrêter le partage",
+    "screen_failed": "Le partage n'a pas pu être modifié."
   },
   "tokens": {
     "title": "Jetons d'accès",

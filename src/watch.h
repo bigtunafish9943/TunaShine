@@ -12,6 +12,9 @@
 #include <string>
 #include <string_view>
 
+// lib includes
+#include <nlohmann/json.hpp>
+
 namespace watch {
   /// The channel_data the watch encoders are started with, so their output comes here.
   void *channel();
@@ -45,4 +48,13 @@ namespace watch {
 
   /// How many browsers are watching now.
   int viewers();
+
+  /// A device is starting a stream: stop showing the PC's own screen, so viewers follow the stream.
+  void stop_desktop();
+
+  /// Share my screen: show the PC's own main screen to viewers while nobody streams, for a while.
+  void share_screen(bool on, int minutes);
+
+  /// {"on", "minutesLeft", "showingScreen", "viewers"} for the home and watch pages.
+  nlohmann::json sharing();
 }  // namespace watch
