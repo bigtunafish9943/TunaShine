@@ -292,6 +292,9 @@
         const latest = await fetch("https://api.github.com/repos/bigtunafish9943/TunaStream/releases/latest").then((r) => r.ok ? r.json() : null);
         this.githubVersion = latest ? new TunaStreamVersion(latest, null) : null;
         console.log("GitHub Version: ", this.githubVersion && this.githubVersion.version)
+        // Came from "Update now" in the banner: start the update straight away
+        this.startUpdateFromBanner();
+        window.addEventListener('hashchange', () => this.startUpdateFromBanner());
         // Pre-releases are only looked up for people who asked to hear about them
         if (this.githubVersion && this.notifyPreReleases) {
           const pre = (await fetch("https://api.github.com/repos/bigtunafish9943/TunaStream/releases").then((r) => r.ok ? r.json() : [])).find(release => release.prerelease);
@@ -360,6 +363,24 @@
           }
         }
         this.update = { ...this.update, stage: 'failed', error: this.$t('index.update_no_restart') };
+      },
+      /**
+       * The banner's "Update now" opens this page at #update-now (or changes the hash when it is
+       * already open). Show the update offer and start it, which still asks before installing.
+       */
+      startUpdateFromBanner() {
+        if (location.hash !== '#update-now') {
+          return;
+        }
+        history.replaceState(null, '', location.pathname + location.search + '#update');
+        if (!this.stableBuildAvailable || this.updateBusy) {
+          return;
+        }
+        this.$nextTick(() => {
+          const offer = document.getElementById('update');
+          if (offer) offer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          this.installUpdate();
+        });
       },
       /** Quit the app that is being streamed, which also disconnects whoever is playing. */
       /** Pause or start Sunshine or Apollo when they are installed next to TunaStream. */
