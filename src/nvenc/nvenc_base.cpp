@@ -144,8 +144,20 @@ namespace nvenc {
     if (allow_split && config.split_frame && client_config.videoFormat >= 1 && !config.weighted_prediction &&
         (std::uint64_t) client_config.width * client_config.height > 2560ull * 1440ull &&
         api_at_least(driver_api_version, 12, 1)) {
+      const auto legacy = minimum_api_version;
       minimum_api_version = NVENCAPI_VERSION;
-      split_attempted = true;
+      // The function list has to be made for the session's API version
+      if (function_list_api == minimum_api_version || create_function_list()) {
+        split_attempted = true;
+      } else {
+        minimum_api_version = legacy;
+      }
+    }
+
+    // A session at an older API version needs a function list made for that version
+    if (function_list_api != minimum_api_version && !create_function_list()) {
+      BOOST_LOG(error) << "NvEnc: couldn't prepare the encoder for this API version";
+      return false;
     }
 
     if (encoder) {

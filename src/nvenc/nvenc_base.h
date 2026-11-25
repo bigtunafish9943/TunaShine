@@ -95,6 +95,19 @@ namespace nvenc {
     virtual bool init_library() = 0;
 
     /**
+     * @brief Makes `nvenc` again for the API version now in `minimum_api_version`.
+     * @details The driver turns down a session opened at a newer API version than the function
+     *          list was made for (NV_ENC_ERR_INVALID_VERSION), so a split frame session needs its own.
+     * @return `true` on success; `false` where it isn't possible, leaving `nvenc` as it was.
+     */
+    virtual bool create_function_list() {
+      return false;
+    }
+
+    /// The API version `nvenc` was made for.
+    uint32_t function_list_api = 0;
+
+    /**
      * @brief Required. Used for creating outside-facing input surface,
      *        registering this surface with `nvenc->nvEncRegisterResource()` and setting `registered_input_buffer` variable.
      *        Called during `create_encoder()`.
