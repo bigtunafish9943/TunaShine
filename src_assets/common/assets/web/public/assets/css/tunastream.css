@@ -1600,3 +1600,66 @@ html[data-ts-theme=gold][data-bs-theme=dark] {
     padding-left: 1.1rem;
     color: var(--bs-secondary-color);
 }
+
+/* ---------- Message to the TV, under Playing now ---------- */
+.home-message {
+    margin-top: 0.9rem;
+    padding-top: 0.9rem;
+    border-top: 1px solid var(--ts-surface-border);
+}
+
+.home-message-label {
+    display: block;
+    font-weight: 600;
+    color: var(--bs-emphasis-color);
+    margin-bottom: 0.5rem;
+}
+
+.home-message-quick {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-bottom: 0.6rem;
+}
+
+.home-message-quick .btn {
+    border-radius: 1rem;
+}
+
+.home-message-row {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.home-message-row .form-control {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.home-message-device {
+    flex: 0 0 auto;
+    width: auto;
+}
+
+.home-message-row .btn {
+    flex: 0 0 auto;
+}
+
+.home-message-status {
+    margin: 0.5rem 0 0;
+    color: var(--bs-secondary-color);
+}
+
+.home-message-error {
+    color: var(--bs-danger-text-emphasis);
+}
+
+@media (max-width: 575.98px) {
+    .home-message-row {
+        flex-wrap: wrap;
+    }
+
+    .home-message-device {
+        width: 100%;
+    }
+}

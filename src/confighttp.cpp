@@ -47,6 +47,7 @@
 #include "file_outbox.h"
 #include "pairing_backup.h"
 #include "play_history.h"
+#include "tv_messages.h"
 #include "updater.h"
 #include "utility.h"
 #include "uuid.h"
@@ -889,6 +890,72 @@ namespace confighttp {
 
     auto output_tree = play_history::recap(days, tz);
     output_tree["status"] = true;
+    send_response(response, output_tree);
+  }
+
+  /**
+   * @brief Show a short message on the screen of a device that is streaming.
+   * @details Body: {"text": "...", "device": "name"} (device empty or left out: every device
+   *          that is streaming). TunaReceive shows it within about five seconds.
+   */
+  void postTvMessage(resp_https_t response, req_https_t request) {
+    if (!validateContentType(response, request, "application/json") || !authenticate(response, request)) {
+      return;
+    }
+
+    print_req(request);
+
+    nlohmann::json output_tree;
+    try {
+      std::stringstream ss;
+      ss << request->content.rdbuf();
+      auto input = nlohmann::json::parse(ss.str());
+      const auto text = input.value("text", "");
+      const auto device = input.value("device", "");
+
+      std::vector<std::string> streaming;
+      for (const auto &h : stream::session::health()) {
+        if (device.empty() || h.device == device) {
+          streaming.push_back(h.device);
+        }
+      }
+      if (streaming.empty()) {
+        output_tree["status"] = false;
+        output_tree["error"] = device.empty() ? "Nobody is streaming right now." : device + " isn't streaming right now.";
+        send_response(response, output_tree);
+        return;
+      }
+      const auto id = tv_messages::post(device, text);
+      if (!id) {
+        bad_request(response, request, "The message is empty");
+        return;
+      }
+      BOOST_LOG(info) << "Message for "sv << (device.empty() ? "every streaming device"s : device) << " queued"sv;
+      output_tree["status"] = true;
+      output_tree["id"] = id;
+      output_tree["devices"] = streaming;
+      send_response(response, output_tree);
+    } catch (std::exception &e) {
+      BOOST_LOG(warning) << "TvMessage: "sv << e.what();
+      bad_request(response, request, e.what());
+    }
+  }
+
+  /**
+   * @brief Which devices recent messages have reached: {"messages": [{"id", "deliveredTo": [...]}]}.
+   */
+  void getTvMessages(resp_https_t response, req_https_t request) {
+    if (!authenticate(response, request)) {
+      return;
+    }
+
+    nlohmann::json messages = nlohmann::json::array();
+    for (const auto &[id, devices] : tv_messages::delivered()) {
+      messages.push_back({{"id", id}, {"deliveredTo", devices}});
+    }
+    nlohmann::json output_tree;
+    output_tree["status"] = true;
+    output_tree["messages"] = messages;
     send_response(response, output_tree);
   }
 
@@ -2063,6 +2130,8 @@ namespace confighttp {
     server.resource["^/api/rumble-test$"]["POST"] = rumbleTest;
     server.resource["^/api/status$"]["GET"] = getStatus;
     server.resource["^/api/recap$"]["GET"] = getRecap;
+    server.resource["^/api/tv-message$"]["POST"] = postTvMessage;
+    server.resource["^/api/tv-message$"]["GET"] = getTvMessages;
     server.resource["^/api/update$"]["GET"] = getUpdate;
     server.resource["^/api/update$"]["POST"] = startUpdate;
     server.resource["^/api/vdisplay/repair$"]["POST"] = repairVirtualDisplay;

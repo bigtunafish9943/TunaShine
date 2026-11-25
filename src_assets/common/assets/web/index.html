@@ -151,6 +151,28 @@
           </div>
         </li>
       </ul>
+
+      <!-- A short message shown on the TV over the game -->
+      <form class="home-message" v-if="streamingDevices.length" @submit.prevent="sendTvMessage()">
+        <label class="home-message-label" for="tv-message">{{ $t('index.message_title') }}</label>
+        <div class="home-message-quick">
+          <button type="button" class="btn btn-sm btn-outline-secondary" v-for="q in quickMessages" :key="q"
+                  :disabled="message.sending" @click="sendTvMessage(q)">{{ q }}</button>
+        </div>
+        <div class="home-message-row">
+          <select class="form-select home-message-device" v-if="streamingDevices.length > 1" v-model="message.device"
+                  :aria-label="$t('index.message_to')">
+            <option value="">{{ $t('index.message_everyone') }}</option>
+            <option v-for="d in streamingDevices" :key="d" :value="d">{{ d }}</option>
+          </select>
+          <input id="tv-message" class="form-control" type="text" maxlength="200" v-model="message.text"
+                 :placeholder="$t('index.message_placeholder')" autocomplete="off">
+          <button type="submit" class="btn btn-primary" :disabled="message.sending || !message.text.trim()">
+            <i class="fas fa-paper-plane"></i> {{ $t('index.message_send') }}
+          </button>
+        </div>
+        <p class="home-message-status" v-if="message.status" role="status" :class="{ 'home-message-error': message.error }">{{ message.status }}</p>
+      </form>
     </div>
 
     <!-- The week's play: time per day, most-played games, and how smooth the streams were -->
@@ -313,6 +335,7 @@
         statusTimer: null,
         recap: null,
         recapTimer: null,
+        message: { text: '', device: '', sending: false, status: '', error: false, id: 0, waitFor: [], shown: false },
       }
     },
     async created() {
@@ -437,6 +460,53 @@
           if (offer) offer.scrollIntoView({ behavior: 'smooth', block: 'center' });
           this.installUpdate();
         });
+      },
+      /**
+       * Show a message on the TV. TunaReceive picks it up with its next report to the PC, within
+       * about five seconds; the page then says which screens it reached.
+       */
+      async sendTvMessage(text) {
+        const body = { text: (text ?? this.message.text).trim(), device: this.message.device };
+        if (!body.text) return;
+        this.message = { ...this.message, sending: true, status: '', error: false };
+        try {
+          const r = await fetch('./api/tv-message', {
+            credentials: 'include', method: 'POST',
+            headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+          }).then((r) => r.json());
+          if (!r.status) {
+            this.message = { ...this.message, sending: false, error: true, status: r.error || this.$t('index.message_failed') };
+            return;
+          }
+          if (text === undefined) this.message.text = '';
+          this.message = { ...this.message, sending: false, id: r.id, waitFor: r.devices, shown: false,
+                           status: this.$t('index.message_sent', { devices: r.devices.join(', ') }) };
+          this.followTvMessage(r.id, r.devices);
+        } catch (e) {
+          this.message = { ...this.message, sending: false, error: true, status: this.$t('index.message_failed') };
+        }
+      },
+      async followTvMessage(id, devices) {
+        const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+        for (let i = 0; i < 12 && this.message.id === id; i++) {
+          await sleep(2000);
+          try {
+            const r = await fetch('./api/tv-message', { credentials: 'include' }).then((r) => r.json());
+            const m = (r.messages || []).find((x) => x.id === id);
+            const reached = m ? m.deliveredTo : [];
+            if (reached.length && this.message.id === id) {
+              this.message.shown = true;
+              this.message.status = this.$t('index.message_shown', { devices: reached.join(', ') });
+              if (devices.every((d) => reached.includes(d))) return;
+            }
+          } catch (e) {
+            // Try again
+          }
+        }
+        if (this.message.id === id && !this.message.shown) {
+          this.message.status = this.$t('index.message_not_shown');
+          this.message.error = true;
+        }
       },
       /** This week's play, counted in the browser's own time zone. */
       async loadRecap() {
@@ -640,6 +710,14 @@
       }
     },
     computed: {
+      /** Devices that are streaming now, which can be sent a message */
+      streamingDevices() {
+        return this.players.filter((p) => p.health).map((p) => p.device).filter((d) => d);
+      },
+      quickMessages() {
+        return [this.$t('index.message_quick_dinner'), this.$t('index.message_quick_ten'),
+                this.$t('index.message_quick_bed'), this.$t('index.message_quick_come')];
+      },
       /** The day chart in words, for screen readers */
       recapDaysLabel() {
         if (!this.recap) return '';

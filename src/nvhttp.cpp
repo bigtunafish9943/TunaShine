@@ -34,6 +34,7 @@
 #include "network.h"
 #include "nvhttp.h"
 #include "box_art.h"
+#include "tv_messages.h"
 #include "platform/common.h"
 #include "process.h"
 #include "rtsp.h"
@@ -1798,6 +1799,15 @@ namespace nvhttp {
         {"pictureScale", pc.picture_scale},
         {"splitFrames", pc.split_frames},
       };
+      // Messages typed on the home page for this device
+      nlohmann::json messages = nlohmann::json::array();
+      for (const auto &m : tv_messages::take(named_cert_p->name)) {
+        messages.push_back({{"id", m.id}, {"text", m.text}});
+      }
+      if (!messages.empty()) {
+        out["messages"] = messages;
+        BOOST_LOG(info) << "Message delivered to "sv << named_cert_p->name;
+      }
     }
     SimpleWeb::CaseInsensitiveMultimap headers;
     headers.emplace("Content-Type", "application/json");
