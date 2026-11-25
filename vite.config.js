@@ -70,6 +70,7 @@ export default defineConfig({
                 config: resolve(assetsSrcPath, 'config.html'),
                 index: resolve(assetsSrcPath, 'index.html'),
                 live: resolve(assetsSrcPath, 'live.html'),
+                checklist: resolve(assetsSrcPath, 'checklist.html'),
                 password: resolve(assetsSrcPath, 'password.html'),
                 pin: resolve(assetsSrcPath, 'pin.html'),
                 setup: resolve(assetsSrcPath, 'setup.html'),

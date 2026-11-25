@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="auto">
+
+<head>
+  <%- header %>
+  <style>
+    .check-summary {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem 1.5rem;
+      align-items: baseline;
+    }
+
+    .check-bar {
+      height: 0.5rem;
+      border-radius: 0.25rem;
+      background: var(--bs-secondary-bg);
+      overflow: hidden;
+      display: flex;
+      margin: 0.75rem 0 1.5rem;
+    }
+
+    .check-bar .works { background: var(--bs-success); }
+    .check-bar .problem { background: var(--bs-danger); }
+
+    .check-item {
+      border: 1px solid var(--bs-border-color);
+      border-left: 0.35rem solid var(--bs-border-color);
+      border-radius: 0.5rem;
+      padding: 1rem 1.25rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .check-item.works { border-left-color: var(--bs-success); }
+    .check-item.problem { border-left-color: var(--bs-danger); }
+
+    .check-item h3 {
+      font-size: 1.1rem;
+      margin: 0 0 0.5rem;
+    }
+
+    .check-where {
+      font-size: 0.8rem;
+      color: var(--bs-secondary-color);
+      margin-left: 0.5rem;
+      font-weight: normal;
+    }
+
+    .check-how, .check-expect {
+      margin-bottom: 0.4rem;
+      max-width: 70ch;
+    }
+
+    .check-expect strong, .check-how strong {
+      font-weight: 600;
+    }
+
+    .check-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+    }
+
+    .check-when {
+      font-size: 0.8rem;
+      color: var(--bs-secondary-color);
+      align-self: center;
+    }
+  </style>
+</head>
+
+<body id="app" v-cloak>
+  <Navbar></Navbar>
+  <div class="container mb-5">
+    <h1 class="my-4">{{ $t('checklist.title') }}</h1>
+    <p style="max-width: 70ch">{{ $t('checklist.intro') }}</p>
+
+    <div class="check-summary">
+      <span><strong>{{ counts.works }}</strong> {{ $t('checklist.count_works') }}</span>
+      <span><strong>{{ counts.problem }}</strong> {{ $t('checklist.count_problem') }}</span>
+      <span><strong>{{ counts.left }}</strong> {{ $t('checklist.count_left') }}</span>
+      <button type="button" class="btn btn-sm btn-outline-secondary ms-auto" @click="resetAll" v-if="counts.works + counts.problem > 0">
+        {{ $t('checklist.reset') }}
+      </button>
+    </div>
+    <div class="check-bar" role="img" :aria-label="$t('checklist.progress', { done: counts.works + counts.problem, total: items.length })">
+      <div class="works" :style="{ width: (100 * counts.works / items.length) + '%' }"></div>
+      <div class="problem" :style="{ width: (100 * counts.problem / items.length) + '%' }"></div>
+    </div>
+
+    <div class="alert alert-danger" v-if="error">{{ error }}</div>
+
+    <div v-for="item in items" :key="item.id" class="check-item" :class="stateOf(item.id)">
+      <h3>{{ $t('checklist.items.' + item.id + '.title') }}<span class="check-where">{{ $t('checklist.where_' + item.where) }}</span></h3>
+      <p class="check-how"><strong>{{ $t('checklist.how') }}</strong> {{ $t('checklist.items.' + item.id + '.how') }}</p>
+      <p class="check-expect"><strong>{{ $t('checklist.expect') }}</strong> {{ $t('checklist.items.' + item.id + '.expect') }}</p>
+      <div v-if="stateOf(item.id) === 'problem'" class="mt-2">
+        <label class="form-label small" :for="'note-' + item.id">{{ $t('checklist.note_label') }}</label>
+        <textarea class="form-control" rows="2" :id="'note-' + item.id" v-model="notes[item.id]"
+                  :placeholder="$t('checklist.note_placeholder')" @change="save(item.id, 'problem')"></textarea>
+      </div>
+      <div class="check-buttons">
+        <button type="button" class="btn btn-sm" :class="stateOf(item.id) === 'works' ? 'btn-success' : 'btn-outline-success'"
+                :aria-pressed="stateOf(item.id) === 'works'" @click="save(item.id, 'works')">
+          <i class="fas fa-check" aria-hidden="true"></i> {{ $t('checklist.works') }}
+        </button>
+        <button type="button" class="btn btn-sm" :class="stateOf(item.id) === 'problem' ? 'btn-danger' : 'btn-outline-danger'"
+                :aria-pressed="stateOf(item.id) === 'problem'" @click="save(item.id, 'problem')">
+          <i class="fas fa-xmark" aria-hidden="true"></i> {{ $t('checklist.problem') }}
+        </button>
+        <button type="button" class="btn btn-sm btn-link" v-if="stateOf(item.id)" @click="save(item.id, '')">
+          {{ $t('checklist.not_tried') }}
+        </button>
+        <span class="check-when" v-if="results[item.id]">{{ new Date(results[item.id].at * 1000).toLocaleString() }}</span>
+      </div>
+    </div>
+
+    <p class="mt-4" style="max-width: 70ch">{{ $t('checklist.problem_help') }}
+      <a href="./troubleshooting#tv_logs">{{ $t('checklist.problem_help_link') }}</a></p>
+  </div>
+
+  <script type="module">
+    import { createApp } from 'vue'
+    import { initApp } from './init'
+    import Navbar from './Navbar.vue'
+
+    // What to try, in a sensible order. "where" says which app it's set up in.
+    const ITEMS = [
+      { id: 'privacy', where: 'pc' },
+      { id: 'quiet', where: 'pc' },
+      { id: 'borderless', where: 'pc' },
+      { id: 'apply', where: 'pc' },
+      { id: 'theme', where: 'both' },
+      { id: 'remote', where: 'both' },
+      { id: 'phone', where: 'both' },
+      { id: 'logs', where: 'both' },
+      { id: 'checkup', where: 'tv' },
+      { id: 'overlay', where: 'tv' },
+      { id: 'shortcuts', where: 'tv' },
+      { id: 'gameprofile', where: 'tv' },
+      { id: 'sharpen', where: 'tv' },
+      { id: 'drift', where: 'tv' },
+      { id: 'ntsc', where: 'tv' },
+      { id: 'whatsnew', where: 'both' },
+    ];
+
+    const app = createApp({
+      components: { Navbar },
+      inject: ['i18n'],
+      data() {
+        return {
+          items: ITEMS,
+          results: {},
+          notes: {},
+          error: '',
+        };
+      },
+      computed: {
+        counts() {
+          let works = 0, problem = 0;
+          for (const item of this.items) {
+            const s = this.stateOf(item.id);
+            if (s === 'works') works++;
+            if (s === 'problem') problem++;
+          }
+          return { works, problem, left: this.items.length - works - problem };
+        },
+      },
+      created() {
+        this.load();
+      },
+      methods: {
+        stateOf(id) {
+          return (this.results[id] && this.results[id].state) || '';
+        },
+        apply(results) {
+          this.results = results || {};
+          const notes = {};
+          for (const [id, r] of Object.entries(this.results)) notes[id] = r.note || '';
+          this.notes = notes;
+        },
+        async load() {
+          try {
+            const r = await fetch('./api/checklist', { credentials: 'include' }).then((r) => r.json());
+            this.apply(r.results);
+          } catch (e) {
+            this.error = this.$t('checklist.load_failed');
+          }
+        },
+        async send(body) {
+          this.error = '';
+          try {
+            const r = await fetch('./api/checklist', {
+              credentials: 'include', method: 'POST',
+              headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+            }).then((r) => r.json());
+            if (!r.status) throw new Error('not saved');
+            this.apply(r.results);
+          } catch (e) {
+            this.error = this.$t('checklist.save_failed');
+          }
+        },
+        save(id, state) {
+          this.send({ id, state, note: state === 'problem' ? (this.notes[id] || '') : '' });
+        },
+        resetAll() {
+          if (confirm(this.$t('checklist.reset_confirm'))) this.send({ reset: true });
+        },
+      },
+    });
+
+    initApp(app);
+  </script>
+</body>
+
+</html>

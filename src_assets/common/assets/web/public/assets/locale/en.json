@@ -1010,7 +1010,8 @@
     "tv_logs_desc": "When something goes wrong on a TV, open TunaReceive, pick this PC, then PC tools > Send logs to PC. The log appears here, so it can be read or shared without connecting anything to the TV.",
     "tv_logs_none": "No logs sent yet.",
     "tv_logs_show": "Show",
-    "tv_logs_gone": "That log isn't on this PC any more."
+    "tv_logs_gone": "That log isn't on this PC any more.",
+    "checklist_link": "Trying new features? Use the test checklist."
   },
   "welcome": {
     "confirm_password": "Confirm password",
@@ -1150,5 +1151,111 @@
     "more_checkbox_enable_perf_overlay": "The stream details shortcut shows more, only when you want it.",
     "more_list_languages": "Used the next time TunaReceive opens.",
     "more_tuna_checkup_before_game": "It suggests a picture size, frame rate and bitrate that suit the connection and the TV, plus turning off HDR or 10-bit where the TV can't use them; each one can be taken or left, and the game starts either way."
+  },
+  "checklist": {
+    "title": "Test checklist",
+    "intro": "Things to try on your own PC, TV and controllers. Mark each one when you've tried it; what you mark is kept on this PC, so you can come back to it from any browser.",
+    "count_works": "work",
+    "count_problem": "have a problem",
+    "count_left": "not tried yet",
+    "progress": "{done} of {total} tried",
+    "reset": "Start over",
+    "reset_confirm": "Forget everything marked here?",
+    "where_pc": "Set up on this PC",
+    "where_tv": "Set up on the TV",
+    "where_both": "PC and TV",
+    "how": "Try:",
+    "expect": "It works if:",
+    "works": "Works",
+    "problem": "Problem",
+    "not_tried": "Not tried",
+    "note_label": "What happened?",
+    "note_placeholder": "What you saw, and what you were doing",
+    "problem_help": "Found a problem on the TV? Send its log from TunaReceive so the cause can be found:",
+    "problem_help_link": "Logs from TVs",
+    "load_failed": "The checklist couldn't be loaded. Reload the page to try again.",
+    "save_failed": "That wasn't saved. Check that TunaStream is running, then try again.",
+    "items": {
+      "privacy": {
+        "title": "Privacy mode",
+        "how": "Turn off Settings > Shared PC > Shared PC, turn on Privacy mode, and save. Then start a game on the TV.",
+        "expect": "The PC's monitors go dark while the TV streams, and come back on when the stream ends."
+      },
+      "quiet": {
+        "title": "No notifications during a stream",
+        "how": "Start a stream, then make something show a Windows notification (a Discord message, for example).",
+        "expect": "Nothing pops up over the game, and notifications show again once the stream ends."
+      },
+      "borderless": {
+        "title": "Borderless games",
+        "how": "With Shared PC on, start a game that normally opens fullscreen.",
+        "expect": "It opens as a borderless window on the TV's screen, and the PC's own screen is left alone."
+      },
+      "apply": {
+        "title": "Saving without signing in again",
+        "how": "Change any setting on this page, then Save and Apply.",
+        "expect": "The page waits while TunaStream restarts and comes back without asking you to sign in."
+      },
+      "theme": {
+        "title": "Theme",
+        "how": "Pick another theme under Settings > General and save.",
+        "expect": "This page changes and stays changed after Apply. TunaReceive matches it the next time it opens."
+      },
+      "remote": {
+        "title": "TV settings from this PC",
+        "how": "Open the Devices page, change something under TV settings, and save. The TV needs TunaReceive open.",
+        "expect": "The TV shows the new value within about 15 seconds."
+      },
+      "phone": {
+        "title": "Phone page",
+        "how": "During a stream, open this PC's address followed by /live on a phone on the same network.",
+        "expect": "It shows what's playing, with the same details as the TV's stream details."
+      },
+      "logs": {
+        "title": "Send logs to PC",
+        "how": "On the TV, open this PC, then PC tools > Send logs to PC.",
+        "expect": "The TV says it was sent, and the log appears under Troubleshooting > Logs from TVs."
+      },
+      "checkup": {
+        "title": "Check before a game",
+        "how": "On the TV, start a game (the check is on unless it was turned off in Settings).",
+        "expect": "It measures for a few seconds, then starts the game or offers changes. Use checked, Use all and Keep mine each do what they say."
+      },
+      "overlay": {
+        "title": "Stream details",
+        "how": "During a stream, press View + right stick (or the buttons set under Settings > Controller shortcuts).",
+        "expect": "Picture size, frame rate, Wi-Fi and delay show over the game. Pressing again hides them."
+      },
+      "shortcuts": {
+        "title": "Changing a shortcut",
+        "how": "On the TV, open Settings > Controller shortcuts, pick one, choose Press new buttons, and press a combination.",
+        "expect": "The new buttons work during a game, and Back to how it came puts the old ones back."
+      },
+      "gameprofile": {
+        "title": "Settings for each game",
+        "how": "On the TV, save a settings profile, then hold a game and choose Settings for this game. Start that game, then a different one.",
+        "expect": "The first says it's using the profile. The other uses your usual settings."
+      },
+      "sharpen": {
+        "title": "Sharpen the picture",
+        "how": "On the TV, set Settings > Sharpen the picture to Medium and stream at 1080p. Then try Off to compare.",
+        "expect": "Edges and text look crisper without bright outlines, and the game doesn't feel slower."
+      },
+      "drift": {
+        "title": "Fix stick drift",
+        "how": "On the TV, turn on Settings > Fix stick drift. Use a controller whose camera or character creeps, and let go of the stick for two seconds.",
+        "expect": "The creeping stops, and small stick movements still count."
+      },
+      "ntsc": {
+        "title": "59.94 FPS",
+        "how": "On the TV, set Frame rate to 59.94 FPS, stream a game, and pan the camera slowly. Open stream details.",
+        "expect": "Panning stays smooth without a hitch every few seconds, and stream details shows about 59.9 FPS."
+      },
+      "whatsnew": {
+        "title": "What's new",
+        "how": "After the next update, open TunaReceive and this page.",
+        "expect": "Each shows what changed once, and not again."
+      }
+    }
   }
 }
