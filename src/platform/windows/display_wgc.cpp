@@ -702,6 +702,10 @@ namespace platf::dxgi {
     // After the helper fails, DDX is used for a while before WGC is tried again
     std::atomic<std::int64_t> wgc_retry_after {0};
 
+    // Display changes restart the helper; too many in a row means something else is wrong
+    std::atomic<std::int64_t> display_change_window {0};
+    std::atomic<int> display_changes {0};
+
     std::int64_t steady_ms() {
       return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
     }
@@ -886,7 +890,12 @@ namespace platf::dxgi {
       if (dead) {
         lk.unlock();
         auto code = exit_code();
-        if (code == wgc_ipc::EXIT_DISPLAY_CHANGED) {
+        const auto now_ms = steady_ms();
+        if (now_ms - display_change_window.load() > 30000) {
+          display_change_window = now_ms;
+          display_changes = 0;
+        }
+        if (code == wgc_ipc::EXIT_DISPLAY_CHANGED && ++display_changes <= 3) {
           BOOST_LOG(info) << "WGC: the display changed, capturing it again"sv;
         } else {
           BOOST_LOG(warning) << "WGC: the capture helper "sv << helper_exit_reason(code) << ", using DDX for a minute"sv;
