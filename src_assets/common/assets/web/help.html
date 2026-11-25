@@ -73,8 +73,28 @@
           <li>Connect this PC to the router with a cable if you can. That helps more than anything else.</li>
           <li>Put the TV box on 5 GHz Wi-Fi, or a cable.</li>
           <li>The home page shows the stream's health while someone is playing, and says whether the network, this PC
-            or the device is holding it back.</li>
+            or the device is holding it back. With TunaReceive, it also shows what the TV sees.</li>
+          <li>If the home page says <em>This PC is on Wi-Fi</em>, every frame crosses the air twice. A cable from
+            this PC to the router is the biggest single improvement.</li>
         </ul>
+        <h3>What adjusts itself</h3>
+        <p>With TunaReceive, the stream fits itself to the connection while you play, so a busy moment softens the
+          picture instead of stuttering:</p>
+        <ul>
+          <li><strong>Picture quality</strong> steps down a little as soon as frames start arriving slowly, before
+            any are lost, and further if they are lost. It steps back up once the connection clears.</li>
+          <li><strong>Picture size</strong> follows when the quality has dropped a long way: a 4K stream is sent at
+            1440p or 1080p and the TV stretches it to fill the screen, then goes back to 4K. The change happens
+            between two frames, without a pause.</li>
+          <li><strong>Packet-loss protection</strong> uses less on a clean connection and more on a rough one.</li>
+        </ul>
+        <p>Afterwards, TunaReceive can tell you how the stream went: hold the select button on the PC and choose
+          <em>How the last stream went</em>. If quality was turned down for most of the game, a lower Picture
+          quality setting gives a steadier picture.</p>
+        <h3>The TV adds delay</h3>
+        <p>TVs process the picture to make films look better, which adds delay that you feel in a game. TunaReceive
+          asks the TV for its game mode while a game is on screen. This needs a TV with auto low latency mode (ALLM),
+          turned on in the TV's HDMI settings. If the TV doesn't switch by itself, choose its Game mode by hand.</p>
       </div>
     </div>
 

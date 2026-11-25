@@ -128,6 +128,15 @@
                 mbps: (player.health.bitrateKbps / 1000).toFixed(0),
                 fec: player.health.fecPercent || 0
               }) }}
+              <span class="d-block" v-if="player.health.deviceView">
+                {{ $t('index.health_device_figures', {
+                  loss: player.health.deviceView.lossPct.toFixed(1),
+                  decode: player.health.deviceView.decodeMs.toFixed(1),
+                  latency: player.health.deviceView.latencyMs,
+                  mbps: Math.round(player.health.deviceView.kbps / 1000),
+                  setting: Math.round(player.health.deviceView.settingKbps / 1000)
+                }) }}
+              </span>
               <span class="d-block" v-if="player.health.pictureScale && player.health.pictureScale < 100">
                 {{ $t('index.health_scaled', { pct: player.health.pictureScale }) }}
               </span>
@@ -438,6 +447,14 @@
         }
         if (h.pcMsAvg > interval || h.pcMsMax > interval * 3) {
           lines.push(t('index.health_pc_slow', { avg: h.pcMsAvg.toFixed(1), max: h.pcMsMax.toFixed(1) }));
+        }
+        // What the device itself reports, when it is TunaReceive
+        const d = h.deviceView;
+        if (d && d.decodeMs > interval) {
+          lines.push(t('index.health_device_decode', { ms: d.decodeMs.toFixed(1) }));
+        }
+        if (d && h.recoveries === 0 && d.lossPct < 1 && d.slowPct >= 30) {
+          lines.push(t('index.health_device_full', { pct: Math.round(d.slowPct) }));
         }
         if (h.recoveries > 0) {
           lines.push(t('index.health_network', { n: h.recoveries }));

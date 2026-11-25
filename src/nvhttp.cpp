@@ -1751,6 +1751,44 @@ namespace nvhttp {
   }
 
   /**
+   * What the device sees of its own stream: GET /tuna/report?loss=&slow=&fps=&decode=&latency=&kbps=&setting=.
+   * TunaReceive sends it every few seconds while streaming, so the PC's stream health can show
+   * both ends side by side. Values out of range are clamped; anything unreadable counts as zero.
+   */
+  void tunaReport(resp_https_t response, req_https_t request) {
+    print_req<TunaStreamHTTPS>(request);
+    auto named_cert_p = get_verified_cert(request);
+    auto args = request->parse_query_string();
+    auto number = [&](const std::string &name, double high) {
+      try {
+        return std::clamp(std::stod(get_arg(args, name.c_str(), "0")), 0.0, high);
+      } catch (...) {
+        return 0.0;
+      }
+    };
+    stream::session::device_view_t view;
+    view.loss_pct = number("loss", 100);
+    view.slow_pct = number("slow", 100);
+    view.fps = number("fps", 1000);
+    view.decode_ms = number("decode", 1000);
+    view.latency_ms = (int) number("latency", 10000);
+    view.kbps = (int) number("kbps", 1000000);
+    view.setting_kbps = (int) number("setting", 1000000);
+
+    nlohmann::json out;
+    auto session = rtsp_stream::find_session(named_cert_p->uuid);
+    out["applied"] = (bool) session;
+    if (session) {
+      stream::session::set_device_view(*session, view);
+    }
+    SimpleWeb::CaseInsensitiveMultimap headers;
+    headers.emplace("Content-Type", "application/json");
+    headers.emplace("Cache-Control", "no-store");
+    response->write(SimpleWeb::StatusCode::success_ok, out.dump(), headers);
+    response->close_connection_after_response = true;
+  }
+
+  /**
    * How this PC reaches the network: GET /tuna/network. TunaReceive's connection test uses it to
    * say when the PC is on Wi-Fi itself, which no setting on the TV can make up for.
    */
@@ -1977,6 +2015,7 @@ namespace nvhttp {
     https_server.resource["^/tuna/files$"]["GET"] = tunaFiles;
     https_server.resource["^/tuna/bitrate$"]["GET"] = tunaBitrate;
     https_server.resource["^/tuna/network$"]["GET"] = tunaNetwork;
+    https_server.resource["^/tuna/report$"]["GET"] = tunaReport;
     https_server.resource["^/tuna/vdisplay$"]["GET"] = tunaVdisplay;
     https_server.resource["^/tuna/vdisplay/repair$"]["GET"] = tunaVdisplay;
     https_server.resource["^/tuna/file$"]["GET"] = tunaFile;
