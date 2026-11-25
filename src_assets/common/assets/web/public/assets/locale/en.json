@@ -543,6 +543,8 @@
   },
   "index": {
     "controller_hint": "What games see this controller as. Most PC games only rumble an Xbox 360 controller; change it under Configuration > Input > Emulated Gamepad Type.",
+    "battery_charging": "charging, {pct}%",
+    "battery_level": "battery {pct}%",
     "controller_n": "Controller {n}",
     "controller_unknown": "unknown type",
     "custom_port": "TunaStream is using port {port} instead of the default. If your client does not find this PC by itself, add it by hand using this PC's IP address followed by :{port}, for example 192.168.1.20:{port}.",

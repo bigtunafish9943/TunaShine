@@ -878,6 +878,8 @@ namespace confighttp {
         {"device", gamepad.device},
         {"controller", gamepad.controller},
         {"emulated", gamepad.emulated},
+        {"battery", gamepad.battery},
+        {"charging", gamepad.charging},
       });
     }
     output_tree["controllers"] = controllers;

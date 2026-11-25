@@ -126,6 +126,26 @@ namespace input {
     gamepad_status_map[id] = gamepad_status_t {device, controller, platf::gamepad_type_name(id)};
   }
 
+  static void record_gamepad_battery(int id, std::uint8_t state, std::uint8_t percent) {
+    std::lock_guard lg {gamepad_status_lock};
+    auto it = gamepad_status_map.find(id);
+    if (it == gamepad_status_map.end()) {
+      return;
+    }
+    if (state == LI_BATTERY_STATE_NOT_PRESENT) {
+      it->second.battery = -1;
+      it->second.charging = false;
+      return;
+    }
+    if (percent <= 100) {
+      it->second.battery = percent;
+    }
+    it->second.charging = state == LI_BATTERY_STATE_CHARGING;
+    if (state == LI_BATTERY_STATE_FULL) {
+      it->second.battery = 100;
+    }
+  }
+
   std::vector<gamepad_status_t> gamepad_status() {
     std::lock_guard lg {gamepad_status_lock};
     std::vector<gamepad_status_t> result;
@@ -1104,6 +1124,7 @@ namespace input {
       packet->batteryPercentage
     };
 
+    record_gamepad_battery(gamepad.id, packet->batteryState, packet->batteryPercentage);
     platf::gamepad_battery(platf_input, battery);
   }
 

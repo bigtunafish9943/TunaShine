@@ -105,6 +105,10 @@
           <span v-for="c in player.controllers" class="home-controller" :title="$t('index.controller_hint')">
             <i class="fas fa-gamepad"></i>
             {{ $t('index.controller_n', { n: c.controller + 1 }) }}: {{ c.emulated || $t('index.controller_unknown') }}
+            <span v-if="c.battery >= 0" class="home-battery" :class="{ 'home-battery-low': c.battery <= 15 && !c.charging }">
+              <i class="fas" :class="c.charging ? 'fa-bolt' : batteryIcon(c.battery)" aria-hidden="true"></i>
+              {{ $t(c.charging ? 'index.battery_charging' : 'index.battery_level', { pct: c.battery }) }}
+            </span>
           </span>
           <!-- How smoothly the stream is running, and what to do about it -->
           <div class="home-health" v-if="player.health">
@@ -381,6 +385,14 @@
           if (offer) offer.scrollIntoView({ behavior: 'smooth', block: 'center' });
           this.installUpdate();
         });
+      },
+      /** A battery icon that matches how full it is. */
+      batteryIcon(pct) {
+        if (pct >= 88) return 'fa-battery-full';
+        if (pct >= 63) return 'fa-battery-three-quarters';
+        if (pct >= 38) return 'fa-battery-half';
+        if (pct >= 13) return 'fa-battery-quarter';
+        return 'fa-battery-empty';
       },
       /** Quit the app that is being streamed, which also disconnects whoever is playing. */
       /** Pause or start Sunshine or Apollo when they are installed next to TunaStream. */

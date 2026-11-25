@@ -653,6 +653,20 @@ html[data-bs-theme=dark] body .btn-outline-secondary {
     color: var(--ts-accent);
 }
 
+.home-battery {
+    margin-left: 0.35rem;
+    color: var(--bs-secondary-color);
+}
+
+.home-battery i {
+    color: inherit;
+}
+
+.home-battery-low {
+    color: var(--bs-danger-text-emphasis);
+    font-weight: 600;
+}
+
 /* ---------- Main navigation as a sidebar on wide screens ----------
    Below 992px it stays a top bar with a menu button, as before. */
 @media (min-width: 992px) {
