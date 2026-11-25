@@ -1307,6 +1307,11 @@
         "how": "En la página Ver, crea una contraseña para ver para alguien. En una tableta sin sesión, abre la página Ver y escríbela. Luego escribe una incorrecta cinco veces en otro dispositivo.",
         "expect": "La tableta mira sin enlace. La contraseña sigue funcionando otros días. Tras cinco intentos fallidos, ese dispositivo debe esperar diez minutos. Quitar la contraseña en Tokens de acceso también detiene la tableta."
       },
+      "watchers": {
+        "title": "Quién mira",
+        "how": "Mientras alguien mira con un enlace o una contraseña, abre Ver en el PC con sesión iniciada. Cambia Imagen a Más nítida y luego elige Quitar acceso para esa persona.",
+        "expect": "La lista la muestra por nombre y dispositivo. Su imagen vuelve más nítida tras unos segundos. Tras Quitar acceso, su dispositivo se detiene y pide un enlace o contraseña nuevos."
+      },
       "sharescreen": {
         "title": "Compartir mi pantalla",
         "how": "Sin transmisión en la tele, abre Ver en el PC, comparte tu pantalla durante 1 hora y abre un enlace para ver en una tableta. Luego inicia una transmisión en la tele, termínala y elige Dejar de compartir.",
@@ -1377,6 +1382,15 @@
     "screen_failed": "No se pudo cambiar el uso compartido.",
     "need_link": "Este dispositivo aún no puede ver. Abre un nuevo enlace para ver de quien comparte, o inicia sesión.",
     "sign_in": "Iniciar sesión",
+    "viewers_title": "Mirando ahora",
+    "viewers_none": "Nadie está mirando.",
+    "viewers_since": "desde las {time}",
+    "viewers_remove": "Quitar acceso",
+    "viewers_remove_desc": "Quitar acceso detiene ese dispositivo. Si entró con una contraseña para ver, esa contraseña deja de funcionar también, en todos los dispositivos.",
+    "viewers_remove_confirm": "¿Dejar de mostrar a {name} y quitar su acceso?",
+    "picture": "Imagen",
+    "picture_standard": "Estándar (720p)",
+    "picture_sharper": "Más nítida (1080p), para texto pequeño",
     "password_label": "Contraseña para ver",
     "password_go": "Ver",
     "password_wrong": "Esa contraseña para ver no es correcta.",

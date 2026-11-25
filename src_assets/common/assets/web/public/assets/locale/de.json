@@ -1307,6 +1307,11 @@
         "how": "Lege auf der Seite „Zuschauen“ ein Zuschau-Passwort für jemanden an. Öffne auf einem nicht angemeldeten Tablet die Seite „Zuschauen“ und gib es ein. Gib dann auf einem anderen Gerät fünfmal ein falsches ein.",
         "expect": "Das Tablet schaut ohne Link zu. Das Passwort funktioniert auch an späteren Tagen. Nach fünf Fehlversuchen soll das Gerät zehn Minuten warten. Entfernen des Passworts unter Zugriffstoken beendet auch das Tablet."
       },
+      "watchers": {
+        "title": "Wer zuschaut",
+        "how": "Während jemand über Zuschau-Link oder -Passwort zuschaut, öffne am PC angemeldet „Zuschauen“. Stell „Bild“ auf „Schärfer“ und wähle dann „Zugriff entfernen“ für diese Person.",
+        "expect": "Die Liste zeigt Name und Gerät. Ihr Bild kommt nach ein paar Sekunden schärfer zurück. Nach „Zugriff entfernen“ stoppt ihr Gerät und fragt nach einem neuen Link oder Passwort."
+      },
       "sharescreen": {
         "title": "Meinen Bildschirm teilen",
         "how": "Öffne, während kein Fernseher streamt, am PC „Zuschauen“, teile deinen Bildschirm für 1 Stunde und öffne einen Zuschau-Link auf einem Tablet. Starte dann einen Stream am Fernseher, beende ihn und wähle zum Schluss „Teilen beenden“.",
@@ -1377,6 +1382,15 @@
     "screen_failed": "Das Teilen konnte nicht geändert werden.",
     "need_link": "Dieses Gerät kann noch nicht zuschauen. Öffne einen neuen Zuschau-Link von der Person, die teilt, oder melde dich an.",
     "sign_in": "Anmelden",
+    "viewers_title": "Schauen gerade zu",
+    "viewers_none": "Niemand schaut zu.",
+    "viewers_since": "seit {time}",
+    "viewers_remove": "Zugriff entfernen",
+    "viewers_remove_desc": "„Zugriff entfernen“ beendet das Zuschauen auf diesem Gerät. Kam es mit einem Zuschau-Passwort herein, funktioniert dieses Passwort auch nicht mehr, auf keinem Gerät.",
+    "viewers_remove_confirm": "{name} das Zuschauen beenden und den Zugriff entfernen?",
+    "picture": "Bild",
+    "picture_standard": "Standard (720p)",
+    "picture_sharper": "Schärfer (1080p), für kleine Schrift",
     "password_label": "Zuschau-Passwort",
     "password_go": "Zuschauen",
     "password_wrong": "Das Zuschau-Passwort stimmt nicht.",

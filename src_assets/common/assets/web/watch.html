@@ -206,6 +206,26 @@
       <p class="small text-danger mt-2 mb-0" v-if="sharingError" role="alert">{{ sharingError }}</p>
     </section>
 
+    <!-- Who is watching, and the picture: only with the password -->
+    <section class="watch-share" v-if="!token && signedIn" aria-labelledby="viewers-title">
+      <h2 class="h6" id="viewers-title"><i class="fas fa-users" aria-hidden="true"></i> {{ $t('watch.viewers_title') }}</h2>
+      <p class="mb-2" v-if="!viewerList.length">{{ $t('watch.viewers_none') }}</p>
+      <ul class="list-unstyled mb-2" v-else>
+        <li v-for="v in viewerList" :key="v.id" class="d-flex flex-wrap align-items-center gap-2 py-1">
+          <span class="flex-grow-1">{{ v.name }} <span class="text-muted small">{{ $t('watch.viewers_since', { time: new Date(v.since * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) }) }}</span></span>
+          <button v-if="!v.signedIn" type="button" class="btn btn-sm btn-outline-danger" @click="removeViewer(v)">{{ $t('watch.viewers_remove') }}</button>
+        </li>
+      </ul>
+      <p class="small text-muted mb-3" v-if="viewerList.some((v) => !v.signedIn)">{{ $t('watch.viewers_remove_desc') }}</p>
+      <div class="d-flex flex-wrap gap-2 align-items-center">
+        <label for="watch-picture" class="mb-0">{{ $t('watch.picture') }}</label>
+        <select id="watch-picture" class="form-select form-select-sm w-auto" :value="sharper ? 'sharper' : 'standard'" @change="setPicture($event.target.value === 'sharper')">
+          <option value="standard">{{ $t('watch.picture_standard') }}</option>
+          <option value="sharper">{{ $t('watch.picture_sharper') }}</option>
+        </select>
+      </div>
+    </section>
+
     <!-- Watch passwords: don't change, for devices that come back often -->
     <section class="watch-share" v-if="!token && signedIn" aria-labelledby="pw-title">
       <h2 class="h6" id="pw-title"><i class="fas fa-key" aria-hidden="true"></i> {{ $t('watch.passwords_title') }}</h2>
@@ -262,6 +282,8 @@
           watchPassword: '',
           passwordBusy: false,
           passwordError: '',
+          viewerList: [],
+          sharper: false,
           newPasswordName: '',
           newPassword: '',
           passwordMade: '',
@@ -307,11 +329,13 @@
         this.loadApp()
         this.loadMonitors()
         this.appTimer = setInterval(() => this.loadApp(), 15000)
+        this.viewerTimer = setInterval(() => this.loadViewers(), 5000)
       },
       beforeUnmount() {
         this.stopped = true
         clearInterval(this.appTimer)
         clearInterval(this.keyTimer)
+        clearInterval(this.viewerTimer)
       },
       methods: {
         storedKey() {
@@ -349,6 +373,34 @@
             }
           }
           this.keyTimer = setInterval(() => this.rotateKey(false), 3600 * 1000)
+        },
+        async loadViewers() {
+          if (this.token || !this.signedIn) return
+          try {
+            const r = await fetch('./api/watch/viewers', { credentials: 'include' }).then((r) => r.ok ? r.json() : null)
+            if (!r) return
+            this.viewerList = r.viewers || []
+            this.sharper = !!r.sharper
+          } catch (e) { /* tried again shortly */ }
+        },
+        async removeViewer(v) {
+          if (!confirm(this.$t('watch.viewers_remove_confirm', { name: v.name }))) return
+          try {
+            const r = await fetch('./api/watch/viewers/remove', {
+              credentials: 'include', method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ id: v.id }),
+            }).then((r) => r.json())
+            this.viewerList = r.viewers || []
+          } catch (e) { this.loadViewers() }
+        },
+        async setPicture(on) {
+          try {
+            const r = await fetch('./api/watch/quality', {
+              credentials: 'include', method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ sharper: on }),
+            }).then((r) => r.json())
+            this.sharper = !!r.sharper
+          } catch (e) { this.loadViewers() }
         },
         async usePassword() {
           this.passwordBusy = true
@@ -433,7 +485,11 @@
           try {
             const s = await fetch('./api/status', { credentials: 'include', headers: this.authHeaders() }).then((r) => r.ok ? r.json() : null)
             this.app = (s && s.app) || ''
-            if (!this.token) this.signedIn = !!s
+            if (!this.token) {
+              const first = !this.signedIn && !!s
+              this.signedIn = !!s
+              if (first) this.loadViewers()
+            }
             this.showingScreen = !!(s && s.sharingScreen && s.sharingScreen.showingScreen)
             if (!this.token) this.sharing = (s && s.sharingScreen) || null
           } catch (e) { /* keep the last name */ }

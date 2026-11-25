@@ -100,7 +100,9 @@ and every step was tightened:
   or phone on your network, view only and a moment behind the TV. *Share a watch link* gives someone else a link
   that works once, within a day, and opens nothing but the picture. The device that opens it keeps watching
   with its own key, which changes every day and stops working after a week unused. For someone who comes back often, a
-  *watch password* doesn't change: typed on the Watch page, it lets that device watch the same way.
+  *watch password* doesn't change: typed on the Watch page, it lets that device watch the same way. Signed in, the
+  Watch page lists who is watching, by name and device, with *Remove access* for each, and a *Sharper (1080p)*
+  picture for small text.
 - **Share my screen.** On the Watch page, choose to share one of the PC's own screens for an hour or a few, so someone can
   watch you play at the desk on a tablet or phone. The home page and the tray say while it's on, a TV's stream takes
   over while it plays, and it turns itself off when the time is up.

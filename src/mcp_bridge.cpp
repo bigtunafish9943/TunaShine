@@ -210,6 +210,12 @@ namespace mcp_bridge {
                          return from_reply(call("GET", "/api/status"));
                        }});
 
+      tools.push_back({"who_is_watching", "status",
+                       "Who is watching in a browser right now (the Watch page), by name and device, and since when.",
+                       object_schema(), [](const json &) {
+                         return from_reply(call("GET", "/api/watch/viewers"));
+                       }});
+
       tools.push_back({"list_devices", "status", "The devices (TVs, phones, tablets) paired with TunaStream, and which are connected now.",
                        object_schema(), [](const json &) {
                          return from_reply(call("GET", "/api/clients/list"), [](const json &j) {

@@ -1307,6 +1307,11 @@
         "how": "Sur la page Regarder, créez un mot de passe pour quelqu'un. Sur une tablette non connectée, ouvrez la page Regarder et saisissez-le. Puis saisissez-en un faux cinq fois sur un autre appareil.",
         "expect": "La tablette regarde sans lien. Le mot de passe marche encore les jours suivants. Après cinq erreurs, l'appareil doit attendre dix minutes. Supprimer le mot de passe dans Jetons d'accès arrête aussi la tablette."
       },
+      "watchers": {
+        "title": "Qui regarde",
+        "how": "Pendant que quelqu'un regarde avec un lien ou un mot de passe, ouvrez Regarder sur le PC, connecté. Passez Image à Plus nette, puis choisissez Retirer l'accès pour cette personne.",
+        "expect": "La liste l'affiche par nom et appareil. Son image revient plus nette après quelques secondes. Après Retirer l'accès, son appareil s'arrête et demande un nouveau lien ou mot de passe."
+      },
       "sharescreen": {
         "title": "Partager mon écran",
         "how": "Sans stream sur la télé, ouvrez Regarder sur le PC, partagez votre écran pendant 1 heure et ouvrez un lien pour regarder sur une tablette. Lancez ensuite un stream sur la télé, terminez-le, puis choisissez Arrêter le partage.",
@@ -1377,6 +1382,15 @@
     "screen_failed": "Le partage n'a pas pu être modifié.",
     "need_link": "Cet appareil ne peut pas encore regarder. Ouvrez un nouveau lien pour regarder envoyé par la personne qui partage, ou connectez-vous.",
     "sign_in": "Se connecter",
+    "viewers_title": "Regardent en ce moment",
+    "viewers_none": "Personne ne regarde.",
+    "viewers_since": "depuis {time}",
+    "viewers_remove": "Retirer l'accès",
+    "viewers_remove_desc": "Retirer l'accès arrête cet appareil. S'il est entré avec un mot de passe pour regarder, ce mot de passe cesse aussi de fonctionner, sur tous les appareils.",
+    "viewers_remove_confirm": "Arrêter {name} et retirer son accès ?",
+    "picture": "Image",
+    "picture_standard": "Standard (720p)",
+    "picture_sharper": "Plus nette (1080p), pour les petits textes",
     "password_label": "Mot de passe pour regarder",
     "password_go": "Regarder",
     "password_wrong": "Ce mot de passe pour regarder n'est pas le bon.",
