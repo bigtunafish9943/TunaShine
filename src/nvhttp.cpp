@@ -1215,7 +1215,8 @@ namespace nvhttp {
     if (std::string why; !play_limits::may_stream(named_cert_p->name, why)) {
       BOOST_LOG(info) << "Stream refused for "sv << named_cert_p->name << ": "sv << why;
       tree.put("root.resume", 0);
-      tree.put("root.<xmlattr>.status_code", 403);
+      // 429: TunaReceive explains it as play time being up, rather than a permission problem
+      tree.put("root.<xmlattr>.status_code", 429);
       tree.put("root.<xmlattr>.status_message", why);
       return;
     }
@@ -1407,7 +1408,8 @@ namespace nvhttp {
     if (std::string why; !play_limits::may_stream(named_cert_p->name, why)) {
       BOOST_LOG(info) << "Stream refused for "sv << named_cert_p->name << ": "sv << why;
       tree.put("root.resume", 0);
-      tree.put("root.<xmlattr>.status_code", 403);
+      // 429: TunaReceive explains it as play time being up, rather than a permission problem
+      tree.put("root.<xmlattr>.status_code", 429);
       tree.put("root.<xmlattr>.status_message", why);
       return;
     }
