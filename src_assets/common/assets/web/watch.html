@@ -299,6 +299,7 @@
               const r = await fetch('./api/watch/redeem', { method: 'POST', headers: { Authorization: 'Bearer ' + invite } }).then((r) => r.json())
               if (r.status && r.key) {
                 this.storeKey(r.key)
+                this.token = r.key  // even where this browser can't keep it
               } else if (!this.storedKey()) {
                 this.linkProblem = r.error || ''
               }
