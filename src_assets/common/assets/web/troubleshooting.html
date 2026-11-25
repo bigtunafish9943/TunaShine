@@ -242,6 +242,7 @@
   <script type="module">
     import { createApp } from 'vue'
     import { initApp } from './init'
+    import { reloadWhenBack } from './restart'
     import Navbar from './Navbar.vue'
 
     const app = createApp({
@@ -528,31 +529,18 @@
         },
         restart() {
           this.serverRestarting = true;
-          setTimeout(() => {
-            this.serverRestarting = false;
-          }, 5000);
           fetch("./api/restart", {
             credentials: 'include',
             method: 'POST',
             headers: {
               'Content-Type': 'application/json'
             }
-          })
-          .then((resp) => {
-            if (resp.status !== 200) {
-              setTimeout(() => {
-                location.reload();
-              }, 1000);
-              return;
-            }
-          })
-          .catch((e) => {
-            this.serverRestarting = false
-            console.error(e);
-            setTimeout(() => {
-              location.reload();
-            }, 1000);
-            return;
+          }).catch(() => {
+            // The connection drops as TunaStream restarts; expected
+          });
+          // Reloads once TunaStream is back, instead of into "This site can't be reached"
+          reloadWhenBack().then((back) => {
+            if (!back) this.serverRestarting = false;
           });
         },
         quit() {

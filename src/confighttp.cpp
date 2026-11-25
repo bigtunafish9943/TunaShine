@@ -79,9 +79,103 @@ namespace confighttp {
     REMOVE  ///< Remove client
   };
 
-  // SESSION COOKIE
-  std::string sessionCookie;
-  static std::chrono::time_point<std::chrono::steady_clock> cookie_creation_time;
+  /**
+   * Signed-in browsers. Each sign-in gets its own cookie, so signing in on the phone doesn't
+   * sign out the PC's browser, and they are kept in the config folder (as salted hashes, never
+   * the cookies themselves) so a restart (Save and Apply, an update) doesn't sign anyone out.
+   */
+  namespace web_sessions {
+    struct session_t {
+      std::string hash;
+      std::int64_t created;  // seconds since 1970
+    };
+
+    constexpr std::size_t MAX_SESSIONS = 20;
+    std::mutex lock;
+    std::vector<session_t> sessions;
+    bool loaded = false;
+
+    std::filesystem::path file() {
+      return platf::appdata() / "web_sessions.json";
+    }
+
+    std::int64_t now_s() {
+      return std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    }
+
+    // With the lock held
+    void save() {
+      nlohmann::json list = nlohmann::json::array();
+      for (const auto &s : sessions) {
+        list.push_back({{"hash", s.hash}, {"created", s.created}});
+      }
+      std::error_code ec;
+      const auto path = file();
+      auto partial = path;
+      partial += ".part";
+      {
+        std::ofstream out {partial, std::ios::trunc};
+        out << list.dump();
+        if (!out) {
+          return;
+        }
+      }
+      std::filesystem::rename(partial, path, ec);
+    }
+
+    // With the lock held: read them once, and drop expired ones
+    void prepare() {
+      if (!loaded) {
+        loaded = true;
+        std::ifstream in {file()};
+        if (in) {
+          try {
+            auto list = nlohmann::json::parse(in);
+            for (const auto &s : list) {
+              sessions.push_back({s.value("hash", ""), s.value("created", (std::int64_t) 0)});
+            }
+          } catch (...) {
+            sessions.clear();
+          }
+        }
+      }
+      const auto oldest = now_s() - std::chrono::duration_cast<std::chrono::seconds>(SESSION_EXPIRE_DURATION).count();
+      const auto before = sessions.size();
+      std::erase_if(sessions, [&](const session_t &s) {
+        return s.hash.empty() || s.created < oldest;
+      });
+      if (sessions.size() != before) {
+        save();
+      }
+    }
+
+    bool valid(const std::string &hash) {
+      std::lock_guard lg {lock};
+      prepare();
+      return std::any_of(sessions.begin(), sessions.end(), [&](const session_t &s) {
+        return s.hash == hash;
+      });
+    }
+
+    void add(const std::string &hash) {
+      std::lock_guard lg {lock};
+      prepare();
+      sessions.push_back({hash, now_s()});
+      // The oldest sign-ins give way beyond the limit
+      while (sessions.size() > MAX_SESSIONS) {
+        sessions.erase(sessions.begin());
+      }
+      save();
+    }
+
+    /// Everyone signs in again (the password changed)
+    void clear() {
+      std::lock_guard lg {lock};
+      prepare();
+      sessions.clear();
+      save();
+    }
+  }  // namespace web_sessions
 
   /**
    * @brief Log the request details.
@@ -213,19 +307,12 @@ namespace confighttp {
         send_unauthorized(response, request);
       }
     });
-    if (sessionCookie.empty())
-      return false;
-    // Check for expiry
-    if (std::chrono::steady_clock::now() - cookie_creation_time > SESSION_EXPIRE_DURATION) {
-      sessionCookie.clear();
-      return false;
-    }
     auto cookies = request->header.find("cookie");
     if (cookies == request->header.end())
       return false;
     auto authCookie = getCookieValue(cookies->second, "auth");
     if (authCookie.empty() ||
-        util::hex(crypto::hash(authCookie + config::tunastream.salt)).to_string() != sessionCookie)
+        !web_sessions::valid(util::hex(crypto::hash(authCookie + config::tunastream.salt)).to_string()))
       return false;
     fg.disable();
     return true;
@@ -2127,7 +2214,7 @@ namespace confighttp {
           else {
             http::save_user_creds(config::tunastream.credentials_file, newUsername, newPassword);
             http::reload_user_creds(config::tunastream.credentials_file);
-            sessionCookie.clear(); // force re-login
+            web_sessions::clear();  // everyone signs in with the new password
             output_tree["status"] = true;
           }
         } else {
@@ -2534,10 +2621,9 @@ namespace confighttp {
       if (!boost::iequals(username, config::tunastream.username) || hash != config::tunastream.password)
         return;
       std::string sessionCookieRaw = crypto::rand_alphabet(64);
-      sessionCookie = util::hex(crypto::hash(sessionCookieRaw + config::tunastream.salt)).to_string();
-      cookie_creation_time = std::chrono::steady_clock::now();
+      web_sessions::add(util::hex(crypto::hash(sessionCookieRaw + config::tunastream.salt)).to_string());
       const SimpleWeb::CaseInsensitiveMultimap headers {
-        { "Set-Cookie", "auth=" + sessionCookieRaw + "; Secure; SameSite=Strict; Max-Age=2592000; Path=/" }
+        { "Set-Cookie", "auth=" + sessionCookieRaw + "; Secure; SameSite=Strict; Max-Age=1296000; Path=/" }
       };
       response->write(headers);
       fg.disable();

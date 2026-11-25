@@ -477,7 +477,7 @@
     "qsv_preset_veryfast": "fastest (lowest quality)",
     "qsv_slow_hevc": "Allow Slow HEVC Encoding",
     "qsv_slow_hevc_desc": "This can enable HEVC encoding on older Intel GPUs, at the cost of higher GPU usage and worse performance.",
-    "restart_note": "TunaStream is restarting to apply changes.",
+    "restart_note": "TunaStream is restarting to apply your changes. This page comes back by itself in a few seconds.",
     "run_setup": "Run setup again",
     "screen_driver_detail": "Display driver status: {status}",
     "screen_intro": "When a device starts streaming, TunaStream makes a screen just for it. It is like plugging in an extra monitor that only that device can see.",
@@ -551,7 +551,13 @@
     "wan_encryption_mode_1": "Enabled for supported clients (default)",
     "wan_encryption_mode_2": "Required for all clients",
     "wan_encryption_mode_desc": "Encrypting stops others from seeing the stream as it crosses the internet. Leave it on.",
-    "nvenc_preset_auto": "Automatic (default): P5 on RTX 40 and 50 series cards (P4 above 1440p unless frames are split), P1 on older cards"
+    "nvenc_preset_auto": "Automatic (default): P5 on RTX 40 and 50 series cards (P4 above 1440p unless frames are split), P1 on older cards",
+    "ui_theme_seasonal_off": "Seasonal themes is now off, so your pick shows instead of {season}. Turn it back on below to wear the seasons again. Save keeps it.",
+    "ui_theme_halloween": "Halloween",
+    "ui_theme_autumn": "Autumn",
+    "ui_theme_winter": "Winter",
+    "ui_theme_summer": "Summer",
+    "restart_slow": "TunaStream is taking longer than usual to restart. Reload this page in a moment; if it doesn't come back, check that TunaStream is running on the PC."
   },
   "index": {
     "controller_hint": "What games see this controller as. Most PC games only rumble an Xbox 360 controller; change it under Configuration > Input > Emulated Gamepad Type.",
