@@ -144,8 +144,20 @@ namespace nvenc {
     if (allow_split && config.split_frame && client_config.videoFormat >= 1 && !config.weighted_prediction &&
         (std::uint64_t) client_config.width * client_config.height > 2560ull * 1440ull &&
         api_at_least(driver_api_version, 12, 1)) {
+      const auto legacy = minimum_api_version;
       minimum_api_version = NVENCAPI_VERSION;
-      split_attempted = true;
+      // The function list has to be made for the session's API version
+      if (function_list_api == minimum_api_version || create_function_list()) {
+        split_attempted = true;
+      } else {
+        minimum_api_version = legacy;
+      }
+    }
+
+    // A session at an older API version needs a function list made for that version
+    if (function_list_api != minimum_api_version && !create_function_list()) {
+      BOOST_LOG(error) << "NvEnc: couldn't prepare the encoder for this API version";
+      return false;
     }
 
     if (encoder) {
@@ -244,7 +256,8 @@ namespace nvenc {
     }
 
     if (buffer_is_yuv444() && !get_encoder_cap(NV_ENC_CAPS_SUPPORT_YUV444_ENCODE)) {
-      BOOST_LOG(error) << "NvEnc: gpu doesn't support YUV444 encode";
+      // Expected while the encoders are probed at start-up (AV1 has no 4:4:4 on most cards)
+      BOOST_LOG(info) << "NvEnc: this graphics card can't encode YUV 4:4:4 in this format";
       return false;
     }
 
@@ -537,7 +550,9 @@ namespace nvenc {
     if (encoder && async_event_handle) {
       NV_ENC_EVENT_PARAMS event_params = {min_struct_version(NV_ENC_EVENT_PARAMS_VER)};
       event_params.completionEvent = async_event_handle;
-      if (nvenc_failed(nvenc->nvEncUnregisterAsyncEvent(encoder, &event_params))) {
+      // An encoder that never finished setting up has no device left to unregister from
+      const auto status = nvenc->nvEncUnregisterAsyncEvent(encoder, &event_params);
+      if (status != NV_ENC_ERR_DEVICE_NOT_EXIST && nvenc_failed(status)) {
         BOOST_LOG(error) << "NvEnc: NvEncUnregisterAsyncEvent() failed: " << last_nvenc_error_string;
       }
     }

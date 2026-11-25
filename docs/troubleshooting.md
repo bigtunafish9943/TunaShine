@@ -34,15 +34,20 @@ virtual gamepad.
 
 ### 8BitDo Ultimate 2
 
-- **On an Android TV box (such as the NVIDIA Shield), connect it over Bluetooth in D mode.** Its 2.4G adapter is
-  meant for Windows PCs: plugged into a TV box it is detected but doesn't control anything.
-- Over Bluetooth, some Android TV boxes don't pass rumble to 8BitDo controllers. **Rumble now** on the
-  Troubleshooting page shows whether yours does.
+- **On an Android TV box (such as the NVIDIA Shield), use TunaReceive with the 2.4G adapter.** Android can read
+  this controller through its adapter but can't rumble it, so during a stream TunaReceive drives the adapter
+  itself: rumble, motion and the battery level all work. In other client apps the adapter gives buttons only.
+- **Rumble needs controller firmware 1.03 or later.** Update it with 8BitDo Ultimate Software on a PC.
+  TunaReceive's *Check my controller* says when the firmware is too old.
+- **If the controller does nothing at all**, unplug the adapter and plug it back in. With the switch in Xbox
+  mode, TunaReceive sends the start-up message Windows does; without it some adapters stay silent.
+- **Over Bluetooth**, Android doesn't pass rumble to 8BitDo controllers
+  ([moonlight-android#1442](https://github.com/moonlight-stream/moonlight-android/issues/1442)), so use the
+  adapter where you can.
 - **Pick "Xbox-style controller" in setup**, or set the controller type to **Xbox 360**. Its gyro used to make
   automatic mode choose a PlayStation 4 controller.
 - **Back paddles and L4/R4** reach the PC only as the buttons they're mapped to. Map them to existing buttons in
   8BitDo Ultimate Software if you want them in games.
-- **Update its firmware** with 8BitDo Ultimate Software; rumble and connection fixes arrive that way.
 
 ## The connection
 

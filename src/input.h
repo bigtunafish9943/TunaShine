@@ -34,6 +34,8 @@ namespace input {
     std::string device;  ///< Name of the paired device it belongs to
     int controller;  ///< The device's own number for it, starting at 0
     std::string emulated;  ///< What games see it as, such as "Xbox 360"
+    int battery = -1;  ///< Percent the device last reported, or -1 when it hasn't
+    bool charging = false;  ///< Whether the device said it's charging
   };
 
   /// Controllers currently connected by streaming devices, in the order they connected.

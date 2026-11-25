@@ -47,7 +47,7 @@
   <div class="update-banner" v-if="updateVersion && !dismissed" role="status">
     <i class="fas fa-circle-arrow-up" aria-hidden="true"></i>
     <span class="update-banner-text">{{ $t('navbar.update_banner', { version: updateVersion }) }}</span>
-    <a class="btn btn-sm btn-primary" href="./#update">{{ $t('navbar.update_banner_action') }}</a>
+    <a class="btn btn-sm btn-primary" href="./#update-now">{{ $t('navbar.update_banner_action') }}</a>
     <button type="button" class="update-banner-close" @click="dismiss" :aria-label="$t('navbar.update_banner_close')" :title="$t('navbar.update_banner_close')">
       <i class="fas fa-xmark" aria-hidden="true"></i>
     </button>

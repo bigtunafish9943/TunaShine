@@ -31,6 +31,7 @@ extern "C" {
 #include "logging.h"
 #include "network.h"
 #include "platform/common.h"
+#include "play_history.h"
 #include "process.h"
 #include "stream.h"
 #include "sync.h"
@@ -450,6 +451,12 @@ namespace stream {
       std::deque<std::chrono::steady_clock::time_point> recoveries;
       std::chrono::steady_clock::time_point first_frame;
       std::chrono::steady_clock::time_point last_log;
+
+      // For the weekly recap: when it started, and a sample each minute
+      std::chrono::system_clock::time_point started_wall;
+      int minutes = 0;
+      int smooth_minutes = 0;
+      double fps_sum = 0;
       std::atomic_int send_rate_mbps {0};
       std::atomic_int bitrate_kbps {0};  // current bitrate, once it has been changed mid-stream
       std::atomic_int fec_percent {0};  // error correction being added to each frame right now
@@ -1486,6 +1493,7 @@ namespace stream {
     if (h.samples.empty() && h.first_frame == std::chrono::steady_clock::time_point {}) {
       h.first_frame = now;
       h.last_log = now;
+      h.started_wall = std::chrono::system_clock::now();
     }
 
     h.samples.push_back({
@@ -1506,6 +1514,12 @@ namespace stream {
     if (now - h.last_log >= 60s) {
       h.last_log = now;
       auto s = summarise_health(session);
+      // A smooth minute: no lost video, and (when the device says) few frames late or lost
+      ++h.minutes;
+      h.fps_sum += s.fps;
+      if (s.recoveries == 0 && (!s.view.known || (s.view.slow_pct < 5 && s.view.loss_pct < 1))) {
+        ++h.smooth_minutes;
+      }
       BOOST_LOG(info) << "Stream health for "sv << s.device << ": "sv
                       << std::fixed << std::setprecision(1) << s.fps << " of "sv << s.target_fps << " fps, "sv
                       << s.skipped_per_sec << " game frames skipped/s, "sv
@@ -2461,6 +2475,31 @@ namespace stream {
         });
 
         exec_thread.detach();
+      }
+
+      // Keep a record of the stream for the weekly recap
+      {
+        play_history::stream_t played;
+        {
+          std::lock_guard lg {session.health.lock};
+          const auto &h = session.health;
+          if (h.first_frame != std::chrono::steady_clock::time_point {}) {
+            played.started = std::chrono::duration_cast<std::chrono::seconds>(h.started_wall.time_since_epoch()).count();
+            played.seconds = (int) std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - h.first_frame).count();
+            played.minutes = h.minutes;
+            played.smooth_minutes = h.smooth_minutes;
+            played.avg_fps = h.minutes ? h.fps_sum / h.minutes : 0;
+          }
+        }
+        played.device = session.device_name;
+        played.app = proc::proc.get_last_run_app_name();
+        played.target_fps = session.config.monitor.framerate;
+        played.lost_video = (int) session.loss_events.load();
+        try {
+          play_history::record(played);
+        } catch (const std::exception &e) {
+          BOOST_LOG(warning) << "Couldn't add the stream to the play history: "sv << e.what();
+        }
       }
 
       // If this is the last session, invoke the platform callbacks

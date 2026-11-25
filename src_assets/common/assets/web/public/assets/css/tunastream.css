@@ -12,6 +12,10 @@
     --ts-accent-soft: #8be6fc;
     --ts-blue: #0b74d1;
     --ts-foam: #eef5fb;
+    --ts-accent-rgb: 12, 200, 246;
+    --ts-accent-hover: #4dd8fa;
+    --ts-accent-active: #09b0da;
+    --ts-outline: #3a5a86;
     --ts-display: "Bahnschrift", "DIN Alternate", "Avenir Next", "Segoe UI Variable Display", system-ui, sans-serif;
     --bs-border-radius: 0.5rem;
     --bs-border-radius-lg: 0.75rem;
@@ -184,7 +188,7 @@ body .form-control:focus,
 body .form-select:focus,
 body .form-check-input:focus {
     border-color: var(--ts-accent);
-    box-shadow: 0 0 0 0.2rem rgba(12, 200, 246, 0.35);
+    box-shadow: 0 0 0 0.2rem rgba(var(--ts-accent-rgb), 0.35);
 }
 
 body .form-check-input:checked {
@@ -206,11 +210,11 @@ body .btn-primary {
     --bs-btn-bg: var(--ts-accent);
     --bs-btn-border-color: var(--ts-accent);
     --bs-btn-hover-color: var(--ts-navy);
-    --bs-btn-hover-bg: #4dd8fa;
-    --bs-btn-hover-border-color: #4dd8fa;
+    --bs-btn-hover-bg: var(--ts-accent-hover);
+    --bs-btn-hover-border-color: var(--ts-accent-hover);
     --bs-btn-active-color: var(--ts-navy);
-    --bs-btn-active-bg: #09b0da;
-    --bs-btn-active-border-color: #09b0da;
+    --bs-btn-active-bg: var(--ts-accent-active);
+    --bs-btn-active-border-color: var(--ts-accent-active);
     --bs-btn-disabled-color: var(--ts-navy);
     --bs-btn-disabled-bg: var(--ts-accent);
     --bs-btn-disabled-border-color: var(--ts-accent);
@@ -498,7 +502,7 @@ body .auth-card {
 
 .app-row.app-running {
     border-left-color: var(--ts-accent);
-    background-color: rgba(12, 200, 246, 0.06);
+    background-color: rgba(var(--ts-accent-rgb), 0.06);
 }
 
 .app-row.dragover {
@@ -562,11 +566,11 @@ body .auth-card {
 
 /* Outline buttons read too faintly on the dark navy */
 html[data-bs-theme=dark] body .btn-outline-secondary {
-    --bs-btn-color: #c3d3e6;
-    --bs-btn-border-color: #3a5a86;
+    --bs-btn-color: var(--bs-body-color);
+    --bs-btn-border-color: var(--ts-outline);
     --bs-btn-hover-color: #ffffff;
-    --bs-btn-hover-bg: #17335f;
-    --bs-btn-hover-border-color: #4d6f9c;
+    --bs-btn-hover-bg: var(--bs-border-color);
+    --bs-btn-hover-border-color: var(--ts-outline);
 }
 
 .app-list-footer {
@@ -647,6 +651,20 @@ html[data-bs-theme=dark] body .btn-outline-secondary {
 
 .home-controller i {
     color: var(--ts-accent);
+}
+
+.home-battery {
+    margin-left: 0.35rem;
+    color: var(--bs-secondary-color);
+}
+
+.home-battery i {
+    color: inherit;
+}
+
+.home-battery-low {
+    color: var(--bs-danger-text-emphasis);
+    font-weight: 600;
 }
 
 /* ---------- Main navigation as a sidebar on wide screens ----------
@@ -1098,13 +1116,13 @@ body .btn-secondary {
 }
 
 body .btn-success {
-    --bs-btn-bg: rgba(12, 200, 246, 0.14);
+    --bs-btn-bg: rgba(var(--ts-accent-rgb), 0.14);
     --bs-btn-color: var(--ts-accent-soft);
     --bs-btn-hover-bg: var(--ts-accent);
     --bs-btn-hover-color: var(--ts-navy);
-    --bs-btn-active-bg: #09b0da;
+    --bs-btn-active-bg: var(--ts-accent-active);
     --bs-btn-active-color: var(--ts-navy);
-    --bs-btn-disabled-bg: rgba(12, 200, 246, 0.08);
+    --bs-btn-disabled-bg: rgba(var(--ts-accent-rgb), 0.08);
     --bs-btn-disabled-color: var(--ts-accent-soft);
 }
 
@@ -1184,7 +1202,7 @@ html[data-bs-theme=light] body .card {
 }
 
 html[data-bs-theme=dark] body .card {
-    box-shadow: inset 0 1px 0 rgba(139, 230, 252, 0.05);
+    box-shadow: inset 0 1px 0 rgba(var(--ts-accent-rgb), 0.05);
 }
 
 /* Alerts: tinted panels rather than loud blocks */
@@ -1207,8 +1225,8 @@ html[data-bs-theme=dark] body .alert-danger {
 }
 
 html[data-bs-theme=dark] body .alert-info {
-    --bs-alert-bg: rgba(12, 200, 246, 0.08);
-    --bs-alert-border-color: rgba(12, 200, 246, 0.3);
+    --bs-alert-bg: rgba(var(--ts-accent-rgb), 0.08);
+    --bs-alert-border-color: rgba(var(--ts-accent-rgb), 0.3);
     --bs-alert-color: var(--ts-accent-soft);
 }
 
@@ -1229,8 +1247,8 @@ html[data-bs-theme=dark] body .alert-info {
 }
 
 .perm-badge.perm-full {
-    background: rgba(12, 200, 246, 0.12);
-    border-color: rgba(12, 200, 246, 0.4);
+    background: rgba(var(--ts-accent-rgb), 0.12);
+    border-color: rgba(var(--ts-accent-rgb), 0.4);
     color: var(--bs-link-color);
 }
 
@@ -1285,4 +1303,300 @@ html[data-bs-theme=dark] .perm-badge.perm-play {
     margin: 0.6rem 0 0;
     font-size: 0.82rem;
     opacity: 0.8;
+}
+
+/* ---------- Colour themes ----------
+   Chosen in Settings and worn by TunaReceive too. Deep Sea is the default above; each theme
+   below swaps the palette, and its dark-mode surfaces. Names match TunaReceive's. */
+html[data-ts-theme=reef] {
+    --ts-navy: #1a0a12;
+    --ts-deep: #3a1426;
+    --ts-accent: #ff7a59;
+    --ts-accent-soft: #ffb8a3;
+    --ts-blue: #e0457b;
+    --ts-accent-rgb: 255, 122, 89;
+    --ts-accent-hover: #ff9a80;
+    --ts-accent-active: #e8603f;
+    --ts-outline: #6b3550;
+}
+html[data-ts-theme=reef][data-bs-theme=dark] {
+    --bs-body-bg: #12060c;
+    --bs-body-color: #f1dfe5;
+    --bs-border-color: #4a2036;
+    --bs-tertiary-bg: #2a1220;
+    --ts-surface: #26101c;
+    --ts-surface-border: #4a2036;
+    --bs-link-color-rgb: 255, 184, 163;
+    --bs-link-hover-color-rgb: 255, 122, 89;
+}
+html[data-ts-theme=kelp] {
+    --ts-navy: #03140e;
+    --ts-deep: #0c3324;
+    --ts-accent: #5ee89a;
+    --ts-accent-soft: #b2f6cf;
+    --ts-blue: #23a86a;
+    --ts-accent-rgb: 94, 232, 154;
+    --ts-accent-hover: #8af0b6;
+    --ts-accent-active: #3fcf7d;
+    --ts-outline: #2f6650;
+}
+html[data-ts-theme=kelp][data-bs-theme=dark] {
+    --bs-body-bg: #020e0a;
+    --bs-body-color: #dcefe5;
+    --bs-border-color: #17402f;
+    --bs-tertiary-bg: #0c2a1f;
+    --ts-surface: #082319;
+    --ts-surface-border: #17402f;
+    --bs-link-color-rgb: 178, 246, 207;
+    --bs-link-hover-color-rgb: 94, 232, 154;
+}
+html[data-ts-theme=midnight] {
+    --ts-navy: #07060f;
+    --ts-deep: #1c1436;
+    --ts-accent: #b08cff;
+    --ts-accent-soft: #dccbff;
+    --ts-blue: #7651e0;
+    --ts-accent-rgb: 176, 140, 255;
+    --ts-accent-hover: #c7adff;
+    --ts-accent-active: #9369f0;
+    --ts-outline: #4b3c7a;
+}
+html[data-ts-theme=midnight][data-bs-theme=dark] {
+    --bs-body-bg: #050409;
+    --bs-body-color: #e6e1f5;
+    --bs-border-color: #2a2048;
+    --bs-tertiary-bg: #17112b;
+    --ts-surface: #120e24;
+    --ts-surface-border: #2a2048;
+    --bs-link-color-rgb: 220, 203, 255;
+    --bs-link-hover-color-rgb: 176, 140, 255;
+}
+html[data-ts-theme=gold] {
+    --ts-navy: #120d04;
+    --ts-deep: #33260a;
+    --ts-accent: #ffc23d;
+    --ts-accent-soft: #ffe2a3;
+    --ts-blue: #e3892a;
+    --ts-accent-rgb: 255, 194, 61;
+    --ts-accent-hover: #ffd474;
+    --ts-accent-active: #e8a91c;
+    --ts-outline: #6f5620;
+}
+html[data-ts-theme=gold][data-bs-theme=dark] {
+    --bs-body-bg: #0c0803;
+    --bs-body-color: #f1e9d4;
+    --bs-border-color: #43330f;
+    --bs-tertiary-bg: #261c07;
+    --ts-surface: #211806;
+    --ts-surface-border: #43330f;
+    --bs-link-color-rgb: 255, 226, 163;
+    --bs-link-hover-color-rgb: 255, 194, 61;
+}
+
+/* Settings: the theme picker */
+.ts-theme-picker {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+.ts-theme-swatch {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.55rem 0.9rem 0.55rem 0.6rem;
+    border: 1px solid var(--bs-border-color);
+    border-radius: 999px;
+    background: var(--ts-surface);
+    color: var(--bs-body-color);
+    cursor: pointer;
+}
+.ts-theme-swatch:hover {
+    border-color: var(--ts-outline);
+}
+.ts-theme-swatch.active {
+    border-color: var(--ts-accent);
+    box-shadow: 0 0 0 0.15rem rgba(var(--ts-accent-rgb), 0.35);
+}
+.ts-theme-swatch:focus-visible {
+    outline: 2px solid var(--ts-accent);
+    outline-offset: 2px;
+}
+.ts-theme-dots {
+    display: inline-flex;
+}
+.ts-theme-dots span {
+    width: 1.35rem;
+    height: 1.35rem;
+    border-radius: 50%;
+    border: 2px solid var(--ts-surface);
+}
+.ts-theme-dots span + span {
+    margin-left: -0.45rem;
+}
+
+/* ---------- The last seven days on the home page ---------- */
+.home-recap {
+    margin: 0 0 1.5rem;
+    padding: 1rem 1.4rem 1.2rem;
+    background-color: var(--ts-surface);
+    border: 1px solid var(--ts-surface-border);
+    border-radius: 0.75rem;
+}
+
+.home-recap-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.25rem 1rem;
+}
+
+.home-recap-head h2 {
+    margin: 0;
+}
+
+.home-recap-total {
+    margin: 0;
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+}
+
+.home-recap-hours {
+    font-size: 1.75rem;
+    font-weight: 700;
+    line-height: 1.1;
+    color: var(--bs-emphasis-color);
+    font-variant-numeric: tabular-nums;
+}
+
+.home-recap-sub,
+.home-recap-empty {
+    color: var(--bs-secondary-color);
+}
+
+.home-recap-empty {
+    margin: 0.5rem 0 0;
+}
+
+.home-recap-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 0.5rem;
+    margin: 1rem 0 1.25rem;
+}
+
+.home-recap-day {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.home-recap-bar-track {
+    position: relative;
+    width: 100%;
+    max-width: 2.75rem;
+    height: 4.5rem;
+    border-radius: 0.4rem;
+    background-color: var(--bs-tertiary-bg);
+    overflow: hidden;
+}
+
+.home-recap-bar {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: 0.4rem 0.4rem 0 0;
+    background-color: rgba(var(--ts-accent-rgb), 0.5);
+}
+
+.home-recap-today .home-recap-bar {
+    background-color: var(--ts-accent);
+}
+
+.home-recap-weekday {
+    font-size: 0.8rem;
+    color: var(--bs-secondary-color);
+}
+
+.home-recap-today .home-recap-weekday {
+    color: var(--bs-emphasis-color);
+    font-weight: 600;
+}
+
+.home-recap-columns {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+    gap: 1rem 2rem;
+}
+
+.home-recap-subtitle {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin: 0 0 0.5rem;
+    color: var(--bs-emphasis-color);
+}
+
+.home-recap-games {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.home-recap-games li {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    column-gap: 0.75rem;
+    padding: 0.2rem 0 0.45rem;
+}
+
+.home-recap-game {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.home-recap-game-time {
+    color: var(--bs-secondary-color);
+    font-variant-numeric: tabular-nums;
+}
+
+.home-recap-game-share {
+    grid-column: 1 / -1;
+    justify-self: start;
+    height: 3px;
+    margin-top: 0.25rem;
+    border-radius: 2px;
+    background-color: var(--ts-accent);
+}
+
+.home-recap-smooth {
+    margin: 0 0 0.5rem;
+}
+
+.home-recap-smooth-pct {
+    font-size: 1.35rem;
+    font-weight: 700;
+    margin-right: 0.25rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.home-recap-smooth-good {
+    color: var(--bs-success-text-emphasis);
+}
+
+.home-recap-smooth-fair {
+    color: var(--bs-warning-text-emphasis);
+}
+
+.home-recap-smooth-poor {
+    color: var(--bs-danger-text-emphasis);
+}
+
+.home-recap-facts {
+    margin: 0;
+    padding-left: 1.1rem;
+    color: var(--bs-secondary-color);
 }

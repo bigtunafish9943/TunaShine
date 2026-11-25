@@ -64,7 +64,37 @@ export function setupThemeToggleListener() {
     showActiveTheme(getPreferredTheme(), false)
 }
 
+const COLOUR_THEMES = ['deepsea', 'reef', 'kelp', 'midnight', 'gold']
+
+/**
+ * Wears a colour theme (Deep Sea, Coral Reef, ...). The choice is saved on the PC; it is also
+ * remembered in this browser so the next page opens in it straight away, before the PC answers.
+ */
+export function applyColourTheme(theme) {
+    if (!COLOUR_THEMES.includes(theme)) {
+        return
+    }
+    document.documentElement.setAttribute('data-ts-theme', theme)
+    try {
+        localStorage.setItem('tunastream.colourTheme', theme)
+    } catch (e) {
+        // Storage can be refused; the PC's answer still applies it
+    }
+}
+
+function applyRememberedColourTheme() {
+    try {
+        const theme = localStorage.getItem('tunastream.colourTheme')
+        if (COLOUR_THEMES.includes(theme)) {
+            document.documentElement.setAttribute('data-ts-theme', theme)
+        }
+    } catch (e) {
+        // No storage: the default until the PC answers
+    }
+}
+
 export function loadAutoTheme() {
+    applyRememberedColourTheme()
     setTheme(getPreferredTheme())
 
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {

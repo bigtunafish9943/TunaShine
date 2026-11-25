@@ -1,4 +1,5 @@
 import {createI18n} from "vue-i18n";
+import { applyColourTheme } from "./theme";
 
 // Import only the fallback language files
 import en from './public/assets/locale/en.json'
@@ -6,6 +7,8 @@ import en from './public/assets/locale/en.json'
 export default async function() {
     let r = await (await fetch("./api/configLocale", { credentials: 'include' })).json();
     let locale = r.locale ?? "en";
+    // The colour theme comes with the language, so every page wears it
+    applyColourTheme(r.theme);
     document.querySelector('html').setAttribute('lang', locale);
     let messages = {
         en

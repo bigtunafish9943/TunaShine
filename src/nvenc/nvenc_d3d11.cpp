@@ -44,6 +44,7 @@ namespace nvenc {
           BOOST_LOG(error) << "NvEnc: NvEncodeAPICreateInstance() failed: " << last_nvenc_error_string;
         } else {
           nvenc = std::move(new_nvenc);
+          function_list_api = minimum_api_version;
           // The newest API version the driver understands, reported as (major << 4) | minor
           if (auto get_max_version = (decltype(NvEncodeAPIGetMaxSupportedVersion) *) GetProcAddress(dll, "NvEncodeAPIGetMaxSupportedVersion")) {
             uint32_t max_version = 0;
@@ -67,6 +68,25 @@ namespace nvenc {
     }
 
     return false;
+  }
+
+  bool nvenc_d3d11::create_function_list() {
+    if (!dll) {
+      return false;
+    }
+    auto create_instance = (decltype(NvEncodeAPICreateInstance) *) GetProcAddress(dll, "NvEncodeAPICreateInstance");
+    if (!create_instance) {
+      return false;
+    }
+    auto new_nvenc = std::make_unique<NV_ENCODE_API_FUNCTION_LIST>();
+    new_nvenc->version = min_struct_version(NV_ENCODE_API_FUNCTION_LIST_VER);
+    if (nvenc_failed(create_instance(new_nvenc.get()))) {
+      BOOST_LOG(warning) << "NvEnc: NvEncodeAPICreateInstance() failed for another API version: " << last_nvenc_error_string;
+      return false;
+    }
+    nvenc = std::move(new_nvenc);
+    function_list_api = minimum_api_version;
+    return true;
   }
 
   bool nvenc_d3d11::wait_for_async_event(uint32_t timeout_ms) {

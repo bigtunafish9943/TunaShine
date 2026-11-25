@@ -36,6 +36,7 @@ namespace nvenc {
 
   protected:
     bool init_library() override;
+    bool create_function_list() override;
     bool wait_for_async_event(uint32_t timeout_ms) override;
 
   private:
