@@ -209,7 +209,9 @@ owes them a great deal:
   the virtual display support, per-device permissions and much more come from it.
 - [Sunshine](https://github.com/LizardByte/Sunshine) by LizardByte, the streaming host Apollo is built on.
 - [SudoVDA](https://github.com/SudoMaker/SudoVDA) by SudoMaker, the virtual display driver TunaStream installs.
-- [Moonlight](https://moonlight-stream.org), the open-source client TunaStream streams to, and the GameStream
-  protocol work behind it.
+- [Moonlight](https://moonlight-stream.org), whose open-source clients and work on the GameStream protocol
+  make streaming like this possible. TunaStream works with Moonlight on any device.
+- [Artemis](https://github.com/ClassicOldSong/moonlight-android) by ClassicOldSong, the Moonlight-based Android
+  client that [TunaReceive](https://github.com/bigtunafish9943/TunaReceive), TunaStream's own client, began as.
 
 Their authors and licenses are listed in [NOTICE](NOTICE).
