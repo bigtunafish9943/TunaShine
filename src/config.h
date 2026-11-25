@@ -176,6 +176,9 @@ namespace config {
     // Start at fec_percentage, then use less while the connection is clean and more while it isn't
     bool adaptive_fec;
 
+    // Keep the last 30 seconds of each stream so they can be saved as a clip (View + L1 on the TV)
+    bool instant_replay;
+
     // Peak rate video packets are sent at, in Mbps; 0 picks one from the stream's bitrate
     int video_send_rate;
 

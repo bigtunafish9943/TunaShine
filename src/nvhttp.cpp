@@ -1849,6 +1849,35 @@ namespace nvhttp {
   }
 
   /**
+   * Instant replay: GET /tuna/replay saves the last 30 seconds of this device's stream as a clip in
+   * the signed-in user's Videos\TunaStream folder. Answers {"saved", "name"} or {"saved": false, "reason"}.
+   */
+  void tunaReplay(resp_https_t response, req_https_t request) {
+    print_req<TunaStreamHTTPS>(request);
+    auto named_cert_p = get_verified_cert(request);
+    nlohmann::json out;
+    auto session = rtsp_stream::find_session(named_cert_p->uuid);
+    if (!session) {
+      out["saved"] = false;
+      out["reason"] = "not streaming";
+    } else {
+      std::string name;
+      auto error = stream::session::save_replay(*session, name);
+      out["saved"] = error.empty();
+      if (error.empty()) {
+        out["name"] = name;
+      } else {
+        out["reason"] = error;
+        BOOST_LOG(warning) << "Replay not saved: "sv << error;
+      }
+    }
+    SimpleWeb::CaseInsensitiveMultimap headers;
+    headers.emplace("Content-Type", "application/json");
+    response->write(SimpleWeb::StatusCode::success_ok, out.dump(), headers);
+    response->close_connection_after_response = true;
+  }
+
+  /**
    * A sound-board sound: GET /tuna/sound?name=. TunaReceive fetches it when the home page sends it.
    */
   void tunaSound(resp_https_t response, req_https_t request) {
@@ -2097,6 +2126,7 @@ namespace nvhttp {
     https_server.resource["^/tuna/report$"]["GET"] = tunaReport;
     https_server.resource["^/tuna/sound$"]["GET"] = tunaSound;
     https_server.resource["^/tuna/screenshot$"]["POST"] = tunaScreenshot;
+    https_server.resource["^/tuna/replay$"]["GET"] = tunaReplay;
     https_server.resource["^/tuna/vdisplay$"]["GET"] = tunaVdisplay;
     https_server.resource["^/tuna/vdisplay/repair$"]["GET"] = tunaVdisplay;
     https_server.resource["^/tuna/file$"]["GET"] = tunaFile;

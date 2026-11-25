@@ -5,6 +5,7 @@
 
 // standard includes
 #include <deque>
+#include <filesystem>
 #include <iomanip>
 #include <fstream>
 #include <future>
@@ -31,7 +32,9 @@ extern "C" {
 #include "logging.h"
 #include "network.h"
 #include "platform/common.h"
+#include "captures.h"
 #include "play_history.h"
+#include "replay.h"
 #include "process.h"
 #include "stream.h"
 #include "sync.h"
@@ -474,6 +477,9 @@ namespace stream {
 
     // Times the client asked for lost video to be repaired or resent
     std::atomic_uint32_t loss_events {0};
+
+    // The last 30 seconds, for instant replay (null when it's turned off)
+    std::unique_ptr<replay::buffer_t> replay;
 
     // Error correction that sizes itself (only touched by the video sending thread)
     struct {
@@ -1679,6 +1685,16 @@ namespace stream {
         }
       }
 
+      // Instant replay keeps a copy of each frame, and asks for a keyframe now and then
+      if (session->replay) {
+        const auto now = std::chrono::steady_clock::now();
+        session->replay->add_video(packet->frame_timestamp.value_or(now), packet->is_idr(),
+                                   (const std::uint8_t *) payload.data(), payload.size());
+        if (session->replay->wants_keyframe(now)) {
+          session->video.idr_events->raise(true);
+        }
+      }
+
       video_short_frame_header_t frame_header = {};
       frame_header.headerType = 0x01;  // Short header type
       frame_header.frameType = packet->is_idr()                     ? 2 :
@@ -2005,6 +2021,10 @@ namespace stream {
 
       TUPLE_2D_REF(channel_data, packet_data, *packet);
       auto session = (session_t *) channel_data;
+
+      if (session->replay) {
+        session->replay->add_audio(std::chrono::steady_clock::now(), (const std::uint8_t *) std::begin(packet_data), packet_data.size());
+      }
 
       auto sequenceNumber = session->audio.sequenceNumber;
       auto timestamp = session->audio.timestamp;
@@ -2367,6 +2387,19 @@ namespace stream {
       return clamped;
     }
 
+    std::string save_replay(session_t &session, std::string &name) {
+      if (!session.replay) {
+        return "off";
+      }
+      const auto dir = captures::clip_dir();
+      std::error_code ec;
+      std::filesystem::create_directories(dir, ec);
+      auto app = proc::proc.get_last_run_app_name();
+      name = captures::file_name(app.empty() ? session.device_name : app, ".mkv");
+      auto u8 = (dir / std::filesystem::path {std::u8string(name.begin(), name.end())}).u8string();
+      return session.replay->save(std::string(u8.begin(), u8.end()));
+    }
+
     health_t set_device_view(session_t &session, const device_view_t &view) {
       std::lock_guard lg {session.health.lock};
       session.health.device_view = view;
@@ -2632,6 +2665,17 @@ namespace stream {
       session->video.picture_scale_events = mail->event<int>(mail::picture_scale);
       session->video.encoder_info_events = mail->event<int>(mail::encoder_info);
       session->video.lowseq = 0;
+      if (config::stream.instant_replay) {
+        const auto layout = audio::stream_layout(config.audio);
+        replay_mkv::opus_layout_t opus {layout.channels, layout.streams, layout.coupled_streams, {}};
+        std::copy(std::begin(layout.mapping), std::end(layout.mapping), std::begin(opus.mapping));
+        const auto codec = config.monitor.videoFormat == 2 ? replay_mkv::codec_e::av1 :
+                           config.monitor.videoFormat == 1 ? replay_mkv::codec_e::hevc :
+                                                             replay_mkv::codec_e::h264;
+        session->replay = std::make_unique<replay::buffer_t>(codec, config.monitor.width, config.monitor.height,
+                                                             config.monitor.dynamicRange ? 10 : 8,
+                                                             config.monitor.chromaSamplingType == 1, opus);
+      }
       session->video.ping_payload = launch_session.av_ping_payload;
       if (config.encryptionFlagsEnabled & SS_ENC_VIDEO) {
         BOOST_LOG(info) << "Video encryption enabled"sv;

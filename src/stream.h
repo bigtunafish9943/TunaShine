@@ -130,6 +130,13 @@ namespace stream {
     /// @return The PC's own figures for the same stream, so the device can report both ends.
     health_t set_device_view(session_t &session, const device_view_t &view);
 
+    /**
+     * @brief Save the last 30 seconds of the stream as a clip in the user's Videos\TunaStream folder.
+     * @param name Set to the clip's file name when it is saved.
+     * @return Empty when saved; "off" when instant replay is turned off; otherwise what went wrong.
+     */
+    std::string save_replay(session_t &session, std::string &name);
+
     state_e state(session_t &session);
     inline bool send(session_t& session, const std::string_view &payload);
   }  // namespace session

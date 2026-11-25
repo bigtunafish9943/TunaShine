@@ -79,6 +79,16 @@ namespace audio {
 
   void capture(safe::mail_t mail, config_t config, void *channel_data);
 
+  /// How the Opus packets of a stream are laid out, for writing them into a file.
+  struct stream_layout_t {
+    int channels;
+    int streams;
+    int coupled_streams;
+    std::uint8_t mapping[8];  ///< For each channel in Windows order, its decoded channel
+  };
+
+  stream_layout_t stream_layout(const config_t &config);
+
   /**
    * @brief Get the reference to the audio context.
    * @returns A shared pointer reference to audio context.

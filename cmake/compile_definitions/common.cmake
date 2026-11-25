@@ -93,6 +93,8 @@ set(TUNASTREAM_TARGET_FILES
         "${CMAKE_SOURCE_DIR}/src/tv_messages.cpp"
         "${CMAKE_SOURCE_DIR}/src/sound_board.cpp"
         "${CMAKE_SOURCE_DIR}/src/captures.cpp"
+        "${CMAKE_SOURCE_DIR}/src/replay.cpp"
+        "${CMAKE_SOURCE_DIR}/src/replay_mkv.cpp"
         "${CMAKE_SOURCE_DIR}/src/other_hosts.cpp"
         "${CMAKE_SOURCE_DIR}/src/pairing_backup.cpp"
         "${CMAKE_SOURCE_DIR}/src/file_outbox.cpp"

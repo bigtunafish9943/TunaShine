@@ -83,6 +83,18 @@ namespace audio {
     },
   };
 
+  stream_layout_t stream_layout(const config_t &config) {
+    auto stream = stream_configs[map_stream(config.channels, config.flags[config_t::HIGH_QUALITY])];
+    if (config.flags[config_t::CUSTOM_SURROUND_PARAMS]) {
+      apply_surround_params(stream, config.customStreamParams);
+    }
+    stream_layout_t layout {stream.channelCount, stream.streams, stream.coupledStreams, {0, 1, 2, 3, 4, 5, 6, 7}};
+    for (int i = 0; i < stream.channelCount && i < 8; ++i) {
+      layout.mapping[i] = stream.mapping[i];
+    }
+    return layout;
+  }
+
   void encodeThread(sample_queue_t samples, config_t config, void *channel_data) {
     auto packets = mail::man->queue<packet_t>(mail::audio_packets);
     auto stream = stream_configs[map_stream(config.channels, config.flags[config_t::HIGH_QUALITY])];
