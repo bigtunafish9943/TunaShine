@@ -37,6 +37,21 @@ namespace nlohmann {
   };
 
   template<>
+  struct adl_serializer<opengl_swapchain_t> {
+    static void to_json(json &j, const opengl_swapchain_t &opengl_swapchain) {
+      j = json {
+        {"our_value", opengl_swapchain.our_value},
+        {"undo_value", opengl_swapchain.undo_value}
+      };
+    }
+
+    static void from_json(const json &j, opengl_swapchain_t &opengl_swapchain) {
+      j.at("our_value").get_to(opengl_swapchain.our_value);
+      j.at("undo_value").get_to(opengl_swapchain.undo_value);
+    }
+  };
+
+  template<>
   struct adl_serializer<data_t> {
     static void to_json(json &j, const data_t &data) {
       json settings = json::object();
@@ -57,21 +72,6 @@ namespace nlohmann {
           data.stream_settings[(uint32_t) std::stoul(id)] = value.get<opengl_swapchain_t>();
         }
       }
-    }
-  };
-
-  template<>
-  struct adl_serializer<opengl_swapchain_t> {
-    static void to_json(json &j, const opengl_swapchain_t &opengl_swapchain) {
-      j = json {
-        {"our_value", opengl_swapchain.our_value},
-        {"undo_value", opengl_swapchain.undo_value}
-      };
-    }
-
-    static void from_json(const json &j, opengl_swapchain_t &opengl_swapchain) {
-      j.at("our_value").get_to(opengl_swapchain.our_value);
-      j.at("undo_value").get_to(opengl_swapchain.undo_value);
     }
   };
 }  // namespace nlohmann
