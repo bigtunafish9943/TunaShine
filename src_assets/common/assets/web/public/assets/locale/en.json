@@ -1284,6 +1284,51 @@
         "title": "What's new",
         "how": "After the next update, open TunaReceive and this page.",
         "expect": "Each shows what changed once, and not again."
+      },
+      "everyday": {
+        "title": "Everyday settings",
+        "how": "Open Settings. It should open on the Everyday tab. Change one setting there and save.",
+        "expect": "The tab shows the settings most people change, grouped, with links to games, devices and fixes. The change is kept after reloading the page."
+      },
+      "watch": {
+        "title": "Watch in a browser",
+        "how": "While the TV streams a game, open the Watch page from the dashboard on a laptop or phone on the same network and tap Sound on.",
+        "expect": "The game appears within a few seconds with sound, a little behind the TV. The TV's picture and controls aren't affected."
+      },
+      "watchlink": {
+        "title": "Watch link",
+        "how": "On the Watch page, choose Share a watch link and open the copied link on another device that isn't signed in.",
+        "expect": "That device can watch without the password for a day, and can't open any other page. The link shows under Change Password > Access tokens, and removing it stops it working."
+      },
+      "signin": {
+        "title": "Keep me signed in",
+        "how": "Sign out, then sign in with Keep me signed in turned on. Close the browser and open the dashboard again. Repeat with it turned off.",
+        "expect": "With it on you stay signed in after closing the browser; with it off you're asked for the password again."
+      },
+      "tokens": {
+        "title": "Access tokens",
+        "how": "Under Change Password > Access tokens, make a token that can only see what's playing and copy it. Remove it afterwards.",
+        "expect": "The token is shown once. Removing it makes it stop working straight away."
+      },
+      "librarysync": {
+        "title": "Keep my games in sync",
+        "how": "On Apps, turn on Keep my games in sync and choose Sync now. Then delete one of the synced games.",
+        "expect": "Games played recently appear with covers and a Synced badge. Games you added yourself aren't touched, and the deleted game doesn't come back."
+      },
+      "framecap": {
+        "title": "Exact frame cap",
+        "how": "With RivaTuner Statistics Server installed and Match the game's frame rate on, stream a game at 59.94 or 119.88 FPS and check RTSS's limit. End the stream.",
+        "expect": "RTSS shows the stream's exact rate while streaming, and its own limit is back afterwards. Without RTSS, NVIDIA's frame cap is used as before."
+      },
+      "vsync": {
+        "title": "V-Sync off while streaming",
+        "how": "On an NVIDIA PC, keep Turn Vertical Sync off in games while streaming on, stream a game that uses V-Sync, then end the stream.",
+        "expect": "The game feels as responsive as without V-Sync while streaming, and the NVIDIA setting is back to how it was afterwards."
+      },
+      "wgc": {
+        "title": "Windows.Graphics.Capture",
+        "how": "Under Settings > Advanced, set Screen capture method to Windows.Graphics.Capture and save. Stream a game, then press Win+L or open a UAC prompt on the PC, and go back.",
+        "expect": "The stream works, the lock screen or UAC prompt shows on the TV, and the game comes back when it closes. If anything looks wrong, set it back to Automatic."
       }
     }
   },

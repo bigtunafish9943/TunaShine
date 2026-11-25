@@ -1284,6 +1284,51 @@
         "title": "Nouveautés",
         "how": "Après la prochaine mise à jour, ouvrez TunaReceive et cette page.",
         "expect": "Chacun montre une fois ce qui a changé, puis plus jamais."
+      },
+      "everyday": {
+        "title": "Réglages du quotidien",
+        "how": "Ouvrez les Réglages. Ils devraient s'ouvrir sur l'onglet Au quotidien. Changez un réglage et enregistrez.",
+        "expect": "L'onglet regroupe les réglages que la plupart des gens changent, avec des liens vers les jeux, les appareils et les dépannages. Le changement est conservé après rechargement."
+      },
+      "watch": {
+        "title": "Regarder dans un navigateur",
+        "how": "Pendant que la télé streame un jeu, ouvrez la page Regarder du tableau de bord sur un portable ou un téléphone du même réseau et touchez Son activé.",
+        "expect": "Le jeu apparaît en quelques secondes avec le son, un peu en retard sur la télé. L'image et les commandes de la télé ne changent pas."
+      },
+      "watchlink": {
+        "title": "Lien pour regarder",
+        "how": "Sur la page Regarder, choisissez Partager un lien pour regarder et ouvrez le lien copié sur un autre appareil non connecté.",
+        "expect": "Cet appareil peut regarder sans mot de passe pendant un jour, sans pouvoir ouvrir d'autre page. Le lien figure dans Changer le mot de passe > Jetons d'accès, et le supprimer le désactive."
+      },
+      "signin": {
+        "title": "Rester connecté",
+        "how": "Déconnectez-vous puis reconnectez-vous avec Rester connecté activé. Fermez le navigateur et rouvrez le tableau de bord. Recommencez en le désactivant.",
+        "expect": "Activé, vous restez connecté après avoir fermé le navigateur ; désactivé, le mot de passe est redemandé."
+      },
+      "tokens": {
+        "title": "Jetons d'accès",
+        "how": "Dans Changer le mot de passe > Jetons d'accès, créez un jeton qui peut seulement voir ce qui est en cours et copiez-le. Supprimez-le ensuite.",
+        "expect": "Le jeton n'est affiché qu'une fois. Une fois supprimé, il cesse aussitôt de fonctionner."
+      },
+      "librarysync": {
+        "title": "Garder mes jeux synchronisés",
+        "how": "Dans Apps, activez Garder mes jeux synchronisés et choisissez Synchroniser. Supprimez ensuite un des jeux synchronisés.",
+        "expect": "Les jeux joués récemment apparaissent avec leur jaquette et le badge Synchronisé. Les jeux ajoutés à la main ne sont pas touchés, et le jeu supprimé ne revient pas."
+      },
+      "framecap": {
+        "title": "Limite d'images exacte",
+        "how": "Avec RivaTuner Statistics Server installé et le réglage de fréquence du jeu activé, streamez un jeu à 59,94 ou 119,88 FPS et regardez la limite dans RTSS. Terminez le stream.",
+        "expect": "RTSS affiche exactement la fréquence du stream pendant le stream, puis retrouve sa propre limite. Sans RTSS, la limite NVIDIA est utilisée comme avant."
+      },
+      "vsync": {
+        "title": "V-Sync coupée pendant le stream",
+        "how": "Sur un PC NVIDIA, gardez Désactiver la V-Sync dans les jeux pendant le stream activé, streamez un jeu qui utilise la V-Sync, puis terminez le stream.",
+        "expect": "Le jeu répond aussi vite que sans V-Sync pendant le stream, et le réglage NVIDIA revient comme avant ensuite."
+      },
+      "wgc": {
+        "title": "Windows.Graphics.Capture",
+        "how": "Dans Réglages > Avancé, choisissez Windows.Graphics.Capture comme méthode de capture et enregistrez. Streamez un jeu, puis faites Win+L ou ouvrez une invite UAC sur le PC, et revenez.",
+        "expect": "Le stream fonctionne, l'écran de verrouillage ou l'invite UAC s'affiche sur la télé, et le jeu revient ensuite. En cas de souci, revenez à Automatique."
       }
     }
   },

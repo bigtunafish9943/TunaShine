@@ -1284,6 +1284,51 @@
         "title": "Neuigkeiten",
         "how": "Öffne nach dem nächsten Update TunaReceive und diese Seite.",
         "expect": "Beide zeigen einmal, was sich geändert hat, und dann nicht wieder."
+      },
+      "everyday": {
+        "title": "Alltags-Einstellungen",
+        "how": "Öffne die Einstellungen. Sie sollten auf dem Tab „Alltag“ starten. Ändere dort eine Einstellung und speichere.",
+        "expect": "Der Tab zeigt die Einstellungen, die die meisten ändern, gruppiert und mit Links zu Spielen, Geräten und Hilfen. Die Änderung bleibt nach dem Neuladen erhalten."
+      },
+      "watch": {
+        "title": "Im Browser zuschauen",
+        "how": "Während der Fernseher ein Spiel streamt, öffne auf einem Laptop oder Handy im selben Netzwerk die Seite „Zuschauen“ im Dashboard und tippe auf „Ton an“.",
+        "expect": "Das Spiel erscheint nach wenigen Sekunden mit Ton, etwas hinter dem Fernseher. Bild und Steuerung am Fernseher bleiben unberührt."
+      },
+      "watchlink": {
+        "title": "Zuschau-Link",
+        "how": "Wähle auf der Seite „Zuschauen“ „Zuschau-Link teilen“ und öffne den kopierten Link auf einem anderen Gerät, das nicht angemeldet ist.",
+        "expect": "Dieses Gerät kann einen Tag lang ohne Passwort zuschauen und keine andere Seite öffnen. Der Link steht unter Passwort ändern > Zugriffstoken, und Entfernen macht ihn ungültig."
+      },
+      "signin": {
+        "title": "Angemeldet bleiben",
+        "how": "Melde dich ab und mit eingeschaltetem „Angemeldet bleiben“ wieder an. Schließ den Browser und öffne das Dashboard erneut. Wiederhole es ausgeschaltet.",
+        "expect": "Eingeschaltet bleibst du nach dem Schließen angemeldet; ausgeschaltet wirst du wieder nach dem Passwort gefragt."
+      },
+      "tokens": {
+        "title": "Zugriffstoken",
+        "how": "Erstelle unter Passwort ändern > Zugriffstoken ein Token, das nur sehen darf, was läuft, und kopiere es. Entferne es danach.",
+        "expect": "Das Token wird einmal angezeigt. Nach dem Entfernen funktioniert es sofort nicht mehr."
+      },
+      "librarysync": {
+        "title": "Meine Spiele synchron halten",
+        "how": "Schalte unter Apps „Meine Spiele synchron halten“ ein und wähle „Jetzt synchronisieren“. Lösche dann eines der synchronisierten Spiele.",
+        "expect": "Kürzlich gespielte Spiele erscheinen mit Cover und dem Hinweis „Synchronisiert“. Selbst hinzugefügte Spiele bleiben unberührt, und das gelöschte Spiel kommt nicht zurück."
+      },
+      "framecap": {
+        "title": "Genaue Bildratenbegrenzung",
+        "how": "Mit installiertem RivaTuner Statistics Server und eingeschaltetem „Bildrate des Spiels an den Stream anpassen“ streame ein Spiel mit 59,94 oder 119,88 FPS und prüfe das Limit in RTSS. Beende den Stream.",
+        "expect": "RTSS zeigt beim Streamen genau die Rate des Streams, danach ist sein eigenes Limit wieder da. Ohne RTSS wird wie bisher die NVIDIA-Begrenzung genutzt."
+      },
+      "vsync": {
+        "title": "V-Sync aus beim Streamen",
+        "how": "Lass auf einem NVIDIA-PC „V-Sync in Spielen während des Streamens ausschalten“ an, streame ein Spiel mit V-Sync und beende dann den Stream.",
+        "expect": "Das Spiel reagiert beim Streamen so direkt wie ohne V-Sync, und die NVIDIA-Einstellung ist danach wie vorher."
+      },
+      "wgc": {
+        "title": "Windows.Graphics.Capture",
+        "how": "Stell unter Einstellungen > Erweitert die Methode der Bildschirmaufnahme auf Windows.Graphics.Capture und speichere. Streame ein Spiel, drück dann am PC Win+L oder öffne eine UAC-Abfrage und geh zurück.",
+        "expect": "Der Stream läuft, Sperrbildschirm oder UAC-Abfrage erscheinen auf dem Fernseher, und das Spiel kommt danach zurück. Wenn etwas nicht stimmt, stell wieder auf „Automatisch“."
       }
     }
   },

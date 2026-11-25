@@ -1284,6 +1284,51 @@
         "title": "Novedades",
         "how": "Tras la próxima actualización, abre TunaReceive y esta página.",
         "expect": "Cada uno muestra una vez lo que cambió, y no vuelve a hacerlo."
+      },
+      "everyday": {
+        "title": "Ajustes del día a día",
+        "how": "Abre Configuración. Debería abrirse en la pestaña Día a día. Cambia un ajuste y guarda.",
+        "expect": "La pestaña agrupa los ajustes que más se cambian, con enlaces a juegos, dispositivos y soluciones. El cambio se mantiene al recargar la página."
+      },
+      "watch": {
+        "title": "Ver en un navegador",
+        "how": "Mientras la tele transmite un juego, abre la página Ver del panel en un portátil o móvil de la misma red y toca Sonido activado.",
+        "expect": "El juego aparece en pocos segundos con sonido, un poco por detrás de la tele. La imagen y los controles de la tele no cambian."
+      },
+      "watchlink": {
+        "title": "Enlace para ver",
+        "how": "En la página Ver, elige Compartir un enlace para ver y abre el enlace copiado en otro dispositivo sin sesión iniciada.",
+        "expect": "Ese dispositivo puede ver sin contraseña durante un día y no puede abrir otras páginas. El enlace aparece en Cambiar contraseña > Tokens de acceso, y al quitarlo deja de funcionar."
+      },
+      "signin": {
+        "title": "Mantener la sesión iniciada",
+        "how": "Cierra sesión y vuelve a entrar con Mantener la sesión iniciada activado. Cierra el navegador y abre el panel otra vez. Repite con la opción desactivada.",
+        "expect": "Activado, sigues dentro tras cerrar el navegador; desactivado, se vuelve a pedir la contraseña."
+      },
+      "tokens": {
+        "title": "Tokens de acceso",
+        "how": "En Cambiar contraseña > Tokens de acceso, crea un token que solo pueda ver qué se juega y cópialo. Después quítalo.",
+        "expect": "El token se muestra una sola vez. Al quitarlo deja de funcionar al instante."
+      },
+      "librarysync": {
+        "title": "Mantener mis juegos sincronizados",
+        "how": "En Apps, activa Mantener mis juegos sincronizados y elige Sincronizar ahora. Luego borra uno de los juegos sincronizados.",
+        "expect": "Los juegos jugados hace poco aparecen con portada y la etiqueta Sincronizado. Los juegos añadidos a mano no se tocan y el juego borrado no vuelve."
+      },
+      "framecap": {
+        "title": "Límite de fotogramas exacto",
+        "how": "Con RivaTuner Statistics Server instalado y el ajuste de frecuencia del juego activado, transmite un juego a 59,94 o 119,88 FPS y mira el límite en RTSS. Termina la transmisión.",
+        "expect": "RTSS muestra la frecuencia exacta de la transmisión mientras dura y después recupera su propio límite. Sin RTSS se usa el límite de NVIDIA como antes."
+      },
+      "vsync": {
+        "title": "V-Sync desactivada al transmitir",
+        "how": "En un PC con NVIDIA, deja activado Desactivar la V-Sync en los juegos durante la transmisión, transmite un juego que use V-Sync y termina la transmisión.",
+        "expect": "El juego responde como sin V-Sync durante la transmisión, y el ajuste de NVIDIA vuelve a como estaba después."
+      },
+      "wgc": {
+        "title": "Windows.Graphics.Capture",
+        "how": "En Configuración > Avanzado, elige Windows.Graphics.Capture como método de captura y guarda. Transmite un juego, pulsa Win+L o abre un aviso de UAC en el PC y vuelve.",
+        "expect": "La transmisión funciona, la pantalla de bloqueo o el aviso de UAC aparecen en la tele y el juego vuelve después. Si algo no va bien, vuelve a Automático."
       }
     }
   },
