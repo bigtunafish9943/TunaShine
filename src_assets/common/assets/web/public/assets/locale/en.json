@@ -559,8 +559,10 @@
     "ui_theme_summer": "Summer",
     "restart_slow": "TunaStream is taking longer than usual to restart. Reload this page in a moment; if it doesn't come back, check that TunaStream is running on the PC.",
     "tab_sharedpc": "Shared PC",
-    "sharedpc_intro": "Keep using this PC while someone streams from it: your screens, sound, mouse and keyboard stay yours, and only the game goes to the TV.",
-    "sharedpc_more": "How it works"
+    "sharedpc_intro": "Keep using this PC while someone streams from it: your screens, sound, mouse and keyboard stay yours, and only the game goes to the TV. Turn Shared PC off for privacy mode instead.",
+    "sharedpc_more": "How it works",
+    "privacy_mode": "Privacy mode: turn this PC's monitors off while someone streams",
+    "privacy_mode_desc": "Only the stream's own screen stays on, so nobody in the room sees what's being played on the PC. The monitors come back on, as they were arranged, when the stream ends or the TV disconnects. Not available in Shared PC mode, where you're using the monitors. If they ever stay off, press Windows + P and pick Extend."
   },
   "index": {
     "controller_hint": "What games see this controller as. Most PC games only rumble an Xbox 360 controller; change it under Configuration > Input > Emulated Gamepad Type.",
@@ -718,7 +720,10 @@
     "version_is": "Version {version}.",
     "version_latest": "You are running the latest version of TunaStream",
     "view_logs": "View logs",
-    "welcome": "Hello, TunaStream!"
+    "welcome": "Hello, TunaStream!",
+    "whatsnew_title": "What's new in {version}",
+    "whatsnew_since": "Since {version}, the version this browser last saw:",
+    "whatsnew_ok": "Got it"
   },
   "login": {
     "save_password": "Remember Password"

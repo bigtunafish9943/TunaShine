@@ -546,6 +546,7 @@ namespace config {
     false,  // shared_pc_tv_primary
     true,  // shared_pc_borderless
     true,  // quiet_notifications
+    false,  // privacy_mode
 
     0,  // video_send_rate (automatic)
 
@@ -1303,6 +1304,7 @@ namespace config {
     bool_f(vars, "shared_pc_tv_primary", stream.shared_pc_tv_primary);
     bool_f(vars, "shared_pc_borderless", stream.shared_pc_borderless);
     bool_f(vars, "quiet_notifications", stream.quiet_notifications);
+    bool_f(vars, "privacy_mode", stream.privacy_mode);
     int_between_f(vars, "video_send_rate", stream.video_send_rate, {0, 10000});
 
     map_int_int_f(vars, "keybindings"s, input.keybindings);

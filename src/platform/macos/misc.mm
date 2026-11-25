@@ -230,6 +230,12 @@ namespace platf {
   void set_stream_audio_device(const std::wstring &) {
   }
 
+  void privacy_screens(bool, const std::string &) {
+  }
+
+  void privacy_screens_cleanup() {
+  }
+
   void quiet_notifications(bool) {
   }
 

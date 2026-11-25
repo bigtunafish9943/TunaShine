@@ -327,6 +327,19 @@
     </div>
 
     <!-- Version -->
+    <!-- What's new since this browser last saw the page, once after each update -->
+    <div class="card p-2 my-4 home-whatsnew" id="whats-new" v-if="whatsNew && whatsNew.items.length">
+      <div class="card-body">
+        <h2>{{ $t('index.whatsnew_title', { version: version.version }) }}</h2>
+        <p class="text-body-secondary">{{ $t('index.whatsnew_since', { version: whatsNew.since }) }}</p>
+        <div v-for="item in whatsNew.items" :key="item.version" class="home-whatsnew-item">
+          <h3 class="h6">{{ item.version }}</h3>
+          <p class="home-whatsnew-text">{{ item.text }}</p>
+        </div>
+        <button class="btn btn-primary" @click="dismissWhatsNew">{{ $t('index.whatsnew_ok') }}</button>
+      </div>
+    </div>
+
     <div class="card p-2 my-4" id="update" v-if="version && (buildVersionIsDirty || installedVersionNotStable || stableBuildAvailable || (notifyPreReleases && preReleaseBuildAvailable))">
       <div class="card-body">
         <h2>{{ $t('index.updates') }}</h2>
@@ -409,6 +422,7 @@
       return {
         version: null,
         githubVersion: null,
+        whatsNew: null,
         notifyPreReleases: false,
         preReleaseVersion: null,
         loading: true,
@@ -463,6 +477,7 @@
         }
         this.notifyPreReleases = config.notify_pre_releases;
         this.version = new TunaStreamVersion(null, config.version);
+        this.loadWhatsNew();
         this.platform = config.platform;
         this.vdisplayStatus = config.vdisplayStatus ?? 0;
         // Set when TunaStream is not on the default port, e.g. installed next to TunaStream
@@ -507,6 +522,56 @@
       this.loading = false;
     },
     methods: {
+      /**
+       * After an update: the notes of each release since the version this browser last saw.
+       * The first visit only remembers the version, so there's nothing to show then.
+       */
+      async loadWhatsNew() {
+        const current = this.version && this.version.version;
+        if (!current || this.version.versionParts === null) return;
+        let seen = null;
+        try {
+          seen = localStorage.getItem('tunastream.seenVersion');
+        } catch (e) {
+          return;
+        }
+        if (!seen) {
+          try { localStorage.setItem('tunastream.seenVersion', current); } catch (e) { /* nothing to remember */ }
+          return;
+        }
+        if (!this.version.isGreater(seen, false)) return;
+        try {
+          const releases = await fetch('https://api.github.com/repos/bigtunafish9943/TunaStream/releases?per_page=30')
+            .then((r) => r.ok ? r.json() : []);
+          const items = [];
+          for (const r of releases) {
+            if (r.draft || r.prerelease) continue;
+            const v = new TunaStreamVersion(r, null);
+            // Newer than the one seen, and not newer than this one
+            if (!v.isGreater(seen, false) || v.isGreater(current, false)) continue;
+            const text = this.releaseSummary(r.body || '');
+            if (text) items.push({ version: v.version, text });
+          }
+          this.whatsNew = { since: seen, items: items.slice(0, 8) };
+        } catch (e) {
+          // GitHub can't be reached: say nothing
+        }
+      },
+      /** The "What's new" part of a release's notes (or its list of changes, for older ones). */
+      releaseSummary(body) {
+        const section = (name) => {
+          const at = body.indexOf('### ' + name);
+          if (at < 0) return '';
+          const rest = body.slice(at + name.length + 4);
+          const end = rest.search(/\n(###|\*\*Download\*\*|Automatic build from)/);
+          return (end < 0 ? rest : rest.slice(0, end)).trim();
+        };
+        return section("What's new") || section('Changes');
+      },
+      dismissWhatsNew() {
+        try { localStorage.setItem('tunastream.seenVersion', this.version.version); } catch (e) { /* nothing to remember */ }
+        this.whatsNew = null;
+      },
       /**
        * Install the newest release. The server downloads and checks it, then runs the
        * installer, which restarts TunaStream; this page reloads once it is back.

@@ -6,6 +6,7 @@
 #include <csignal>
 #include <cstring>
 #include <thread>
+#include <vector>
 #include <filesystem>
 #include <fstream>
 #include <functional>
@@ -690,6 +691,152 @@ namespace platf {
     if (quiet_profile() == static_cast<int>(QUIET_PROFILE) && set_quiet_profile(0)) {
       BOOST_LOG(info) << "Turned off Do not disturb that was left on by the last stream"sv;
     }
+  }
+
+  namespace {
+    std::mutex privacy_lock;
+    bool privacy_on = false;
+    // The arrangement before the monitors were turned off, put back exactly when possible
+    std::vector<DISPLAYCONFIG_PATH_INFO> privacy_paths;
+    std::vector<DISPLAYCONFIG_MODE_INFO> privacy_modes;
+
+    std::filesystem::path privacy_marker() {
+      return appdata() / L"monitors_off_by_tunastream"sv;
+    }
+
+    bool query_active_config(std::vector<DISPLAYCONFIG_PATH_INFO> &paths, std::vector<DISPLAYCONFIG_MODE_INFO> &modes) {
+      for (int attempt = 0; attempt < 3; ++attempt) {
+        UINT32 path_count = 0, mode_count = 0;
+        if (GetDisplayConfigBufferSizes(QDC_ONLY_ACTIVE_PATHS, &path_count, &mode_count) != ERROR_SUCCESS) {
+          return false;
+        }
+        paths.resize(path_count);
+        modes.resize(mode_count);
+        LONG result = QueryDisplayConfig(QDC_ONLY_ACTIVE_PATHS, &path_count, paths.data(), &mode_count, modes.data(), nullptr);
+        if (result == ERROR_INSUFFICIENT_BUFFER) {
+          continue;  // A display came or went between the two calls
+        }
+        if (result != ERROR_SUCCESS) {
+          return false;
+        }
+        paths.resize(path_count);
+        modes.resize(mode_count);
+        return true;
+      }
+      return false;
+    }
+
+    /// "\\.\DISPLAY9" for a path's source
+    std::wstring gdi_name_of(const DISPLAYCONFIG_PATH_INFO &path) {
+      DISPLAYCONFIG_SOURCE_DEVICE_NAME name {};
+      name.header.type = DISPLAYCONFIG_DEVICE_INFO_GET_SOURCE_NAME;
+      name.header.size = sizeof(name);
+      name.header.adapterId = path.sourceInfo.adapterId;
+      name.header.id = path.sourceInfo.id;
+      if (DisplayConfigGetDeviceInfo(&name.header) != ERROR_SUCCESS) {
+        return {};
+      }
+      return name.viewGdiDeviceName;
+    }
+
+    /// Turn every monitor back on: the saved arrangement, or Windows' own Extend one
+    void restore_monitors() {
+      LONG result = ERROR_INVALID_PARAMETER;
+      if (!privacy_paths.empty()) {
+        result = SetDisplayConfig((UINT32) privacy_paths.size(), privacy_paths.data(), (UINT32) privacy_modes.size(), privacy_modes.data(),
+                                  SDC_APPLY | SDC_USE_SUPPLIED_DISPLAY_CONFIG | SDC_ALLOW_CHANGES);
+      }
+      if (result != ERROR_SUCCESS) {
+        result = SetDisplayConfig(0, nullptr, 0, nullptr, SDC_APPLY | SDC_TOPOLOGY_EXTEND);
+      }
+      if (result == ERROR_SUCCESS) {
+        BOOST_LOG(info) << "Privacy mode: the PC's monitors are on again"sv;
+      } else {
+        BOOST_LOG(warning) << "Privacy mode: couldn't turn the PC's monitors back on: "sv << result << " (press Windows + P and pick Extend)"sv;
+      }
+      privacy_paths.clear();
+      privacy_modes.clear();
+    }
+  }  // namespace
+
+  void privacy_screens(bool on, const std::string &keep) {
+    std::lock_guard lg {privacy_lock};
+    syncThreadDesktop();
+    std::error_code ec;
+    if (!on) {
+      if (!privacy_on) {
+        return;
+      }
+      privacy_on = false;
+      restore_monitors();
+      std::filesystem::remove(privacy_marker(), ec);
+      return;
+    }
+    if (privacy_on || keep.empty()) {
+      return;
+    }
+    std::vector<DISPLAYCONFIG_PATH_INFO> paths;
+    std::vector<DISPLAYCONFIG_MODE_INFO> modes;
+    if (!query_active_config(paths, modes)) {
+      BOOST_LOG(warning) << "Privacy mode: couldn't read the display arrangement"sv;
+      return;
+    }
+    const auto keep_name = from_utf8(keep);
+    // Only the stream's screen stays on; it becomes the main one, at the top-left
+    std::vector<DISPLAYCONFIG_PATH_INFO> kept;
+    for (const auto &path : paths) {
+      if (gdi_name_of(path) == keep_name) {
+        kept.push_back(path);
+      }
+    }
+    if (kept.empty()) {
+      BOOST_LOG(warning) << "Privacy mode: the stream's screen "sv << keep << " isn't active; leaving the monitors on"sv;
+      return;
+    }
+    if (kept.size() == paths.size()) {
+      return;  // Nothing else is on
+    }
+    // Only the modes the kept path uses, with their indexes renumbered
+    std::vector<DISPLAYCONFIG_MODE_INFO> kept_modes;
+    auto keep_mode = [&](UINT32 &index) {
+      if (index == DISPLAYCONFIG_PATH_MODE_IDX_INVALID || index >= modes.size()) {
+        return;
+      }
+      kept_modes.push_back(modes[index]);
+      index = (UINT32) kept_modes.size() - 1;
+    };
+    for (auto &path : kept) {
+      keep_mode(path.sourceInfo.modeInfoIdx);
+      keep_mode(path.targetInfo.modeInfoIdx);
+    }
+    for (auto &mode : kept_modes) {
+      if (mode.infoType == DISPLAYCONFIG_MODE_INFO_TYPE_SOURCE) {
+        mode.sourceMode.position = {0, 0};
+      }
+    }
+    const LONG result = SetDisplayConfig((UINT32) kept.size(), kept.data(), (UINT32) kept_modes.size(), kept_modes.data(),
+                                         SDC_APPLY | SDC_USE_SUPPLIED_DISPLAY_CONFIG | SDC_ALLOW_CHANGES);
+    if (result != ERROR_SUCCESS) {
+      BOOST_LOG(warning) << "Privacy mode: couldn't turn the PC's monitors off: "sv << result;
+      return;
+    }
+    privacy_on = true;
+    privacy_paths = std::move(paths);
+    privacy_modes = std::move(modes);
+    std::ofstream {privacy_marker()} << "1";
+    BOOST_LOG(info) << "Privacy mode: the PC's monitors are off while "sv << keep << " streams"sv;
+  }
+
+  void privacy_screens_cleanup() {
+    std::lock_guard lg {privacy_lock};
+    std::error_code ec;
+    if (!std::filesystem::exists(privacy_marker(), ec)) {
+      return;
+    }
+    std::filesystem::remove(privacy_marker(), ec);
+    syncThreadDesktop();
+    BOOST_LOG(info) << "Privacy mode: TunaStream stopped while the monitors were off; turning them back on"sv;
+    restore_monitors();
   }
 
   /**

@@ -344,6 +344,8 @@ int main(int argc, char *argv[]) {
   play_limits::start();
   // Do not disturb left on if TunaStream stopped during a stream
   platf::quiet_notifications_cleanup();
+  // Monitors left off by privacy mode if TunaStream stopped during a stream
+  platf::privacy_screens_cleanup();
 
   // If any of the following fail, we log an error and continue event though tunastream will not function correctly.
   // This allows access to the UI to fix configuration problems or view the logs.

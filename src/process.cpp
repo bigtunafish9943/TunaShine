@@ -487,6 +487,11 @@ namespace proc {
       display_device::reset_persistence();
     }
 
+    // Privacy mode: only the stream's own screen stays on (never the PC's monitor it may be streaming)
+    if (this->virtual_display && config::stream.privacy_mode && !config::stream.shared_pc) {
+      platf::privacy_screens(true, this->display_name);
+    }
+
 #else
 
     display_device::configure_display(config::video, *launch_session);
@@ -799,6 +804,12 @@ namespace proc {
     reclaim_primary_display();
     display_restore_failed = false;
 
+#ifdef _WIN32
+    if (this->virtual_display && config::stream.privacy_mode && !config::stream.shared_pc) {
+      platf::privacy_screens(true, this->display_name);
+    }
+#endif
+
     if (config::stream.quiet_notifications) {
       platf::quiet_notifications(true);
     }
@@ -851,6 +862,8 @@ namespace proc {
   void proc_t::pause(bool connection_lost) {
     // Nobody is streaming now, so the PC's own frame rate limit applies again
     platf::set_game_frame_limit(0);
+    // ...the PC's monitors come back on (privacy mode)...
+    platf::privacy_screens(false);
     // ...notifications pop up again...
     platf::quiet_notifications(false);
     // ...and windows stay wherever the person at the PC puts them. In shared PC mode the app's
@@ -987,6 +1000,7 @@ namespace proc {
     ++session_generation;
     platf::set_game_frame_limit(0);
     platf::quiet_notifications(false);
+    platf::privacy_screens(false);
     _window_herder.reset();
     frame_limit_fps = 0;
     std::error_code ec;

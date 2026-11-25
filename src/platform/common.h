@@ -994,6 +994,20 @@ namespace platf {
   /// At start up: turn Do not disturb off if TunaStream left it on.
   void quiet_notifications_cleanup();
 
+  /**
+   * @brief Privacy mode: while someone streams, turn off the PC's own monitors so only the
+   *        stream's (virtual) screen is on, and turn them back on afterwards.
+   * @param on True to turn the other monitors off, false to turn them back on.
+   * @param keep The stream's screen, e.g. "\\.\DISPLAY9"; the only one left on.
+   * @details The arrangement from before is put back exactly when it can be, and otherwise
+   *          Windows' own "Extend" arrangement is used. A mark in the config folder lets the next
+   *          start turn the monitors back on if TunaStream stopped while they were off.
+   */
+  void privacy_screens(bool on, const std::string &keep = {});
+
+  /// At start up: turn the PC's monitors back on if TunaStream left them off.
+  void privacy_screens_cleanup();
+
   std::string
   get_clipboard();
 
