@@ -78,15 +78,26 @@ and every step was tightened:
   horn...) play on the TV too, and you can add your own.
 - **Screenshots and instant replay.** On the TV, View + R1 saves a screenshot (on the TV and in your
   Pictures\TunaStream folder), and View + L1 saves the last 30 seconds as a clip in Videos\TunaStream, exactly as
-  the stream looked. *Make this week's highlights* joins the end of each replay into one clip.
-- **A Live page for your phone.** Scan the QR code on the home page: what's playing with its cover, the frame
-  rate as it happens, controller batteries, the message and sound buttons and End session. Add it to your home
-  screen to open it like an app.
+  the stream looked. *Make this week's highlights* joins the end of each replay into one clip. The buttons are
+  yours to change in TunaReceive.
+- **A Live page for your phone.** Scan the QR code on the home page. While someone plays: what's playing with its
+  cover, and the same stream details the TV's overlay shows (picture size and codec, frame rate set, now and on
+  average, delay, how steady it is, bitrate, and the TV's and the PC's network), plus controller batteries, play
+  time left, the message and sound buttons and End session. While nobody plays: the last seven days, play time
+  today, each TV and how it's set up, this PC, milestones and captures. Add it to your home screen to open it
+  like an app; *Full page* opens everything else.
+- **The TV's settings, from the PC.** Under **Devices > TV settings**, change TunaReceive's settings on a TV
+  (picture, sound, controller shortcuts and more), each explained in full. The TV picks the changes up within
+  15 seconds while its games are on screen.
 - **Now playing on the tray icon.** Hover over TunaStream's icon by the clock to see who is playing what.
 - **Shared PC mode** (on by default). Keep using the PC while someone streams: your monitor stays the main
   screen, only the game's windows go to the TV, only the game's sound goes to the stream, your mouse can't
-  wander onto the TV's screen, and when you leave your mouse and keyboard alone the game gets focus back.
-  *Settings > General*.
+  wander onto the TV's screen, and when you leave your mouse and keyboard alone the game gets focus back. Games
+  set to *Windowed* lose their border and fill the TV. Or make the TV's screen the main one, so games open there
+  by themselves, and your own new windows (Windows' own included) are moved back to your screens.
+  *Settings > Shared PC*.
+- **Do not disturb during streams** (on by default). Windows' notifications wait in the notification centre
+  instead of popping up over the game.
 
 ## Everything else
 
@@ -99,7 +110,8 @@ and every step was tightened:
 - **A clear web interface.** A home page that shows what is streaming, who is playing and with which
   controllers, which devices are paired and whether the virtual display is working, with an End session button.
   Settings in plain words, with the technical ones tucked away. Pairing and permissions together on one Devices
-  page.
+  page. Each device you sign in on stays signed in for 15 days, through restarts and updates, and *Apply* brings
+  the page back by itself once TunaStream has restarted.
 - **Your last seven days.** The home page shows play time for each day, the most-played games and how smooth the
   streams were, with milestones as they're reached. The record stays on the PC.
 - **A reminder when a game runs slow.** When a game itself draws fewer than 59 frames a second, the home page
@@ -107,9 +119,10 @@ and every step was tightened:
 - **Game covers from Steam.** Steam games added as apps get their cover on the client's game tiles: a custom cover
   you set in your Steam library first, then the one Steam shows, fetched by itself.
 - **Controller batteries** on the home page next to each controller, in red when one is low.
-- **Five colour themes**: Deep Sea, Coral Reef, Kelp Forest, Midnight and Golden Hour, in light and dark, plus
-  seasonal ones for Halloween, autumn, winter and summer. TunaReceive wears the PC's theme by default, or its own
-  if you pick one. *Settings > General*.
+- **Nine colour themes**: Deep Sea, Coral Reef, Kelp Forest, Midnight, Golden Hour, Halloween, Autumn, Winter
+  and Summer, in light and dark. *Seasonal themes* wears the last four in their season. TunaReceive wears the
+  PC's theme by default, and so do TunaStream's own Desktop, Steam and Virtual Desktop tiles. *Settings >
+  General*.
 - **Updates itself.** When a new version is out, a banner offers *Update now*; TunaStream downloads it, checks it
   against GitHub's published checksum and installs it, keeping your settings and paired devices.
 - **Troubleshooting that helps.** The log, ready to save and attach to a bug report; a rumble test; and a Wi-Fi
