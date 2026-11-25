@@ -196,7 +196,7 @@ See the [roadmap](ROADMAP.md). Found a bug or have an idea?
 ## Building
 
 Every push builds the Windows installer with GitHub Actions and runs a smoke test against it, and every build of
-`master` is published as a release; see
+the default branch (`TunaStreamMain`) is published as a release; see
 [`build-windows.yml`](.github/workflows/build-windows.yml). To build on your own PC, follow
 [docs/building.md](docs/building.md).
 

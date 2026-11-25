@@ -222,11 +222,11 @@ jobs:
           git push -f "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" web-preview
 
   release:
-    # Every successful build of master is published as a release, so the installer can be
+    # Every successful build of the default branch is published as a release, so the installer can be
     # downloaded without signing in to GitHub, and the update check in the app can see it.
     name: Publish release
     needs: build
-    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    if: github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -253,7 +253,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           {
-            echo "Automatic build from master, commit ${GITHUB_SHA::7}."
+            echo "Automatic build from ${GITHUB_REF_NAME}, commit ${GITHUB_SHA::7}."
             echo
             echo "**Download** \`TunaStream-${VERSION}-setup.exe\` and run it. Windows warns about an unknown"
             echo "publisher because the installer is not code-signed: choose **More info**, then **Run anyway**."
