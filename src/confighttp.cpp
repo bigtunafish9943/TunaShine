@@ -890,7 +890,7 @@ namespace confighttp {
       // Keep the defaults
     }
 
-    auto output_tree = play_history::recap(days, tz);
+    auto output_tree = play_history::recap_with_milestones(days, tz);
     output_tree["status"] = true;
     send_response(response, output_tree);
   }

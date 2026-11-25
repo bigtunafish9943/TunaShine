@@ -265,6 +265,17 @@
           </div>
         </div>
       </template>
+      <!-- Milestones: the newest few, the ones from this week marked as new -->
+      <div class="home-milestones" v-if="recap.milestones && recap.milestones.length">
+        <h3 class="home-recap-subtitle">{{ $t('index.milestones_title') }}</h3>
+        <ul>
+          <li v-for="m in recap.milestones.slice(0, 6)" :key="m.id" :class="{ 'home-milestone-new': isRecent(m.at) }">
+            <i class="fas fa-trophy" aria-hidden="true"></i>
+            <span>{{ milestoneName(m.id) }}</span>
+            <span class="home-milestone-date">{{ shortDate(m.at) }}</span>
+          </li>
+        </ul>
+      </div>
     </section>
 
     <!-- Screenshots and clips taken from the TV -->
@@ -675,6 +686,25 @@
           return date.toLocaleDateString(locale, { weekday: 'short' });
         } catch (e) {
           return date.toLocaleDateString(undefined, { weekday: 'short' });
+        }
+      },
+      milestoneName(id) {
+        const hours = id.match(/^hours_(\d+)$/);
+        if (hours) return this.$t(hours[1] === '1' ? 'index.milestone_hours_one' : 'index.milestone_hours', { n: hours[1] });
+        const streams = id.match(/^streams_(\d+)$/);
+        if (streams) return this.$t('index.milestone_streams', { n: streams[1] });
+        const key = 'index.milestone_' + id;
+        const text = this.$t(key);
+        return text === key ? id : text;
+      },
+      isRecent(at) {
+        return Date.now() / 1000 - at < 7 * 86400;
+      },
+      shortDate(at) {
+        try {
+          return new Date(at * 1000).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+        } catch (e) {
+          return '';
         }
       },
       recapBarHeight(seconds) {

@@ -54,13 +54,111 @@ namespace play_history {
     std::int64_t now_seconds() {
       return std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     }
+    fs::path totals_file() {
+      return platf::appdata() / "play_milestones.json";
+    }
+
+    /// Write JSON next to its final name, then swap it in, so a crash can't leave half a file
+    void save_json(const fs::path &path, const nlohmann::json &data) {
+      std::error_code ec;
+      fs::create_directories(path.parent_path(), ec);
+      const auto partial = fs::path {path}.concat(".part");
+      {
+        std::ofstream out(partial, std::ios::trunc);
+        out << data.dump(1);
+        if (!out) {
+          return;
+        }
+      }
+      fs::rename(partial, path, ec);
+    }
+
+    /**
+     * All-time totals and the milestones they have reached, with when. Kept apart from the
+     * history, which only goes back 120 days.
+     */
+    void update_milestones(const stream_t &s) {
+      nlohmann::json totals = nlohmann::json::object();
+      {
+        std::ifstream in(totals_file());
+        if (in) {
+          try {
+            totals = nlohmann::json::parse(in);
+          } catch (const std::exception &) {
+            totals = nlohmann::json::object();
+          }
+        }
+      }
+      if (!totals.is_object()) {
+        totals = nlohmann::json::object();
+      }
+      auto &reached = totals["reached"];
+      if (!reached.is_object()) {
+        reached = nlohmann::json::object();
+      }
+      const std::int64_t seconds = totals.value("seconds", (std::int64_t) 0) + s.seconds;
+      const int streams = totals.value("streams", 0) + 1;
+      const int smooth_run = s.lost_video == 0 ? totals.value("smoothRun", 0) + 1 : 0;
+      totals["seconds"] = seconds;
+      totals["streams"] = streams;
+      totals["smoothRun"] = smooth_run;
+
+      const auto when = s.started + s.seconds;
+      auto reach = [&](const std::string &id, bool condition) {
+        if (condition && !reached.contains(id)) {
+          reached[id] = when;
+          BOOST_LOG(info) << "Milestone reached: "sv << id;
+        }
+      };
+      reach("first_stream", true);
+      for (int hours : {1, 10, 25, 50, 100, 250, 500, 1000}) {
+        reach("hours_" + std::to_string(hours), seconds >= hours * 3600LL);
+      }
+      for (int count : {10, 50, 100, 500}) {
+        reach("streams_" + std::to_string(count), streams >= count);
+      }
+      reach("first_4k", s.width >= 3840);
+      reach("marathon", s.seconds >= 3 * 3600);
+      reach("smooth_10", smooth_run >= 10);
+      reach("smooth_hour", s.seconds >= 3600 && s.lost_video == 0);
+      reach("full_rate_4k", s.width >= 3840 && s.target_fps >= 60 && s.avg_fps >= 59 && s.minutes >= 30);
+      save_json(totals_file(), totals);
+    }
   }  // namespace
+
+  nlohmann::json milestones() {
+    std::lock_guard lg {lock};
+    std::ifstream in(totals_file());
+    nlohmann::json out = nlohmann::json::array();
+    if (!in) {
+      return out;
+    }
+    try {
+      auto totals = nlohmann::json::parse(in);
+      std::vector<std::pair<std::int64_t, std::string>> list;
+      for (const auto &[id, at] : totals.value("reached", nlohmann::json::object()).items()) {
+        list.emplace_back(at.get<std::int64_t>(), id);
+      }
+      std::sort(list.rbegin(), list.rend());
+      for (const auto &[at, id] : list) {
+        out.push_back({{"id", id}, {"at", at}});
+      }
+    } catch (const std::exception &) {
+      // No milestones to show
+    }
+    return out;
+  }
 
   void record(const stream_t &s) {
     if (s.seconds < 60) {
       return;
     }
     std::lock_guard lg {lock};
+    try {
+      update_milestones(s);
+    } catch (const std::exception &e) {
+      BOOST_LOG(warning) << "Milestones couldn't be updated: "sv << e.what();
+    }
     auto data = load();
     data.push_back({
       {"started", s.started},
@@ -216,5 +314,11 @@ namespace play_history {
       {"longestApp", longest_app},
       {"fpsReminders", reminders},
     };
+  }
+
+  nlohmann::json recap_with_milestones(int days, int utc_offset_minutes) {
+    auto out = recap(days, utc_offset_minutes);
+    out["milestones"] = milestones();
+    return out;
   }
 }  // namespace play_history

@@ -38,4 +38,10 @@ namespace play_history {
    * @param utc_offset_minutes The viewer's offset from UTC, so days start at their midnight.
    */
   nlohmann::json recap(int days, int utc_offset_minutes);
+
+  /// Milestones reached, newest first: [{"id", "at"}] (at: seconds since 1970).
+  nlohmann::json milestones();
+
+  /// recap() with the milestones added.
+  nlohmann::json recap_with_milestones(int days, int utc_offset_minutes);
 }  // namespace play_history
