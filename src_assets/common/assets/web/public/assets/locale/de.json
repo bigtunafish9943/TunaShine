@@ -919,7 +919,8 @@
     "generic_moonlight_clients_desc": "Moonlight und andere kompatible Apps funktionieren auch mit TunaStream."
   },
   "login": {
-    "save_password": "Passwort merken"
+    "save_password": "Passwort merken",
+    "remember_me": "Angemeldet bleiben"
   },
   "permissions": {
     "input_controller": "Controller-Eingabe",
@@ -1276,6 +1277,40 @@
     "sound_off": "Ton aus",
     "fullscreen": "Vollbild",
     "note": "Nur zuschauen: Nichts hier steuert das Spiel.",
-    "no_sound_here": "Nur zuschauen. Dieser Browser kann den Ton nicht abspielen; versuche Chrome oder Edge."
+    "no_sound_here": "Nur zuschauen. Dieser Browser kann den Ton nicht abspielen; versuche Chrome oder Edge.",
+    "share": "Zuschau-Link teilen",
+    "share_name": "Zuschau-Link {when}",
+    "share_copied": "Link kopiert. Jeder in deinem Netzwerk kann damit einen Tag lang zuschauen; entfernen kannst du ihn jederzeit unter Passwort ändern > Zugriffstoken.",
+    "share_copy_this": "Kopiere diesen Link:",
+    "share_failed": "Der Link konnte nicht erstellt werden."
+  },
+  "tokens": {
+    "title": "Zugriffstoken",
+    "desc": "Lass ein Skript, ein Stream Deck, Home Assistant oder einen geteilten Link ein paar Dinge ohne dein Passwort tun. Jedes Token darf nur, was du ankreuzt, und du kannst es jederzeit entfernen. Ein Token mit „Den Stream ansehen“ ergibt einen Link, den jeder in deinem Netzwerk zum Zuschauen öffnen kann.",
+    "token": "Token",
+    "made": "{name} ist bereit.",
+    "made_once": "Kopiere es jetzt: Es wird nicht noch einmal angezeigt.",
+    "copy": "Kopieren",
+    "copy_link": "Link kopieren",
+    "watch_link": "Zuschau-Link",
+    "name": "Name",
+    "name_placeholder": "Zuschau-Link fürs Wohnzimmer",
+    "expires": "Gültig",
+    "days": "{n} Tage",
+    "never": "Läuft nie ab",
+    "may": "Es darf:",
+    "scope_status": "Sehen, was läuft, und die Geräte",
+    "scope_watch": "Den Stream ansehen",
+    "scope_messages": "Nachrichten und Töne an Fernseher senden",
+    "scope_sessions": "Sitzungen beenden und mehr Spielzeit geben",
+    "scope_launch": "Spiele starten",
+    "make": "Token erstellen",
+    "none": "Noch keine Token.",
+    "expires_on": "Bis {when}",
+    "used_on": "zuletzt genutzt {when}",
+    "unused": "noch nicht genutzt",
+    "remove": "Entfernen",
+    "remove_confirm": "{name} entfernen? Alles, was es nutzt, funktioniert dann nicht mehr.",
+    "failed": "Das Token konnte nicht erstellt werden."
   }
 }

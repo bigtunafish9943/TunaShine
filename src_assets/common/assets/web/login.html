@@ -17,17 +17,17 @@
         <form @submit.prevent="login" class="mt-4">
           <div class="mb-2">
             <label for="usernameInput" class="form-label">{{ $t('_common.username') }}</label>
-            <input type="text" class="form-control" id="usernameInput" autocomplete="username"
+            <input type="text" class="form-control" id="usernameInput" name="username" autocomplete="username"
               v-model="passwordData.username" required autofocus/>
           </div>
           <div class="mb-2">
             <label for="passwordInput" class="form-label">{{ $t('_common.password') }}</label>
-            <input type="password" class="form-control" id="passwordInput" autocomplete="password"
+            <input type="password" class="form-control" id="passwordInput" name="password" autocomplete="current-password"
               v-model="passwordData.password" required />
           </div>
           <div class="mb-3 form-check">
-            <label for="savePassword" class="form-check-label">{{ $t('login.save_password') }}</label>
-            <input type="checkbox" class="form-check-input" id="savePassword" v-model="savePassword"/>
+            <input type="checkbox" class="form-check-input" id="rememberMe" v-model="remember"/>
+            <label for="rememberMe" class="form-check-label">{{ $t('login.remember_me') }}</label>
           </div>
           <button type="submit" class="btn btn-primary w-100 mb-2" v-bind:disabled="loading">
             {{ $t('welcome.login') }}
@@ -54,30 +54,20 @@
       const error = ref('');
       const success = ref(false);
       const loading = ref(false);
-      const savePassword = ref(false);
+      // Keep me signed in (15 days); the browser's password manager remembers the password itself
+      const remember = ref(true);
+
+      // Older versions kept the password itself in this browser's storage: take it out
+      try { localStorage.removeItem('login') } catch (e) { /* nothing stored */ }
 
       const data = {
         error,
         success,
         loading,
-        savePassword,
+        remember,
         passwordData: {
           username: '',
           password: ''
-        }
-      }
-
-      const savedPasswordStr = localStorage.getItem('login')
-      if (savedPasswordStr) {
-        try {
-          const { username, password } = JSON.parse(savedPasswordStr);
-          savePassword.value = true;
-          data.passwordData = {
-            username,
-            password
-          }
-        } catch (e) {
-          console.error('Reading saved password failed!', e);
         }
       }
 
@@ -87,22 +77,16 @@
       login() {
         this.error = null;
         this.loading = true;
-        if (!this.savePassword) {
-          localStorage.removeItem('login')
-        }
         fetch("./api/login", {
           headers: {
             'Content-Type': 'application/json'
           },
           method: 'POST',
-          body: JSON.stringify(this.passwordData),
+          body: JSON.stringify({ ...this.passwordData, remember: this.remember }),
         }).then((res) => {
           this.loading = false;
           if (res.status === 200) {
             this.success = true;
-            if (this.savePassword) {
-              localStorage.setItem('login', JSON.stringify(this.passwordData));
-            }
             const url = new URL(window.location);
             const redirectUrl = url.searchParams.get('redir');
             const hash = url.hash;

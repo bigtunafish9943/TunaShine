@@ -919,7 +919,8 @@
     "generic_moonlight_clients_desc": "Moonlight et d'autres apps compatibles fonctionnent aussi avec TunaStream."
   },
   "login": {
-    "save_password": "Se souvenir du mot de passe"
+    "save_password": "Se souvenir du mot de passe",
+    "remember_me": "Rester connecté"
   },
   "permissions": {
     "input_controller": "Entrée manette",
@@ -1276,6 +1277,40 @@
     "sound_off": "Son coupé",
     "fullscreen": "Plein écran",
     "note": "Regarder uniquement : rien ici ne contrôle le jeu.",
-    "no_sound_here": "Regarder uniquement. Ce navigateur ne peut pas lire le son ; essayez Chrome ou Edge."
+    "no_sound_here": "Regarder uniquement. Ce navigateur ne peut pas lire le son ; essayez Chrome ou Edge.",
+    "share": "Partager un lien pour regarder",
+    "share_name": "Lien pour regarder {when}",
+    "share_copied": "Lien copié. Toute personne sur votre réseau peut regarder avec pendant un jour ; retirez-le à tout moment dans Changer le mot de passe > Jetons d'accès.",
+    "share_copy_this": "Copiez ce lien :",
+    "share_failed": "Le lien n'a pas pu être créé."
+  },
+  "tokens": {
+    "title": "Jetons d'accès",
+    "desc": "Permettez à un script, un Stream Deck, Home Assistant ou un lien partagé de faire quelques actions sans votre mot de passe. Chaque jeton ne peut faire que ce que vous cochez, et vous pouvez le retirer à tout moment. Un jeton avec Regarder le stream donne un lien que toute personne sur votre réseau peut ouvrir pour regarder.",
+    "token": "Jeton",
+    "made": "{name} est prêt.",
+    "made_once": "Copiez-le maintenant : il ne sera plus affiché.",
+    "copy": "Copier",
+    "copy_link": "Copier le lien",
+    "watch_link": "Lien pour regarder",
+    "name": "Nom",
+    "name_placeholder": "Lien pour regarder au salon",
+    "expires": "Durée",
+    "days": "{n} jours",
+    "never": "N'expire jamais",
+    "may": "Il peut :",
+    "scope_status": "Voir ce qui est en cours et les appareils",
+    "scope_watch": "Regarder le stream",
+    "scope_messages": "Envoyer des messages et des sons aux télés",
+    "scope_sessions": "Terminer les sessions et donner plus de temps de jeu",
+    "scope_launch": "Lancer des jeux",
+    "make": "Créer le jeton",
+    "none": "Aucun jeton pour le moment.",
+    "expires_on": "Jusqu'au {when}",
+    "used_on": "dernière utilisation {when}",
+    "unused": "jamais utilisé",
+    "remove": "Retirer",
+    "remove_confirm": "Retirer {name} ? Ce qui l'utilise cessera de fonctionner.",
+    "failed": "Le jeton n'a pas pu être créé."
   }
 }

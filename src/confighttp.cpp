@@ -181,6 +181,160 @@ namespace confighttp {
   }  // namespace web_sessions
 
   /**
+   * Access tokens for scripts and share links: each allows only the scopes picked for it, is
+   * shown once, and is kept only as a salted hash in api_tokens.json.
+   */
+  namespace api_tokens {
+    struct token_t {
+      std::string id;
+      std::string name;
+      std::string hash;
+      std::vector<std::string> scopes;
+      std::int64_t created = 0;
+      std::int64_t expires = 0;  // 0: never
+      std::int64_t last_used = 0;
+    };
+
+    std::mutex lock;
+    std::vector<token_t> tokens;
+    bool loaded = false;
+
+    const std::vector<std::string> SCOPES {"status", "watch", "messages", "sessions", "launch"};
+
+    std::filesystem::path file() {
+      return platf::appdata() / "api_tokens.json";
+    }
+
+    std::int64_t now_s() {
+      return std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    }
+
+    std::string hash_of(const std::string &token) {
+      return util::hex(crypto::hash(token + config::tunastream.salt)).to_string();
+    }
+
+    // With the lock held
+    void save() {
+      nlohmann::json list = nlohmann::json::array();
+      for (const auto &t : tokens) {
+        list.push_back({{"id", t.id}, {"name", t.name}, {"hash", t.hash}, {"scopes", t.scopes}, {"created", t.created}, {"expires", t.expires}, {"lastUsed", t.last_used}});
+      }
+      std::error_code ec;
+      const auto path = file();
+      auto partial = path;
+      partial += ".part";
+      {
+        std::ofstream out {partial, std::ios::trunc};
+        out << list.dump();
+        if (!out) {
+          return;
+        }
+      }
+      std::filesystem::rename(partial, path, ec);
+    }
+
+    // With the lock held
+    void prepare() {
+      if (loaded) {
+        return;
+      }
+      loaded = true;
+      std::ifstream in {file()};
+      if (!in) {
+        return;
+      }
+      try {
+        for (const auto &j : nlohmann::json::parse(in)) {
+          token_t t;
+          t.id = j.value("id", "");
+          t.name = j.value("name", "");
+          t.hash = j.value("hash", "");
+          t.scopes = j.value("scopes", std::vector<std::string> {});
+          t.created = j.value("created", (std::int64_t) 0);
+          t.expires = j.value("expires", (std::int64_t) 0);
+          t.last_used = j.value("lastUsed", (std::int64_t) 0);
+          if (!t.id.empty() && !t.hash.empty()) {
+            tokens.push_back(std::move(t));
+          }
+        }
+      } catch (const std::exception &) {
+        tokens.clear();
+      }
+    }
+
+    /// The scope a request needs, or empty when no token may make it
+    std::string scope_of(const std::string &method, const std::string &path) {
+      if (method == "GET") {
+        if (path == "/api/watch/stream" || path == "/watch" || path == "/watch/") {
+          return "watch";
+        }
+        for (auto p : {"/api/status", "/api/clients/list", "/api/apps", "/api/recap", "/api/play-limits", "/api/captures", "/api/receiver-settings", "/api/sounds"}) {
+          if (path == p) {
+            return "status";
+          }
+        }
+      } else if (method == "POST") {
+        if (path == "/api/tv-message" || path == "/api/sounds/play") {
+          return "messages";
+        }
+        if (path == "/api/apps/close" || path == "/api/play-limits/extend") {
+          return "sessions";
+        }
+        if (path == "/api/apps/launch") {
+          return "launch";
+        }
+      }
+      return {};
+    }
+
+    /// Whether this token may make this request. A watch token may also read the game's name.
+    bool allows(const std::string &token, const std::string &method, const std::string &path) {
+      auto scope = scope_of(method, path);
+      if (scope.empty() || token.size() < 20) {
+        return false;
+      }
+      const auto hash = hash_of(token);
+      std::lock_guard lg {lock};
+      prepare();
+      const auto now = now_s();
+      for (auto &t : tokens) {
+        if (t.hash != hash) {
+          continue;
+        }
+        if (t.expires && t.expires < now) {
+          return false;
+        }
+        bool ok = std::find(t.scopes.begin(), t.scopes.end(), scope) != t.scopes.end();
+        if (!ok && scope == "status" && path == "/api/status") {
+          ok = std::find(t.scopes.begin(), t.scopes.end(), "watch") != t.scopes.end();
+        }
+        if (ok && now - t.last_used > 60) {
+          t.last_used = now;
+          save();
+        }
+        return ok;
+      }
+      return false;
+    }
+
+    /// The token a request carries: "Authorization: Bearer ...", or ?token= on a GET (share links)
+    std::string from_request(const req_https_t &request) {
+      for (auto &[name, value] : request->header) {
+        if (boost::iequals(name, "authorization") && boost::istarts_with(value, "Bearer ")) {
+          return value.substr(7);
+        }
+      }
+      if (request->method == "GET") {
+        auto args = request->parse_query_string();
+        if (auto it = args.find("token"); it != args.end()) {
+          return it->second;
+        }
+      }
+      return {};
+    }
+  }  // namespace api_tokens
+
+  /**
    * @brief Log the request details.
    * @param request The HTTP request object.
    */
@@ -188,11 +342,12 @@ namespace confighttp {
     BOOST_LOG(debug) << "METHOD :: "sv << request->method;
     BOOST_LOG(debug) << "DESTINATION :: "sv << request->path;
     for (auto &[name, val] : request->header) {
-      BOOST_LOG(debug) << name << " -- " << (name == "Authorization" ? "CREDENTIALS REDACTED" : val);
+      const bool secret = boost::iequals(name, "authorization") || boost::iequals(name, "cookie");
+      BOOST_LOG(debug) << name << " -- " << (secret ? "CREDENTIALS REDACTED" : val);
     }
     BOOST_LOG(debug) << " [--] "sv;
     for (auto &[name, val] : request->parse_query_string()) {
-      BOOST_LOG(debug) << name << " -- " << val;
+      BOOST_LOG(debug) << name << " -- " << (name == "token" ? "REDACTED" : val);
     }
     BOOST_LOG(debug) << " [--] "sv;
   }
@@ -310,6 +465,14 @@ namespace confighttp {
         send_unauthorized(response, request);
       }
     });
+    // A script or a share link with an access token: only what the token allows
+    if (auto token = api_tokens::from_request(request); !token.empty()) {
+      if (!api_tokens::allows(token, request->method, request->path)) {
+        return false;
+      }
+      fg.disable();
+      return true;
+    }
     auto cookies = request->header.find("cookie");
     if (cookies == request->header.end())
       return false;
@@ -708,6 +871,119 @@ namespace confighttp {
     headers.emplace("X-Frame-Options", "DENY");
     headers.emplace("Content-Security-Policy", "frame-ancestors 'none';");
     response->write(content, headers);
+  }
+
+  /**
+   * @brief Signed in with the password (not a token): token management never accepts a token.
+   */
+  bool authenticate_owner(resp_https_t response, req_https_t request) {
+    if (!api_tokens::from_request(request).empty()) {
+      send_unauthorized(response, request);
+      return false;
+    }
+    return authenticate(response, request);
+  }
+
+  /**
+   * @brief Access tokens: {"tokens": [{"id", "name", "scopes", "created", "expires", "lastUsed"}], "scopes": [...]}.
+   */
+  void getApiTokens(resp_https_t response, req_https_t request) {
+    if (!authenticate_owner(response, request)) {
+      return;
+    }
+    nlohmann::json list = nlohmann::json::array();
+    {
+      std::lock_guard lg {api_tokens::lock};
+      api_tokens::prepare();
+      for (const auto &t : api_tokens::tokens) {
+        list.push_back({{"id", t.id}, {"name", t.name}, {"scopes", t.scopes}, {"created", t.created}, {"expires", t.expires}, {"lastUsed", t.last_used}});
+      }
+    }
+    nlohmann::json out;
+    out["status"] = true;
+    out["tokens"] = list;
+    out["scopes"] = api_tokens::SCOPES;
+    send_response(response, out);
+  }
+
+  /**
+   * @brief Make a token: {"name", "scopes": [...], "days": 0 for never}. Answers the token, once.
+   */
+  void postApiToken(resp_https_t response, req_https_t request) {
+    if (!validateContentType(response, request, "application/json") || !authenticate_owner(response, request)) {
+      return;
+    }
+    try {
+      std::stringstream ss;
+      ss << request->content.rdbuf();
+      auto input = nlohmann::json::parse(ss.str());
+      api_tokens::token_t t;
+      t.name = input.value("name", std::string {});
+      if (t.name.size() > 60) {
+        t.name.resize(60);
+      }
+      for (const auto &s : input.value("scopes", std::vector<std::string> {})) {
+        if (std::find(api_tokens::SCOPES.begin(), api_tokens::SCOPES.end(), s) != api_tokens::SCOPES.end() &&
+            std::find(t.scopes.begin(), t.scopes.end(), s) == t.scopes.end()) {
+          t.scopes.push_back(s);
+        }
+      }
+      if (t.name.empty() || t.scopes.empty()) {
+        bad_request(response, request, "Give the token a name and at least one thing it may do.");
+        return;
+      }
+      const int days = std::clamp(input.value("days", 0), 0, 3650);
+      const std::string token = "tst_" + crypto::rand_alphabet(40);
+      t.id = crypto::rand_alphabet(12);
+      t.hash = api_tokens::hash_of(token);
+      t.created = api_tokens::now_s();
+      t.expires = days ? t.created + days * 86400LL : 0;
+      {
+        std::lock_guard lg {api_tokens::lock};
+        api_tokens::prepare();
+        if (api_tokens::tokens.size() >= 50) {
+          bad_request(response, request, "There are 50 tokens already. Remove some first.");
+          return;
+        }
+        api_tokens::tokens.push_back(t);
+        api_tokens::save();
+      }
+      BOOST_LOG(info) << "Access token made: "sv << t.name;
+      nlohmann::json out;
+      out["status"] = true;
+      out["id"] = t.id;
+      out["token"] = token;
+      send_response(response, out);
+    } catch (std::exception &e) {
+      bad_request(response, request, e.what());
+    }
+  }
+
+  /**
+   * @brief Remove a token: {"id"}.
+   */
+  void postApiTokenDelete(resp_https_t response, req_https_t request) {
+    if (!validateContentType(response, request, "application/json") || !authenticate_owner(response, request)) {
+      return;
+    }
+    try {
+      std::stringstream ss;
+      ss << request->content.rdbuf();
+      auto id = nlohmann::json::parse(ss.str()).value("id", std::string {});
+      {
+        std::lock_guard lg {api_tokens::lock};
+        api_tokens::prepare();
+        std::erase_if(api_tokens::tokens, [&](const api_tokens::token_t &t) {
+          return t.id == id;
+        });
+        api_tokens::save();
+      }
+      nlohmann::json out;
+      out["status"] = true;
+      send_response(response, out);
+    } catch (std::exception &e) {
+      bad_request(response, request, e.what());
+    }
   }
 
   /**
@@ -2891,8 +3167,10 @@ namespace confighttp {
         return;
       std::string sessionCookieRaw = crypto::rand_alphabet(64);
       web_sessions::add(util::hex(crypto::hash(sessionCookieRaw + config::tunastream.salt)).to_string());
+      // Keep me signed in: 15 days. Otherwise until the browser closes.
+      const bool remember = input_tree.value("remember", true);
       const SimpleWeb::CaseInsensitiveMultimap headers {
-        { "Set-Cookie", "auth=" + sessionCookieRaw + "; Secure; SameSite=Strict; Max-Age=1296000; Path=/" }
+        { "Set-Cookie", "auth=" + sessionCookieRaw + "; Secure; SameSite=Strict; " + (remember ? "Max-Age=1296000; "s : ""s) + "HttpOnly; Path=/" }
       };
       response->write(headers);
       fg.disable();
@@ -2998,6 +3276,9 @@ namespace confighttp {
     server.resource["^/live/?$"]["GET"] = getLivePage;
     server.resource["^/checklist/?$"]["GET"] = getChecklistPage;
     server.resource["^/watch/?$"]["GET"] = getWatchPage;
+    server.resource["^/api/tokens$"]["GET"] = getApiTokens;
+    server.resource["^/api/tokens$"]["POST"] = postApiToken;
+    server.resource["^/api/tokens/delete$"]["POST"] = postApiTokenDelete;
     server.resource["^/api/watch/stream$"]["GET"] = getWatchStream;
     server.resource["^/api/checklist$"]["GET"] = getChecklist;
     server.resource["^/api/checklist$"]["POST"] = postChecklist;

@@ -146,6 +146,10 @@
       <button type="button" class="btn btn-sm btn-outline-secondary" @click="fullscreen">
         <i class="fas fa-expand" aria-hidden="true"></i> {{ $t('watch.fullscreen') }}
       </button>
+      <button type="button" class="btn btn-sm btn-outline-secondary" @click="share" v-if="!token">
+        <i class="fas fa-link" aria-hidden="true"></i> {{ $t('watch.share') }}
+      </button>
+      <span class="small" role="status" v-if="shareStatus">{{ shareStatus }}</span>
       <span class="watch-note">{{ audioSupported ? $t('watch.note') : $t('watch.no_sound_here') }}</span>
     </div>
   </main>
@@ -180,6 +184,9 @@
           app: '',
           soundOn: false,
           audioSupported: typeof window.AudioDecoder !== 'undefined',
+          // Opened from a shared watch link: its token signs the page's requests
+          token: new URLSearchParams(location.search).get('token') || '',
+          shareStatus: '',
         }
       },
       computed: {
@@ -214,9 +221,27 @@
         clearInterval(this.appTimer)
       },
       methods: {
+        authHeaders() {
+          return this.token ? { Authorization: 'Bearer ' + this.token } : {}
+        },
+        async share() {
+          this.shareStatus = ''
+          try {
+            const r = await fetch('./api/tokens', {
+              credentials: 'include', method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ name: this.$t('watch.share_name', { when: new Date().toLocaleDateString() }), scopes: ['watch'], days: 1 }),
+            }).then((r) => r.json())
+            if (!r.status) throw new Error()
+            const link = `${location.origin}/watch?token=${encodeURIComponent(r.token)}`
+            try { await navigator.clipboard.writeText(link); this.shareStatus = this.$t('watch.share_copied') }
+            catch (e) { window.prompt(this.$t('watch.share_copy_this'), link) }
+          } catch (e) {
+            this.shareStatus = this.$t('watch.share_failed')
+          }
+        },
         async loadApp() {
           try {
-            const s = await fetch('./api/status', { credentials: 'include' }).then((r) => r.ok ? r.json() : null)
+            const s = await fetch('./api/status', { credentials: 'include', headers: this.authHeaders() }).then((r) => r.ok ? r.json() : null)
             this.app = (s && s.app) || ''
           } catch (e) { /* keep the last name */ }
         },
@@ -227,7 +252,7 @@
           if (this.state !== 'playing') this.state = 'connecting'
           let response
           try {
-            response = await fetch('./api/watch/stream', { credentials: 'include', cache: 'no-store' })
+            response = await fetch('./api/watch/stream', { credentials: 'include', cache: 'no-store', headers: this.authHeaders() })
           } catch (e) {
             this.state = 'error'
             this.message = this.$t('watch.error')
