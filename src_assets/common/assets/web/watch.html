@@ -219,9 +219,15 @@
       <button type="button" class="btn btn-sm btn-outline-secondary" @click="fullscreen">
         <i class="fas fa-expand" aria-hidden="true"></i> {{ $t('watch.fullscreen') }}
       </button>
-      <button type="button" class="btn btn-sm btn-outline-secondary" @click="share" v-if="!token && signedIn">
+      <button type="button" class="btn btn-sm btn-outline-secondary" @click="shareAsking = !shareAsking" v-if="!token && signedIn && !shareAsking">
         <i class="fas fa-link" aria-hidden="true"></i> {{ $t('watch.share') }}
       </button>
+      <form class="d-inline-flex gap-2 align-items-center" v-if="!token && signedIn && shareAsking" @submit.prevent="share">
+        <label class="visually-hidden" for="share-for">{{ $t('watch.share_for') }}</label>
+        <input id="share-for" class="form-control form-control-sm" style="width: 12rem" v-model="shareFor" :placeholder="$t('watch.share_for')" maxlength="60" required>
+        <button class="btn btn-sm btn-primary"><i class="fas fa-link" aria-hidden="true"></i> {{ $t('watch.share_make') }}</button>
+        <button type="button" class="btn btn-sm btn-link" @click="shareAsking = false">{{ $t('watch.share_cancel') }}</button>
+      </form>
       <span class="small" role="status" v-if="shareStatus">{{ shareStatus }}</span>
       <span class="watch-cheer-bar" v-if="state === 'playing'" role="group" :aria-label="$t('watch.cheer_label')">
         <button v-for="c in cheerKinds" :key="c.key" type="button" class="btn btn-sm btn-outline-secondary"
@@ -350,6 +356,8 @@
           signedIn: false,
           shareStatus: '',
           linkProblem: '',
+          shareAsking: false,
+          shareFor: '',
           watchPassword: '',
           passwordBusy: false,
           passwordError: '',
@@ -582,10 +590,12 @@
           try {
             const r = await fetch('./api/watch/invite', {
               credentials: 'include', method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ name: this.$t('watch.share_name', { when: new Date().toLocaleDateString() }) }),
+              body: JSON.stringify({ name: this.shareFor.trim() || this.$t('watch.share_name', { when: new Date().toLocaleDateString() }) }),
             }).then((r) => r.json())
             if (!r.status) throw new Error()
             const link = `${location.origin}/watch?invite=${encodeURIComponent(r.invite)}`
+            this.shareAsking = false
+            this.shareFor = ''
             try { await navigator.clipboard.writeText(link); this.shareStatus = this.$t('watch.share_copied') }
             catch (e) { window.prompt(this.$t('watch.share_copy_this'), link) }
           } catch (e) {
@@ -594,7 +604,14 @@
         },
         async loadApp() {
           try {
-            const s = await fetch('./api/status', { credentials: 'include', headers: this.authHeaders() }).then((r) => r.ok ? r.json() : null)
+            if (this.token) {
+              // A viewer's key sees only the game's name, not the PC's status
+              const n = await fetch('./api/watch/now', { headers: this.authHeaders() }).then((r) => r.ok ? r.json() : null)
+              this.app = (n && n.app) || ''
+              this.showingScreen = !!(n && n.showingScreen)
+              return
+            }
+            const s = await fetch('./api/status', { credentials: 'include' }).then((r) => r.ok ? r.json() : null)
             this.app = (s && s.app) || ''
             if (!this.token) {
               const first = !this.signedIn && !!s
