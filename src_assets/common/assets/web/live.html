@@ -270,6 +270,10 @@
   <script type="module">
     import { createApp } from 'vue'
     import { initApp } from './init'
+    import { loadAutoTheme } from './theme'
+
+    // Light or dark as the phone is set, in the PC's colour theme (there's no navigation bar here to do it)
+    loadAutoTheme()
 
     const app = createApp({
       inject: ['i18n'],
