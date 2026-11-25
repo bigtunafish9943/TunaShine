@@ -1804,6 +1804,29 @@ namespace nvhttp {
     view.kbps = (int) number("kbps", 1000000);
     view.setting_kbps = (int) number("setting", 1000000);
     view.hdr_peak_nits = (int) number("hdrpeak", 10000);
+    view.avg_fps = number("avgfps", 1000);
+    view.late30_pct = number("late30", 100);
+    view.loss_seconds = (int) number("lossec", 1e7);
+    view.scale_pct = args.count("scale") ? std::max(1, (int) number("scale", 100)) : 100;
+    view.bit_depth = (int) number("bits", 16);
+    view.rtt_ms = (int) number("rtt", 10000);
+    view.rtt_var_ms = (int) number("rttvar", 10000);
+    view.signal = (int) number("signal", 100);
+    view.rssi_dbm = -(int) number("rssi", 200);
+    view.link_mbps = (int) number("link", 100000);
+    // Words from a short list only
+    auto pick = [&](const char *name, std::initializer_list<const char *> allowed) {
+      const std::string value = get_arg(args, name, "");
+      for (const char *a : allowed) {
+        if (value == a) {
+          return value;
+        }
+      }
+      return std::string {};
+    };
+    view.codec = pick("codec", {"hevc", "av1", "h264"});
+    view.net = pick("net", {"wifi", "wired", "unknown"});
+    view.band = pick("band", {"2.4", "5", "6"});
 
     nlohmann::json out;
     auto session = rtsp_stream::find_session(named_cert_p->uuid);
