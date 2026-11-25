@@ -407,6 +407,8 @@
     "nvenc_preset_desc": "How much effort the graphics card spends on each frame. More effort gives a cleaner picture at the same bitrate, for a little extra delay. Automatic picks what your card can do comfortably.",
     "nvenc_realtime_hags": "Use realtime priority in hardware accelerated gpu scheduling",
     "nvenc_realtime_hags_desc": "Currently NVIDIA drivers may freeze in encoder when HAGS is enabled, realtime priority is used and VRAM utilization is close to maximum. Disabling this option lowers the priority to high, sidestepping the freeze at the cost of reduced capture performance when the GPU is heavily loaded.",
+    "nvenc_split_frame": "Encode each frame in halves at once",
+    "nvenc_split_frame_desc": "Graphics cards with more than one video encoder, such as the RTX 5080, encode the top and bottom of each frame at the same time. TunaStream checks how many the card has. A 4K frame is ready in about half the time, with a quality cost under 2%. Used for HEVC and AV1 above 1440p, with an up-to-date NVIDIA driver. If the encoder turns it down, streaming carries on the usual way.",
     "nvenc_spatial_aq": "Spatial AQ",
     "nvenc_spatial_aq_desc": "Spends more of the bitrate where your eye notices: dark scenes, skies and smooth gradients. Less banding and blockiness at the same bitrate.",
     "nvenc_spatial_aq_disabled": "Disabled (faster)",

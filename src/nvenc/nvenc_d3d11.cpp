@@ -44,6 +44,14 @@ namespace nvenc {
           BOOST_LOG(error) << "NvEnc: NvEncodeAPICreateInstance() failed: " << last_nvenc_error_string;
         } else {
           nvenc = std::move(new_nvenc);
+          // The newest API version the driver understands, reported as (major << 4) | minor
+          if (auto get_max_version = (decltype(NvEncodeAPIGetMaxSupportedVersion) *) GetProcAddress(dll, "NvEncodeAPIGetMaxSupportedVersion")) {
+            uint32_t max_version = 0;
+            if (get_max_version(&max_version) == NV_ENC_SUCCESS) {
+              driver_api_version = MAKE_NVENC_VER(max_version >> 4, max_version & 0xF);
+              BOOST_LOG(info) << "NvEnc: the driver supports NVENC API " << (max_version >> 4) << '.' << (max_version & 0xF);
+            }
+          }
           return true;
         }
       } else {

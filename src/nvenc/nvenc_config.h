@@ -28,6 +28,10 @@ namespace nvenc {
     // Improves fades compression, uses CUDA cores
     bool weighted_prediction = false;
 
+    // On cards with two or more NVENC chips, encode each frame in two halves at once (HEVC and AV1,
+    // above 1440p). Nearly halves the time to encode a 4K frame, for a quality cost under 2%.
+    bool split_frame = true;
+
     // Allocate more bitrate to flat regions since they're visually more perceptible, uses CUDA cores
     bool adaptive_quantization = true;  // spends bits where the eye notices: dark scenes, skies, gradients
 
