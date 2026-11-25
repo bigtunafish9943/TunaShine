@@ -47,6 +47,7 @@
 #include "file_outbox.h"
 #include "pairing_backup.h"
 #include "play_history.h"
+#include "box_art.h"
 #include "captures.h"
 #include "sound_board.h"
 #include "tv_messages.h"
@@ -560,6 +561,89 @@ namespace confighttp {
     headers.emplace("Content-Type", "image/png");
     headers.emplace("X-Frame-Options", "DENY");
     headers.emplace("Content-Security-Policy", "frame-ancestors 'none';");
+    response->write(SimpleWeb::StatusCode::success_ok, in, headers);
+  }
+
+  /**
+   * @brief The home-screen icon for the phone page: /images/tunastream-app-512.png or -180.png.
+   */
+  void getAppIcon(resp_https_t response, req_https_t request) {
+    const bool small = request->path.find("180") != std::string::npos;
+    std::ifstream in(small ? WEB_DIR "images/tunastream-app-180.png" : WEB_DIR "images/tunastream-app-512.png", std::ios::binary);
+    SimpleWeb::CaseInsensitiveMultimap headers;
+    headers.emplace("Content-Type", "image/png");
+    headers.emplace("Cache-Control", "public, max-age=86400");
+    response->write(SimpleWeb::StatusCode::success_ok, in, headers);
+  }
+
+  /**
+   * @brief Lets a phone add the Live page to its home screen like an app.
+   */
+  void getLiveManifest(resp_https_t response, req_https_t request) {
+    nlohmann::json manifest {
+      {"name", "TunaStream Live"},
+      {"short_name", "TunaStream"},
+      {"start_url", "./live"},
+      {"scope", "./"},
+      {"display", "standalone"},
+      {"background_color", "#041431"},
+      {"theme_color", "#041431"},
+      {"icons", nlohmann::json::array({
+        {{"src", "./images/tunastream-app-180.png"}, {"sizes", "180x180"}, {"type", "image/png"}},
+        {{"src", "./images/tunastream-app-512.png"}, {"sizes", "512x512"}, {"type", "image/png"}},
+      })},
+    };
+    SimpleWeb::CaseInsensitiveMultimap headers;
+    headers.emplace("Content-Type", "application/manifest+json");
+    response->write(SimpleWeb::StatusCode::success_ok, manifest.dump(), headers);
+  }
+
+  /**
+   * @brief The Live page: what's playing, on a phone.
+   */
+  void getLivePage(resp_https_t response, req_https_t request) {
+    if (!authenticate(response, request, true)) {
+      return;
+    }
+
+    print_req(request);
+
+    std::string content = file_handler::read_file(WEB_DIR "live.html");
+    SimpleWeb::CaseInsensitiveMultimap headers;
+    headers.emplace("Content-Type", "text/html; charset=utf-8");
+    headers.emplace("X-Frame-Options", "DENY");
+    headers.emplace("Content-Security-Policy", "frame-ancestors 'none';");
+    response->write(content, headers);
+  }
+
+  /**
+   * @brief An app's picture, by name, for the Live page: GET /api/cover?app=...
+   */
+  void getCover(resp_https_t response, req_https_t request) {
+    if (!authenticate(response, request)) {
+      return;
+    }
+
+    auto args = request->parse_query_string();
+    const auto name = args.find("app") != args.end() ? args.find("app")->second : std::string {};
+    std::string path;
+    for (const auto &app : proc::proc.get_apps()) {
+      if (app.name == name) {
+        try {
+          path = proc::proc.get_app_image(std::stoi(app.id));
+        } catch (const std::exception &) {
+        }
+        break;
+      }
+    }
+    if (path.empty()) {
+      response->write(SimpleWeb::StatusCode::client_error_not_found);
+      return;
+    }
+    std::ifstream in(path, std::ios::binary);
+    SimpleWeb::CaseInsensitiveMultimap headers;
+    headers.emplace("Content-Type", box_art::content_type_of(path));
+    headers.emplace("Cache-Control", "private, max-age=600");
     response->write(SimpleWeb::StatusCode::success_ok, in, headers);
   }
 
@@ -1656,6 +1740,8 @@ namespace confighttp {
     output_tree["status"] = true;
     output_tree["platform"] = TUNASTREAM_PLATFORM;
     output_tree["version"] = PROJECT_VERSION;
+    // For the phone QR code on the home page
+    output_tree["lanAddress"] = platf::get_local_ip_for_gateway();
 #ifdef _WIN32
     output_tree["vdisplayStatus"] = (int)proc::vDisplayDriverStatus;
 #endif
@@ -2317,6 +2403,10 @@ namespace confighttp {
     server.resource["^/api/covers/upload$"]["POST"] = uploadCover;
     server.resource["^/images/tunastream.ico$"]["GET"] = getFaviconImage;
     server.resource["^/images/logo-tunastream-45.png$"]["GET"] = getTunaStreamLogoImage;
+    server.resource["^/images/tunastream-app-(180|512).png$"]["GET"] = getAppIcon;
+    server.resource["^/live.webmanifest$"]["GET"] = getLiveManifest;
+    server.resource["^/live/?$"]["GET"] = getLivePage;
+    server.resource["^/api/cover$"]["GET"] = getCover;
     server.resource["^/assets\\/.+$"]["GET"] = getNodeModules;
     server.config.reuse_address = true;
     server.config.address = net::af_to_any_address_string(address_family);

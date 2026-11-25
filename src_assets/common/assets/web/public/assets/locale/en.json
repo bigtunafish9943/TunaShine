@@ -602,6 +602,10 @@
     "milestone_smooth_hour": "An hour without lost video",
     "milestone_streams": "{n} streams",
     "milestones_title": "Milestones",
+    "phone_desc": "Point your phone's camera at the code to open the Live page: what's playing, controller batteries, messages and sounds for the TV, and End session. Add it to your home screen to open it like an app.",
+    "phone_note": "Your phone needs to be on the same Wi-Fi. The first time, it warns that the page's certificate isn't trusted, as your PC's browser did; that's expected for a page on your own PC. Accept it, then sign in.",
+    "phone_qr_label": "QR code for the Live page",
+    "phone_title": "On your phone",
     "battery_charging": "charging, {pct}%",
     "battery_level": "battery {pct}%",
     "controller_n": "Controller {n}",
@@ -959,5 +963,26 @@
     "login": "Sign in",
     "welcome_success": "Account created. This page will reload and ask you to sign in.",
     "login_success": "This page will reload soon."
+  },
+  "live": {
+    "battery": "Controller {pct}%",
+    "battery_charging": "Controller charging, {pct}%",
+    "controller": "Controller {n}",
+    "delay": "{ms} ms on the TV",
+    "desktop": "Desktop",
+    "end_confirm": "End the session? The game closes and the TV goes back to its menu.",
+    "end_session": "End session",
+    "ended": "Session ended.",
+    "fps_of": "of {target} fps",
+    "mbps": "{mbps} Mbps",
+    "message_placeholder": "Type a message for the TV",
+    "message_title": "Message the TV",
+    "nobody": "Nobody is streaming right now.",
+    "on_device": "on {device}",
+    "open_home": "Open TunaStream",
+    "sent": "Sent. It shows on the TV within a few seconds.",
+    "sounds_title": "Play a sound",
+    "this_week": "played in the last seven days",
+    "updated": "Live"
   }
 }

@@ -352,6 +352,17 @@
         </div>
       </div>
     </div>
+    <!-- Open the Live page on a phone: what's playing, messages, sounds, End session -->
+    <section class="home-phone" v-if="phoneQr" aria-labelledby="phone-title">
+      <div class="home-phone-qr" v-html="phoneQr" role="img" :aria-label="$t('index.phone_qr_label')"></div>
+      <div>
+        <h2 class="h5" id="phone-title">{{ $t('index.phone_title') }}</h2>
+        <p>{{ $t('index.phone_desc') }}</p>
+        <p class="home-phone-url"><a :href="phoneUrl">{{ phoneUrl }}</a></p>
+        <p class="home-phone-note">{{ $t('index.phone_note') }}</p>
+      </div>
+    </section>
+
     <!-- Send a file to a paired device -->
     <Send-File-Card></Send-File-Card>
     <!-- Resources -->
@@ -368,6 +379,7 @@
   import ResourceCard from './ResourceCard.vue'
   import SendFileCard from './SendFileCard.vue'
   import TunaStreamVersion from './tunastream_version'
+  import QRCode from 'qrcode'
 
   console.log("Hello, TunaStream!")
   let app = createApp({
@@ -407,6 +419,8 @@
         statusTimer: null,
         recap: null,
         recapTimer: null,
+        phoneQr: '',
+        phoneUrl: '',
         captures: [],
         captureFolders: { screenshots: '', clips: '' },
         sounds: [],
@@ -440,6 +454,7 @@
         this.statusTimer = setInterval(() => {
           if (!document.hidden && !this.ending) this.loadStatus();
         }, 5000);
+        this.makePhoneQr(config.lanAddress);
         this.loadRecap();
         this.loadSounds();
         this.loadCaptures();
@@ -564,6 +579,18 @@
           this.followTvMessage(r.id, r.devices);
         } catch (e) {
           this.message = { ...this.message, sending: false, error: true, status: this.$t('index.message_failed') };
+        }
+      },
+      /** A QR code for the Live page at the PC's address on the home network, for a phone camera. */
+      async makePhoneQr(lanAddress) {
+        const host = lanAddress && lanAddress !== '0.0.0.0' ? lanAddress : location.hostname;
+        if (!host || host === 'localhost' || host === '127.0.0.1') return;
+        this.phoneUrl = `https://${host}:${location.port || 47990}/live`;
+        try {
+          this.phoneQr = await QRCode.toString(this.phoneUrl, { type: 'svg', margin: 1, errorCorrectionLevel: 'M',
+                                                               color: { dark: '#041431', light: '#ffffff' } });
+        } catch (e) {
+          this.phoneQr = '';
         }
       },
       async loadCaptures() {
