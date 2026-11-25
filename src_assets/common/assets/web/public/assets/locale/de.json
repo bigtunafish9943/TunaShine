@@ -1302,6 +1302,11 @@
         "how": "Wähle auf der Seite „Zuschauen“ „Zuschau-Link teilen“ und öffne den Link auf einem nicht angemeldeten Tablet. Öffne denselben Link auf einem zweiten Gerät. Öffne am nächsten Tag „Zuschauen“ wieder auf dem Tablet.",
         "expect": "Das Tablet schaut ohne Passwort zu und kann keine andere Seite öffnen. Das zweite Gerät erfährt, dass der Link schon benutzt wurde. Am nächsten Tag geht es auf dem Tablet weiter, und unter Passwort ändern > Zugriffstoken steht es als täglich wechselnder Zuschau-Schlüssel; Entfernen beendet es."
       },
+      "watchpassword": {
+        "title": "Zuschau-Passwort",
+        "how": "Lege auf der Seite „Zuschauen“ ein Zuschau-Passwort für jemanden an. Öffne auf einem nicht angemeldeten Tablet die Seite „Zuschauen“ und gib es ein. Gib dann auf einem anderen Gerät fünfmal ein falsches ein.",
+        "expect": "Das Tablet schaut ohne Link zu. Das Passwort funktioniert auch an späteren Tagen. Nach fünf Fehlversuchen soll das Gerät zehn Minuten warten. Entfernen des Passworts unter Zugriffstoken beendet auch das Tablet."
+      },
       "sharescreen": {
         "title": "Meinen Bildschirm teilen",
         "how": "Öffne, während kein Fernseher streamt, am PC „Zuschauen“, teile deinen Bildschirm für 1 Stunde und öffne einen Zuschau-Link auf einem Tablet. Starte dann einen Stream am Fernseher, beende ihn und wähle zum Schluss „Teilen beenden“.",
@@ -1372,6 +1377,17 @@
     "screen_failed": "Das Teilen konnte nicht geändert werden.",
     "need_link": "Dieses Gerät kann noch nicht zuschauen. Öffne einen neuen Zuschau-Link von der Person, die teilt, oder melde dich an.",
     "sign_in": "Anmelden",
+    "password_label": "Zuschau-Passwort",
+    "password_go": "Zuschauen",
+    "password_wrong": "Das Zuschau-Passwort stimmt nicht.",
+    "passwords_title": "Zuschau-Passwörter",
+    "passwords_desc": "Ein Zuschau-Passwort ändert sich nicht. Auf der Seite „Zuschauen“ eines Tablets oder Handys eingegeben, lässt es dieses Gerät zuschauen, genau wie ein Zuschau-Link. Leg für jede Person eines an, dann kannst du eines entfernen, ohne die anderen.",
+    "passwords_name": "Für wen",
+    "passwords_suggest": "Vorschlagen",
+    "passwords_make": "Zuschau-Passwort anlegen",
+    "passwords_made": "{name} kann jetzt mit dem Passwort {password} zuschauen. Es wird nicht noch einmal angezeigt.",
+    "passwords_failed": "Das Zuschau-Passwort konnte nicht angelegt werden.",
+    "passwords_manage": "Zuschau-Passwörter und -Links entfernst du unter Passwort ändern > Zugriffstoken",
     "screen_which": "Welcher Bildschirm",
     "screen_monitor": "Bildschirm {n}",
     "screen_main": "Hauptbildschirm"
@@ -1408,6 +1424,7 @@
     "remove_confirm": "{name} entfernen? Alles, was es nutzt, funktioniert dann nicht mehr.",
     "failed": "Das Token konnte nicht erstellt werden.",
     "kind_invite": "Zuschau-Link, noch nicht geöffnet",
-    "kind_rotating": "Zuschau-Schlüssel auf einem Gerät, ändert sich täglich"
+    "kind_rotating": "Zuschau-Schlüssel auf einem Gerät, ändert sich täglich",
+    "kind_password": "Zuschau-Passwort, ändert sich nicht; Entfernen entfernt auch seine Geräte"
   }
 }

@@ -70,6 +70,12 @@
       border: 0;
     }
 
+    .watch-password {
+      margin-top: 1rem;
+      text-align: start;
+      max-width: 22rem;
+    }
+
     .watch-share {
       margin-top: 1rem;
       padding: 0.75rem 1rem;
@@ -143,7 +149,15 @@
       <div class="watch-status" v-if="state !== 'playing'" role="status">
         <div class="spinner-border" v-if="state === 'connecting'" aria-hidden="true"></div>
         <p>{{ statusText }}</p>
-        <p v-if="state === 'locked'"><a href="./login?redir=./watch">{{ $t('watch.sign_in') }}</a></p>
+        <form v-if="state === 'locked'" class="watch-password" @submit.prevent="usePassword">
+          <label for="watch-password" class="form-label">{{ $t('watch.password_label') }}</label>
+          <div class="input-group">
+            <input id="watch-password" class="form-control" type="password" v-model="watchPassword" autocomplete="current-password" required minlength="8">
+            <button class="btn btn-primary" :disabled="passwordBusy">{{ $t('watch.password_go') }}</button>
+          </div>
+          <p class="small text-danger mt-2 mb-0" v-if="passwordError" role="alert">{{ passwordError }}</p>
+          <p class="small mt-2 mb-0"><a href="./login?redir=./watch">{{ $t('watch.sign_in') }}</a></p>
+        </form>
       </div>
     </div>
 
@@ -191,6 +205,22 @@
       </template>
       <p class="small text-danger mt-2 mb-0" v-if="sharingError" role="alert">{{ sharingError }}</p>
     </section>
+
+    <!-- Watch passwords: don't change, for devices that come back often -->
+    <section class="watch-share" v-if="!token && signedIn" aria-labelledby="pw-title">
+      <h2 class="h6" id="pw-title"><i class="fas fa-key" aria-hidden="true"></i> {{ $t('watch.passwords_title') }}</h2>
+      <p class="mb-2">{{ $t('watch.passwords_desc') }}</p>
+      <form class="d-flex flex-wrap gap-2 align-items-center" @submit.prevent="makePassword">
+        <label class="visually-hidden" for="pw-name">{{ $t('watch.passwords_name') }}</label>
+        <input id="pw-name" class="form-control form-control-sm w-auto" v-model="newPasswordName" :placeholder="$t('watch.passwords_name')" maxlength="60" required>
+        <label class="visually-hidden" for="pw-text">{{ $t('watch.password_label') }}</label>
+        <input id="pw-text" class="form-control form-control-sm w-auto font-monospace" v-model="newPassword" :placeholder="$t('watch.password_label')" minlength="8" maxlength="128" required autocomplete="off">
+        <button type="button" class="btn btn-sm btn-outline-secondary" @click="suggestPassword">{{ $t('watch.passwords_suggest') }}</button>
+        <button class="btn btn-sm btn-primary">{{ $t('watch.passwords_make') }}</button>
+      </form>
+      <p class="small mt-2 mb-0" role="status" v-if="passwordMade">{{ passwordMade }}</p>
+      <p class="small mt-2 mb-0"><a href="./password#tokens-title">{{ $t('watch.passwords_manage') }}</a></p>
+    </section>
   </main>
 
   <script type="module">
@@ -229,6 +259,12 @@
           signedIn: false,
           shareStatus: '',
           linkProblem: '',
+          watchPassword: '',
+          passwordBusy: false,
+          passwordError: '',
+          newPasswordName: '',
+          newPassword: '',
+          passwordMade: '',
           sharing: null,
           sharingBusy: false,
           sharingError: '',
@@ -313,6 +349,51 @@
             }
           }
           this.keyTimer = setInterval(() => this.rotateKey(false), 3600 * 1000)
+        },
+        async usePassword() {
+          this.passwordBusy = true
+          this.passwordError = ''
+          try {
+            const r = await fetch('./api/watch/password', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ password: this.watchPassword }),
+            }).then((r) => r.json())
+            if (!r.status || !r.key) throw new Error(r.error || '')
+            this.storeKey(r.key)
+            this.token = r.key
+            this.watchPassword = ''
+            this.connect()
+            this.loadApp()
+          } catch (e) {
+            this.passwordError = e.message || this.$t('watch.password_wrong')
+          }
+          this.passwordBusy = false
+        },
+        suggestPassword() {
+          // Easy to read out and type on a tablet: three short words and two digits
+          const words = ['tuna', 'reef', 'kelp', 'coral', 'wave', 'shell', 'pearl', 'tide', 'squid', 'crab', 'otter', 'whale', 'shark', 'manta', 'sand', 'foam', 'drift', 'bay', 'cove', 'fin']
+          const pick = (n) => {
+            const a = new Uint32Array(n)
+            crypto.getRandomValues(a)
+            return Array.from(a)
+          }
+          const r = pick(4)
+          this.newPassword = [0, 1, 2].map((i) => words[r[i] % words.length]).join('-') + '-' + String(r[3] % 90 + 10)
+        },
+        async makePassword() {
+          this.passwordMade = ''
+          try {
+            const r = await fetch('./api/watch/passwords', {
+              credentials: 'include', method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ name: this.newPasswordName, password: this.newPassword }),
+            }).then((r) => r.json())
+            if (!r.status) throw new Error(r.error || '')
+            this.passwordMade = this.$t('watch.passwords_made', { name: this.newPasswordName, password: this.newPassword })
+            this.newPasswordName = ''
+            this.newPassword = ''
+          } catch (e) {
+            this.passwordMade = e.message || this.$t('watch.passwords_failed')
+          }
         },
         async rotateKey(force) {
           const kept = this.storedKey()

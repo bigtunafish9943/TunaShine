@@ -1302,6 +1302,11 @@
         "how": "En la página Ver, elige Compartir un enlace para ver y abre el enlace en una tableta sin sesión iniciada. Abre el mismo enlace en un segundo dispositivo. Al día siguiente, vuelve a abrir Ver en la tableta.",
         "expect": "La tableta mira sin contraseña y no puede abrir otras páginas. Al segundo dispositivo se le avisa de que el enlace ya se usó. La tableta sigue funcionando al día siguiente, y Cambiar contraseña > Tokens de acceso la muestra como clave que cambia cada día; al quitarla deja de funcionar."
       },
+      "watchpassword": {
+        "title": "Contraseña para ver",
+        "how": "En la página Ver, crea una contraseña para ver para alguien. En una tableta sin sesión, abre la página Ver y escríbela. Luego escribe una incorrecta cinco veces en otro dispositivo.",
+        "expect": "La tableta mira sin enlace. La contraseña sigue funcionando otros días. Tras cinco intentos fallidos, ese dispositivo debe esperar diez minutos. Quitar la contraseña en Tokens de acceso también detiene la tableta."
+      },
       "sharescreen": {
         "title": "Compartir mi pantalla",
         "how": "Sin transmisión en la tele, abre Ver en el PC, comparte tu pantalla durante 1 hora y abre un enlace para ver en una tableta. Luego inicia una transmisión en la tele, termínala y elige Dejar de compartir.",
@@ -1372,6 +1377,17 @@
     "screen_failed": "No se pudo cambiar el uso compartido.",
     "need_link": "Este dispositivo aún no puede ver. Abre un nuevo enlace para ver de quien comparte, o inicia sesión.",
     "sign_in": "Iniciar sesión",
+    "password_label": "Contraseña para ver",
+    "password_go": "Ver",
+    "password_wrong": "Esa contraseña para ver no es correcta.",
+    "passwords_title": "Contraseñas para ver",
+    "passwords_desc": "Una contraseña para ver no cambia. Escrita en la página Ver de una tableta o un móvil, deja ver a ese dispositivo, igual que un enlace para ver. Crea una por persona para poder quitar una sin afectar a las demás.",
+    "passwords_name": "Para quién",
+    "passwords_suggest": "Sugerir una",
+    "passwords_make": "Crear contraseña para ver",
+    "passwords_made": "{name} ya puede ver con la contraseña {password}. No se vuelve a mostrar.",
+    "passwords_failed": "No se pudo crear la contraseña para ver.",
+    "passwords_manage": "Quita contraseñas y enlaces en Cambiar contraseña > Tokens de acceso",
     "screen_which": "Qué pantalla",
     "screen_monitor": "Pantalla {n}",
     "screen_main": "principal"
@@ -1408,6 +1424,7 @@
     "remove_confirm": "¿Quitar {name}? Lo que lo use dejará de funcionar.",
     "failed": "No se pudo crear el token.",
     "kind_invite": "enlace para ver, aún sin abrir",
-    "kind_rotating": "clave para ver en un dispositivo, cambia cada día"
+    "kind_rotating": "clave para ver en un dispositivo, cambia cada día",
+    "kind_password": "contraseña para ver, no cambia; al quitarla se quitan también sus dispositivos"
   }
 }

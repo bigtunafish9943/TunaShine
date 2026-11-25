@@ -11,6 +11,7 @@
 #include <filesystem>
 #include <format>
 #include <fstream>
+#include <map>
 #include <mutex>
 #include <set>
 #include <sstream>
@@ -198,6 +199,10 @@ namespace confighttp {
       // gets its own key, which changes every day while it's used
       bool invite = false;
       bool rotating = false;
+      // A watch password: typed on the Watch page, it gives that device a watch key. It doesn't
+      // change and doesn't run out; removing it also removes the keys it gave.
+      bool password = false;
+      std::string parent;  // the watch password that gave this key
       std::string prev_hash;  // the key before the last change, for a few minutes
       std::int64_t prev_until = 0;
       std::int64_t rotated = 0;
@@ -229,7 +234,7 @@ namespace confighttp {
     void save() {
       nlohmann::json list = nlohmann::json::array();
       for (const auto &t : tokens) {
-        list.push_back({{"id", t.id}, {"name", t.name}, {"hash", t.hash}, {"scopes", t.scopes}, {"created", t.created}, {"expires", t.expires}, {"lastUsed", t.last_used}, {"invite", t.invite}, {"rotating", t.rotating}, {"prevHash", t.prev_hash}, {"prevUntil", t.prev_until}, {"rotated", t.rotated}});
+        list.push_back({{"id", t.id}, {"name", t.name}, {"hash", t.hash}, {"scopes", t.scopes}, {"created", t.created}, {"expires", t.expires}, {"lastUsed", t.last_used}, {"invite", t.invite}, {"rotating", t.rotating}, {"prevHash", t.prev_hash}, {"prevUntil", t.prev_until}, {"rotated", t.rotated}, {"password", t.password}, {"parent", t.parent}});
       }
       std::error_code ec;
       const auto path = file();
@@ -270,6 +275,8 @@ namespace confighttp {
           t.prev_hash = j.value("prevHash", "");
           t.prev_until = j.value("prevUntil", (std::int64_t) 0);
           t.rotated = j.value("rotated", (std::int64_t) 0);
+          t.password = j.value("password", false);
+          t.parent = j.value("parent", "");
           if (!t.id.empty() && !t.hash.empty()) {
             tokens.push_back(std::move(t));
           }
@@ -332,6 +339,10 @@ namespace confighttp {
           continue;
         }
         if (t.expires && t.expires < now) {
+          return false;
+        }
+        // A watch password is only ever typed into the Watch page, never sent as a token
+        if (t.password) {
           return false;
         }
         // A watch link only swaps itself for a key; only a key changes itself
@@ -970,7 +981,7 @@ namespace confighttp {
         if (t.expires && t.expires < api_tokens::now_s() && (t.invite || t.rotating)) {
           continue;  // watch links and keys that ran out
         }
-        list.push_back({{"id", t.id}, {"name", t.name}, {"scopes", t.scopes}, {"created", t.created}, {"expires", t.expires}, {"lastUsed", t.last_used}, {"invite", t.invite}, {"rotating", t.rotating}});
+        list.push_back({{"id", t.id}, {"name", t.name}, {"scopes", t.scopes}, {"created", t.created}, {"expires", t.expires}, {"lastUsed", t.last_used}, {"invite", t.invite}, {"rotating", t.rotating}, {"password", t.password}, {"parent", t.parent}});
       }
     }
     nlohmann::json out;
@@ -1084,7 +1095,7 @@ namespace confighttp {
         std::lock_guard lg {api_tokens::lock};
         api_tokens::prepare();
         std::erase_if(api_tokens::tokens, [&](const api_tokens::token_t &t) {
-          return t.id == id;
+          return t.id == id || (!id.empty() && t.parent == id);  // a watch password takes its devices' keys along
         });
         api_tokens::save();
       }
@@ -1195,6 +1206,149 @@ namespace confighttp {
       }
     }
     bad_request(response, request, "This watch link was already used or has expired.");
+  }
+
+  namespace watch_passwords {
+    std::mutex lock;
+    std::map<std::string, std::pair<int, std::int64_t>> failures;  // address: count, since
+
+    /// Too many wrong watch passwords from this address lately: 5 in 10 minutes
+    bool blocked(const std::string &address) {
+      std::lock_guard lg {lock};
+      auto it = failures.find(address);
+      if (it == failures.end()) {
+        return false;
+      }
+      if (api_tokens::now_s() - it->second.second > 600) {
+        failures.erase(it);
+        return false;
+      }
+      return it->second.first >= 5;
+    }
+
+    void failed(const std::string &address) {
+      std::lock_guard lg {lock};
+      auto &f = failures[address];
+      if (f.first == 0 || api_tokens::now_s() - f.second > 600) {
+        f = {0, api_tokens::now_s()};
+      }
+      ++f.first;
+    }
+  }  // namespace watch_passwords
+
+  /**
+   * @brief POST /api/watch/passwords {"name", "password"}: a watch password that doesn't change.
+   *        Typed on the Watch page, it lets that device watch (with its own daily-changing key).
+   */
+  void postWatchPasswordMake(resp_https_t response, req_https_t request) {
+    if (!validateContentType(response, request, "application/json") || !authenticate_owner(response, request)) {
+      return;
+    }
+    try {
+      auto input = nlohmann::json::parse(watch_keys::read_body(request));
+      api_tokens::token_t t;
+      t.name = input.value("name", std::string {});
+      const auto password = input.value("password", std::string {});
+      if (t.name.empty() || t.name.size() > 60) {
+        bad_request(response, request, "Give the watch password a name, up to 60 characters.");
+        return;
+      }
+      if (password.size() < 8 || password.size() > 128) {
+        bad_request(response, request, "A watch password needs at least 8 characters.");
+        return;
+      }
+      t.scopes = {"watch"};
+      t.password = true;
+      t.id = crypto::rand_alphabet(12);
+      t.hash = api_tokens::hash_of("watch-password:" + password);
+      t.created = api_tokens::now_s();
+      {
+        std::lock_guard lg {api_tokens::lock};
+        api_tokens::prepare();
+        for (const auto &x : api_tokens::tokens) {
+          if (x.password && x.hash == t.hash) {
+            bad_request(response, request, "That watch password is already in use. Choose another.");
+            return;
+          }
+        }
+        if (api_tokens::tokens.size() >= 50) {
+          bad_request(response, request, "There are 50 tokens and watch passwords already. Remove some first.");
+          return;
+        }
+        api_tokens::tokens.push_back(t);
+        api_tokens::save();
+      }
+      BOOST_LOG(info) << "Watch password made: "sv << t.name;
+      nlohmann::json out;
+      out["status"] = true;
+      out["id"] = t.id;
+      send_response(response, out);
+    } catch (std::exception &e) {
+      bad_request(response, request, e.what());
+    }
+  }
+
+  /**
+   * @brief POST /api/watch/password {"password"}: from the Watch page on a device, no sign-in.
+   *        A right watch password gives this device its own watch key, {"key", "rotateAfter"}.
+   *        Five wrong tries from one address wait ten minutes.
+   */
+  void postWatchPasswordUse(resp_https_t response, req_https_t request) {
+    if (!checkIPOrigin(response, request) || !validateContentType(response, request, "application/json")) {
+      return;
+    }
+    const auto address = net::addr_to_normalized_string(request->remote_endpoint().address());
+    if (watch_passwords::blocked(address)) {
+      bad_request(response, request, "Too many wrong tries. Wait ten minutes, then try again.");
+      return;
+    }
+    try {
+      auto input = nlohmann::json::parse(watch_keys::read_body(request));
+      const auto hash = api_tokens::hash_of("watch-password:" + input.value("password", std::string {}));
+      std::lock_guard lg {api_tokens::lock};
+      api_tokens::prepare();
+      std::string parent_id;
+      std::string parent_name;
+      for (auto &t : api_tokens::tokens) {
+        if (t.password && t.hash == hash) {
+          parent_id = t.id;
+          parent_name = t.name;
+          t.last_used = api_tokens::now_s();
+        }
+      }
+      if (parent_id.empty()) {
+        watch_passwords::failed(address);
+        bad_request(response, request, "That watch password isn't right.");
+        return;
+      }
+      // Each device keeps at most a few keys from one password: the oldest go first
+      std::vector<std::size_t> mine;
+      for (std::size_t i = 0; i < api_tokens::tokens.size(); ++i) {
+        if (api_tokens::tokens[i].parent == parent_id) {
+          mine.push_back(i);
+        }
+      }
+      if (mine.size() >= 10) {
+        api_tokens::tokens.erase(api_tokens::tokens.begin() + (std::ptrdiff_t) mine.front());
+      }
+      api_tokens::token_t key;
+      key.id = crypto::rand_alphabet(12);
+      key.name = parent_name;
+      key.scopes = {"watch"};
+      key.rotating = true;
+      key.parent = parent_id;
+      key.created = api_tokens::now_s();
+      api_tokens::tokens.push_back(key);
+      const auto fresh = watch_keys::renew_locked(api_tokens::tokens.back(), false);
+      BOOST_LOG(info) << "Watch password used on a device: "sv << parent_name;
+      nlohmann::json out;
+      out["status"] = true;
+      out["key"] = fresh;
+      out["rotateAfter"] = api_tokens::ROTATE_EVERY;
+      send_response(response, out);
+    } catch (std::exception &e) {
+      bad_request(response, request, e.what());
+    }
   }
 
   /**
@@ -3565,6 +3719,8 @@ namespace confighttp {
     server.resource["^/api/watch/invite$"]["POST"] = postWatchInvite;
     server.resource["^/api/watch/redeem$"]["POST"] = postWatchRedeem;
     server.resource["^/api/watch/rotate$"]["POST"] = postWatchRotate;
+    server.resource["^/api/watch/passwords$"]["POST"] = postWatchPasswordMake;
+    server.resource["^/api/watch/password$"]["POST"] = postWatchPasswordUse;
     server.resource["^/api/checklist$"]["GET"] = getChecklist;
     server.resource["^/api/checklist$"]["POST"] = postChecklist;
     server.resource["^/api/cover$"]["GET"] = getCover;

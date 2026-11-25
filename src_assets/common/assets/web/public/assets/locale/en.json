@@ -1302,6 +1302,11 @@
         "how": "On the Watch page, choose Share a watch link and open the copied link on a tablet that isn't signed in. Open the same link again on a second device. The next day, open Watch on the tablet again.",
         "expect": "The tablet watches without the password and can't open any other page. The second device is told the link was already used. The tablet keeps working the next day, and Change Password > Access tokens lists it as a watch key that changes daily; removing it stops it."
       },
+      "watchpassword": {
+        "title": "Watch password",
+        "how": "On the Watch page, make a watch password for someone. On a tablet that isn't signed in, open the Watch page and type it. Then type a wrong one five times on another device.",
+        "expect": "The tablet watches without a link. The password keeps working on later days. After five wrong tries, that device is told to wait ten minutes. Removing the password under Access tokens stops the tablet too."
+      },
       "sharescreen": {
         "title": "Share my screen",
         "how": "With no TV streaming, open Watch on the PC, choose Share my screen for 1 hour, and open a watch link on a tablet. Then start a stream on the TV, end it, and finally choose Stop sharing.",
@@ -1372,6 +1377,17 @@
     "screen_failed": "Sharing couldn't be changed.",
     "need_link": "This device can't watch yet. Open a new watch link from the person who shares, or sign in.",
     "sign_in": "Sign in",
+    "password_label": "Watch password",
+    "password_go": "Watch",
+    "password_wrong": "That watch password isn't right.",
+    "passwords_title": "Watch passwords",
+    "passwords_desc": "A watch password doesn't change. Typed on the Watch page of a tablet or phone, it lets that device watch, the same as a watch link. Make one for each person, so you can remove one without the others.",
+    "passwords_name": "Who it's for",
+    "passwords_suggest": "Suggest one",
+    "passwords_make": "Make watch password",
+    "passwords_made": "{name} can now watch with the password {password}. It isn't shown again.",
+    "passwords_failed": "The watch password couldn't be made.",
+    "passwords_manage": "Remove watch passwords and links under Change Password > Access tokens",
     "screen_which": "Which screen",
     "screen_monitor": "Screen {n}",
     "screen_main": "main"
@@ -1408,6 +1424,7 @@
     "remove_confirm": "Remove {name}? Anything using it stops working.",
     "failed": "The token couldn't be made.",
     "kind_invite": "watch link, not opened yet",
-    "kind_rotating": "watch key on a device, changes daily"
+    "kind_rotating": "watch key on a device, changes daily",
+    "kind_password": "watch password, doesn't change; removing it removes its devices too"
   }
 }
