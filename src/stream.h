@@ -97,6 +97,20 @@ namespace stream {
       int kbps = 0;  ///< Bitrate the device is asking for, in the units of its own setting
       int setting_kbps = 0;  ///< The device's bitrate setting
       int hdr_peak_nits = 0;  ///< The brightest the screen says it can show in HDR, 0 when unknown
+      // What TunaReceive's stream details overlay shows, for the phone page
+      double avg_fps = 0;  ///< Frames received per second since the stream started
+      double late30_pct = 0;  ///< Share of frames late over the last 30 seconds
+      int loss_seconds = 0;  ///< Seconds with lost video since the stream started
+      int scale_pct = 100;  ///< Picture drawn at this share of its size to keep up (100 = full size)
+      std::string codec;  ///< "hevc", "av1" or "h264"
+      int bit_depth = 0;  ///< 8 or 10
+      int rtt_ms = 0;  ///< Network round trip, and how much it varies
+      int rtt_var_ms = 0;
+      std::string net;  ///< The TV's connection: "wifi", "wired" or "unknown"
+      std::string band;  ///< Wi-Fi band in GHz: "2.4", "5" or "6"
+      int signal = 0;  ///< Wi-Fi signal, 0 to 100
+      int rssi_dbm = 0;  ///< Wi-Fi signal strength (negative)
+      int link_mbps = 0;  ///< Wi-Fi link speed
     };
 
     /// How smoothly one client's stream is running, measured over the last few seconds.

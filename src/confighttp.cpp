@@ -1289,6 +1289,7 @@ namespace confighttp {
     output_tree["status"] = true;
     output_tree["app"] = proc::proc.get_last_run_app_name();
     output_tree["sessions"] = rtsp_stream::session_count();
+    output_tree["version"] = PROJECT_VERSION;
     nlohmann::json controllers = nlohmann::json::array();
     for (const auto &gamepad : input::gamepad_status()) {
       controllers.push_back({
@@ -1324,6 +1325,7 @@ namespace confighttp {
         {"slowGameFps", h.slow_game_fps},
         {"width", h.width},
         {"height", h.height},
+        {"runningS", h.running_s},
       });
       if (h.view.known) {
         streams.back()["deviceView"] = {
@@ -1335,6 +1337,19 @@ namespace confighttp {
           {"kbps", h.view.kbps},
           {"settingKbps", h.view.setting_kbps},
           {"hdrPeakNits", h.view.hdr_peak_nits},
+          {"avgFps", h.view.avg_fps},
+          {"late30Pct", h.view.late30_pct},
+          {"lossSeconds", h.view.loss_seconds},
+          {"scalePct", h.view.scale_pct},
+          {"codec", h.view.codec},
+          {"bitDepth", h.view.bit_depth},
+          {"rttMs", h.view.rtt_ms},
+          {"rttVarMs", h.view.rtt_var_ms},
+          {"net", h.view.net},
+          {"band", h.view.band},
+          {"signal", h.view.signal},
+          {"rssiDbm", h.view.rssi_dbm},
+          {"linkMbps", h.view.link_mbps},
         };
       }
     }
