@@ -43,4 +43,15 @@ namespace settings_backup {
 
   /// One TunaReceive backup by name, or empty when there is none.
   std::string receiver_backup(const std::string &name);
+
+  // ---------- TunaReceive's logs, sent from the TV for troubleshooting ----------
+
+  /// Keep a log TunaReceive sent. @return the name it was saved under, or empty when refused.
+  std::string keep_receiver_log(const std::string &device, const std::string &text);
+
+  /// Logs on this PC, newest first (the same fields as a backup).
+  std::vector<receiver_backup_t> receiver_logs();
+
+  /// One log by name, or empty when there is none.
+  std::string receiver_log(const std::string &name);
 }  // namespace settings_backup

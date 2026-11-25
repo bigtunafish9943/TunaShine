@@ -40,6 +40,7 @@
   <Navbar></Navbar>
   <div class="container">
     <h1 class="my-4">{{ $t('troubleshooting.troubleshooting') }}</h1>
+    <p><a href="./checklist"><i class="fas fa-list-check" aria-hidden="true"></i> {{ $t('troubleshooting.checklist_link') }}</a></p>
     <!-- Force Close App -->
     <div class="card p-2 my-4">
       <div class="card-body">
@@ -216,6 +217,24 @@
         </div>
       </div>
     </div>
+    <!-- Logs sent from TVs -->
+    <div class="card p-2 my-4">
+      <div class="card-body">
+        <h2 id="tv_logs">{{ $t('troubleshooting.tv_logs_title') }}</h2>
+        <p>{{ $t('troubleshooting.tv_logs_desc') }}</p>
+        <p v-if="!receiverLogs.length" class="text-muted">{{ $t('troubleshooting.tv_logs_none') }}</p>
+        <ul class="list-unstyled" v-else>
+          <li v-for="l in receiverLogs" :key="l.name" class="d-flex flex-wrap gap-2 align-items-baseline py-1">
+            <span>{{ l.device }}, {{ new Date(l.made * 1000).toLocaleString() }}</span>
+            <button type="button" class="btn btn-sm btn-outline-secondary" @click="showTvLog(l.name)">{{ $t('troubleshooting.tv_logs_show') }}</button>
+            <a class="btn btn-sm btn-outline-secondary" :href="'./api/receiver-log?download=1&name=' + encodeURIComponent(l.name)">
+              <i class="fas fa-download" aria-hidden="true"></i> {{ $t('troubleshooting.logs_save') }}
+            </a>
+          </li>
+        </ul>
+        <div class="troubleshooting-logs mt-2" v-if="tvLog">{{ tvLog }}</div>
+      </div>
+    </div>
     <!-- Logs -->
     <div class="card p-2 my-4">
       <div class="card-body">
@@ -276,6 +295,8 @@
           restoreStatus: '',
           restoreError: false,
           receiverBackups: [],
+          receiverLogs: [],
+          tvLog: '',
         };
       },
       computed: {
@@ -363,6 +384,7 @@
         this.refreshLogs();
         this.refreshVdisplay();
         this.loadReceiverBackups();
+        this.loadReceiverLogs();
       },
       beforeDestroy() {
         clearInterval(this.logInterval);
@@ -394,6 +416,22 @@
             this.restoreStatus = this.$t('troubleshooting.restore_failed');
           }
           this.restoring = false;
+        },
+        async loadReceiverLogs() {
+          try {
+            const r = await fetch('./api/receiver-logs', { credentials: 'include' }).then((r) => r.json());
+            this.receiverLogs = r.logs || [];
+          } catch (e) {
+            this.receiverLogs = [];
+          }
+        },
+        async showTvLog(name) {
+          try {
+            const r = await fetch('./api/receiver-log?name=' + encodeURIComponent(name), { credentials: 'include' });
+            this.tvLog = r.ok ? await r.text() : this.$t('troubleshooting.tv_logs_gone');
+          } catch (e) {
+            this.tvLog = this.$t('troubleshooting.tv_logs_gone');
+          }
         },
         async loadReceiverBackups() {
           try {

@@ -98,6 +98,56 @@ namespace settings_backup {
     fs::path receiver_dir() {
       return platf::appdata() / "tunareceive_backups";
     }
+
+    fs::path receiver_logs_dir() {
+      return platf::appdata() / "tunareceive_logs";
+    }
+
+    constexpr size_t MAX_RECEIVER_LOG = 2 * 1024 * 1024;
+    constexpr size_t KEEP_RECEIVER_LOGS = 15;
+
+    /// Files named <device>-<seconds><extension> in a folder, newest first
+    std::vector<receiver_backup_t> list_named(const fs::path &dir, const std::string &extension) {
+      std::vector<receiver_backup_t> out;
+      std::error_code ec;
+      for (const auto &entry : fs::directory_iterator {dir, ec}) {
+        try {
+          if (!entry.is_regular_file(ec) || entry.path().extension() != extension) {
+            continue;
+          }
+          const auto name = entry.path().filename().string();
+          const auto stem = entry.path().stem().string();
+          const auto dash = stem.rfind('-');
+          std::int64_t made = 0;
+          std::string device = stem;
+          if (dash != std::string::npos) {
+            device = stem.substr(0, dash);
+            try {
+              made = std::stoll(stem.substr(dash + 1));
+            } catch (const std::exception &) {
+            }
+          }
+          out.push_back({name, device, made, entry.file_size(ec)});
+        } catch (const std::exception &) {
+        }
+      }
+      std::sort(out.begin(), out.end(), [](const auto &a, const auto &b) {
+        return a.made > b.made;
+      });
+      return out;
+    }
+
+    std::string safe_device(const std::string &device) {
+      std::string safe;
+      for (unsigned char c : device) {
+        safe.push_back(std::isalnum(c) ? (char) c : '-');
+      }
+      return safe.empty() ? "device" : safe;
+    }
+
+    bool plain_name(const std::string &name) {
+      return !name.empty() && name.find_first_of("/\\:") == std::string::npos && name.find("..") == std::string::npos;
+    }
   }  // namespace
 
   nlohmann::json make(bool with_pairings) {
@@ -232,6 +282,38 @@ namespace settings_backup {
       return a.made > b.made;
     });
     return out;
+  }
+
+  std::string keep_receiver_log(const std::string &device, const std::string &text) {
+    if (text.empty() || text.size() > MAX_RECEIVER_LOG) {
+      return {};
+    }
+    const auto name = safe_device(device) + "-" + std::to_string(now_seconds()) + ".txt";
+    if (!write_bytes(receiver_logs_dir() / name, text)) {
+      return {};
+    }
+    auto list = receiver_logs();
+    std::error_code ec;
+    for (size_t i = KEEP_RECEIVER_LOGS; i < list.size(); ++i) {
+      fs::remove(receiver_logs_dir() / list[i].name, ec);
+    }
+    BOOST_LOG(info) << "TunaReceive log kept for "sv << device;
+    return name;
+  }
+
+  std::vector<receiver_backup_t> receiver_logs() {
+    return list_named(receiver_logs_dir(), ".txt");
+  }
+
+  std::string receiver_log(const std::string &name) {
+    if (!plain_name(name)) {
+      return {};
+    }
+    std::string bytes;
+    if (!read_bytes(receiver_logs_dir() / name, bytes)) {
+      return {};
+    }
+    return bytes;
   }
 
   std::string receiver_backup(const std::string &name) {

@@ -18,6 +18,7 @@
 #include <thread>
 #include <numeric>
 #include <algorithm>
+#include <cctype>
 
 // lib includes
 #include <boost/algorithm/string.hpp>
@@ -687,6 +688,118 @@ namespace confighttp {
     SimpleWeb::CaseInsensitiveMultimap headers;
     headers.emplace("Content-Type", "application/manifest+json");
     response->write(SimpleWeb::StatusCode::success_ok, manifest.dump(), headers);
+  }
+
+  /**
+   * @brief The test checklist page: what to try on the real setup, with what was found.
+   */
+  void getChecklistPage(resp_https_t response, req_https_t request) {
+    if (!authenticate(response, request, true)) {
+      return;
+    }
+
+    print_req(request);
+
+    std::string content = file_handler::read_file(WEB_DIR "checklist.html");
+    SimpleWeb::CaseInsensitiveMultimap headers;
+    headers.emplace("Content-Type", "text/html; charset=utf-8");
+    headers.emplace("X-Frame-Options", "DENY");
+    headers.emplace("Content-Security-Policy", "frame-ancestors 'none';");
+    response->write(content, headers);
+  }
+
+  namespace checklist {
+    std::mutex lock;
+
+    std::filesystem::path file() {
+      return platf::appdata() / "test_checklist.json";
+    }
+
+    nlohmann::json load() {
+      std::ifstream in {file()};
+      if (!in) {
+        return nlohmann::json::object();
+      }
+      try {
+        auto j = nlohmann::json::parse(in);
+        return j.is_object() ? j : nlohmann::json::object();
+      } catch (const std::exception &) {
+        return nlohmann::json::object();
+      }
+    }
+  }  // namespace checklist
+
+  /**
+   * @brief What was found for each checklist item: {"results": {"<id>": {"state", "note", "at"}}}.
+   */
+  void getChecklist(resp_https_t response, req_https_t request) {
+    if (!authenticate(response, request)) {
+      return;
+    }
+
+    std::scoped_lock guard {checklist::lock};
+    nlohmann::json output_tree;
+    output_tree["status"] = true;
+    output_tree["results"] = checklist::load();
+    send_response(response, output_tree);
+  }
+
+  /**
+   * @brief Record one item: {"id", "state": "works"|"problem"|"" (not tried), "note"}.
+   *        {"reset": true} forgets everything.
+   */
+  void postChecklist(resp_https_t response, req_https_t request) {
+    if (!validateContentType(response, request, "application/json") || !authenticate(response, request)) {
+      return;
+    }
+
+    print_req(request);
+
+    try {
+      std::stringstream ss;
+      ss << request->content.rdbuf();
+      auto input = nlohmann::json::parse(ss.str());
+      std::scoped_lock guard {checklist::lock};
+      auto results = checklist::load();
+      if (input.value("reset", false)) {
+        results = nlohmann::json::object();
+      } else {
+        const auto id = input.value("id", std::string {});
+        const auto state = input.value("state", std::string {});
+        auto note = input.value("note", std::string {});
+        const bool plain_id = !id.empty() && id.size() <= 40 && std::all_of(id.begin(), id.end(), [](unsigned char c) {
+          return std::isalnum(c) || c == '_';
+        });
+        if (!plain_id || (state != "works" && state != "problem" && !state.empty())) {
+          bad_request(response, request, "Unknown checklist item or result");
+          return;
+        }
+        if (note.size() > 1000) {
+          note.resize(1000);
+        }
+        if (state.empty()) {
+          results.erase(id);
+        } else if (results.size() < 200 || results.contains(id)) {
+          const auto now = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+          results[id] = {{"state", state}, {"note", note}, {"at", now}};
+        }
+      }
+      std::error_code ec;
+      const auto path = checklist::file();
+      auto partial = path;
+      partial += ".part";
+      {
+        std::ofstream out {partial, std::ios::trunc};
+        out << results.dump();
+      }
+      std::filesystem::rename(partial, path, ec);
+      nlohmann::json output_tree;
+      output_tree["status"] = !ec;
+      output_tree["results"] = results;
+      send_response(response, output_tree);
+    } catch (std::exception &e) {
+      bad_request(response, request, e.what());
+    }
   }
 
   /**
@@ -2434,6 +2547,51 @@ namespace confighttp {
   }
 
   /**
+   * @brief Logs sent from TVs (TunaReceive > PC tools > Send logs to PC):
+   *        {"logs": [{"name", "device", "made", "size"}]}.
+   */
+  void getReceiverLogs(resp_https_t response, req_https_t request) {
+    if (!authenticate(response, request)) {
+      return;
+    }
+
+    nlohmann::json list = nlohmann::json::array();
+    for (const auto &l : settings_backup::receiver_logs()) {
+      list.push_back({{"name", l.name}, {"device", l.device}, {"made", l.made}, {"size", l.size}});
+    }
+    nlohmann::json output_tree;
+    output_tree["status"] = true;
+    output_tree["logs"] = list;
+    send_response(response, output_tree);
+  }
+
+  /**
+   * @brief One log from a TV as text: GET /api/receiver-log?name=...&download=1 to save it.
+   */
+  void getReceiverLog(resp_https_t response, req_https_t request) {
+    if (!authenticate(response, request)) {
+      return;
+    }
+
+    auto args = request->parse_query_string();
+    const auto name = args.find("name") != args.end() ? args.find("name")->second : std::string {};
+    const bool download = args.find("download") != args.end() && args.find("download")->second == "1";
+    const auto text = settings_backup::receiver_log(name);
+    if (text.empty()) {
+      bad_request(response, request, "That log isn't on this PC any more.");
+      return;
+    }
+    SimpleWeb::CaseInsensitiveMultimap headers;
+    headers.emplace("Content-Type", "text/plain; charset=utf-8");
+    headers.emplace("Cache-Control", "no-store");
+    headers.emplace("X-Content-Type-Options", "nosniff");
+    if (download) {
+      headers.emplace("Content-Disposition", "attachment; filename=\"TunaReceive log "s + name + "\"");
+    }
+    response->write(SimpleWeb::StatusCode::success_ok, text, headers);
+  }
+
+  /**
    * @brief TunaReceive's settings on each TV that has shared them: {"tvs": [...]}.
    */
   void getReceiverSettings(resp_https_t response, req_https_t request) {
@@ -2706,6 +2864,8 @@ namespace confighttp {
     server.resource["^/api/backup$"]["GET"] = getBackup;
     server.resource["^/api/restore$"]["POST"] = postRestore;
     server.resource["^/api/receiver-backups$"]["GET"] = getReceiverBackups;
+    server.resource["^/api/receiver-logs$"]["GET"] = getReceiverLogs;
+    server.resource["^/api/receiver-log$"]["GET"] = getReceiverLog;
     server.resource["^/api/receiver-settings$"]["GET"] = getReceiverSettings;
     server.resource["^/api/receiver-settings$"]["POST"] = postReceiverSettings;
     server.resource["^/api/quit$"]["POST"] = quit;
@@ -2725,6 +2885,9 @@ namespace confighttp {
     server.resource["^/images/tunastream-app-(180|512).png$"]["GET"] = getAppIcon;
     server.resource["^/live.webmanifest$"]["GET"] = getLiveManifest;
     server.resource["^/live/?$"]["GET"] = getLivePage;
+    server.resource["^/checklist/?$"]["GET"] = getChecklistPage;
+    server.resource["^/api/checklist$"]["GET"] = getChecklist;
+    server.resource["^/api/checklist$"]["POST"] = postChecklist;
     server.resource["^/api/cover$"]["GET"] = getCover;
     server.resource["^/assets\\/.+$"]["GET"] = getNodeModules;
     server.config.reuse_address = true;
