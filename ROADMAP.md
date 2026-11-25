@@ -32,6 +32,17 @@ Everything here is built and passes the automated checks, but has not yet been c
   Japanese, Chinese and Korean. Settings reworded in plain English show in English in other languages until they
   are translated again.
 
+## Just added (needs testing on real hardware)
+
+- **Fun and family:** messages and a sound board for the TV, daily play-time limits with warnings, a weekly
+  recap with milestones, screenshots (View + R1), instant replay (View + L1) and weekly highlights, Steam covers
+  for game tiles (also for games from other stores that are on Steam), seasonal themes, controller batteries.
+- **Your phone:** a Live page with a QR code on the home page, that can be added to the home screen.
+- **Shared PC mode:** keep using the PC while someone streams; only the game's windows and sound go to the TV.
+- **Smoother:** split-frame encoding actually engages now; the stream's screen is made primary with the display
+  configuration API; a reminder when a game itself runs below full frame rate; Wi-Fi channel advice.
+- **Keeping things:** backup and restore for TunaStream, and TunaReceive backups kept on the PC.
+
 ## Next
 
 - **Clear fallback when the virtual display fails.** Started: TunaStream retries once, falls back to the PC's own
@@ -76,9 +87,12 @@ Still to come:
   Tailscale and the PC is added by its Tailscale address. To make that easy: show the PC's Tailscale address on the
   home page, treat it as a trusted address for pairing, pick a picture that fits the home's upload speed, and say
   when the connection is being relayed instead of going direct.
-- **Two people using one PC independently.** Today a stream shares the mouse, keyboard and window focus with
-  whoever is at the PC. Fully separate use means a separate Windows session for each person, which is what Duo
-  does by patching Remote Desktop. That is a large project with licensing questions, not a setting.
+- **Two people using one PC fully independently.** Shared PC mode keeps windows, sound and the mouse apart, but
+  Windows still has one keyboard focus, so some games pause when the person at the PC clicks their own windows.
+  Fully separate use means a separate Windows session for each person, which is what Duo does by patching Remote
+  Desktop. That is a large project with licensing questions, not a setting.
+- **Automatic HDR calibration.** Today the home page shows the TV's HDR peak and Help explains Windows HDR
+  Calibration. Writing a calibration profile for the stream's screen automatically would remove the manual step.
 
 ## Outside this repository
 
