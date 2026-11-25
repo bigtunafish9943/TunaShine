@@ -47,6 +47,7 @@
 #include "file_outbox.h"
 #include "pairing_backup.h"
 #include "play_history.h"
+#include "sound_board.h"
 #include "tv_messages.h"
 #include "updater.h"
 #include "utility.h"
@@ -912,6 +913,11 @@ namespace confighttp {
       auto input = nlohmann::json::parse(ss.str());
       const auto text = input.value("text", "");
       const auto device = input.value("device", "");
+      const auto sound = input.value("sound", "");
+      if (!sound.empty() && !sound_board::file_for(sound)) {
+        bad_request(response, request, "There is no sound called " + sound);
+        return;
+      }
 
       std::vector<std::string> streaming;
       for (const auto &h : stream::session::health()) {
@@ -925,7 +931,7 @@ namespace confighttp {
         send_response(response, output_tree);
         return;
       }
-      const auto id = tv_messages::post(device, text);
+      const auto id = tv_messages::post(device, text, sound);
       if (!id) {
         bad_request(response, request, "The message is empty");
         return;
@@ -937,6 +943,71 @@ namespace confighttp {
       send_response(response, output_tree);
     } catch (std::exception &e) {
       BOOST_LOG(warning) << "TvMessage: "sv << e.what();
+      bad_request(response, request, e.what());
+    }
+  }
+
+  /**
+   * @brief The sound board: {"sounds": [{"name", "builtIn"}], "maxBytes"}.
+   */
+  void getSounds(resp_https_t response, req_https_t request) {
+    if (!authenticate(response, request)) {
+      return;
+    }
+
+    nlohmann::json sounds = nlohmann::json::array();
+    for (const auto &sound : sound_board::list()) {
+      sounds.push_back({{"name", sound.name}, {"builtIn", sound.built_in}});
+    }
+    nlohmann::json output_tree;
+    output_tree["status"] = true;
+    output_tree["sounds"] = sounds;
+    output_tree["maxBytes"] = sound_board::MAX_BYTES;
+    send_response(response, output_tree);
+  }
+
+  /**
+   * @brief Add a sound to the sound board. Body: {"name", "extension", "data" (base64)}.
+   */
+  void addSound(resp_https_t response, req_https_t request) {
+    if (!validateContentType(response, request, "application/json") || !authenticate(response, request)) {
+      return;
+    }
+
+    nlohmann::json output_tree;
+    try {
+      std::stringstream ss;
+      ss << request->content.rdbuf();
+      auto input = nlohmann::json::parse(ss.str());
+      auto bytes = SimpleWeb::Crypto::Base64::decode(input.value("data", ""));
+      auto error = sound_board::add(input.value("name", ""), input.value("extension", ""), bytes);
+      output_tree["status"] = error.empty();
+      if (!error.empty()) {
+        output_tree["error"] = error;
+      }
+      send_response(response, output_tree);
+    } catch (std::exception &e) {
+      BOOST_LOG(warning) << "AddSound: "sv << e.what();
+      bad_request(response, request, e.what());
+    }
+  }
+
+  /**
+   * @brief Remove one of your own sounds. Body: {"name"}.
+   */
+  void removeSound(resp_https_t response, req_https_t request) {
+    if (!validateContentType(response, request, "application/json") || !authenticate(response, request)) {
+      return;
+    }
+
+    nlohmann::json output_tree;
+    try {
+      std::stringstream ss;
+      ss << request->content.rdbuf();
+      auto input = nlohmann::json::parse(ss.str());
+      output_tree["status"] = sound_board::remove(input.value("name", ""));
+      send_response(response, output_tree);
+    } catch (std::exception &e) {
       bad_request(response, request, e.what());
     }
   }
@@ -2132,6 +2203,9 @@ namespace confighttp {
     server.resource["^/api/recap$"]["GET"] = getRecap;
     server.resource["^/api/tv-message$"]["POST"] = postTvMessage;
     server.resource["^/api/tv-message$"]["GET"] = getTvMessages;
+    server.resource["^/api/sounds$"]["GET"] = getSounds;
+    server.resource["^/api/sounds$"]["POST"] = addSound;
+    server.resource["^/api/sounds/delete$"]["POST"] = removeSound;
     server.resource["^/api/update$"]["GET"] = getUpdate;
     server.resource["^/api/update$"]["POST"] = startUpdate;
     server.resource["^/api/vdisplay/repair$"]["POST"] = repairVirtualDisplay;

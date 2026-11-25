@@ -65,15 +65,15 @@ namespace tv_messages {
     }
   }  // namespace
 
-  std::uint32_t post(const std::string &device, const std::string &text) {
+  std::uint32_t post(const std::string &device, const std::string &text, const std::string &sound) {
     auto cleaned = clean(text);
-    if (cleaned.empty()) {
+    if (cleaned.empty() && sound.empty()) {
       return 0;
     }
     std::lock_guard lg {lock};
     drop_old();
     const auto id = next_id++;
-    queue.push_back({{id, std::move(cleaned)}, device, std::chrono::steady_clock::now(), {}});
+    queue.push_back({{id, std::move(cleaned), sound}, device, std::chrono::steady_clock::now(), {}});
     return id;
   }
 

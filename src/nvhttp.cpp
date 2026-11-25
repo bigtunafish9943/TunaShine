@@ -34,6 +34,7 @@
 #include "network.h"
 #include "nvhttp.h"
 #include "box_art.h"
+#include "sound_board.h"
 #include "tv_messages.h"
 #include "platform/common.h"
 #include "process.h"
@@ -1802,7 +1803,7 @@ namespace nvhttp {
       // Messages typed on the home page for this device
       nlohmann::json messages = nlohmann::json::array();
       for (const auto &m : tv_messages::take(named_cert_p->name)) {
-        messages.push_back({{"id", m.id}, {"text", m.text}});
+        messages.push_back({{"id", m.id}, {"text", m.text}, {"sound", m.sound}});
       }
       if (!messages.empty()) {
         out["messages"] = messages;
@@ -1813,6 +1814,25 @@ namespace nvhttp {
     headers.emplace("Content-Type", "application/json");
     headers.emplace("Cache-Control", "no-store");
     response->write(SimpleWeb::StatusCode::success_ok, out.dump(), headers);
+    response->close_connection_after_response = true;
+  }
+
+  /**
+   * A sound-board sound: GET /tuna/sound?name=. TunaReceive fetches it when the home page sends it.
+   */
+  void tunaSound(resp_https_t response, req_https_t request) {
+    print_req<TunaStreamHTTPS>(request);
+    auto args = request->parse_query_string();
+    auto file = sound_board::file_for(get_arg(args, "name", ""));
+    if (!file) {
+      response->write(SimpleWeb::StatusCode::client_error_not_found);
+      response->close_connection_after_response = true;
+      return;
+    }
+    std::ifstream in(*file, std::ios::binary);
+    SimpleWeb::CaseInsensitiveMultimap headers;
+    headers.emplace("Content-Type", sound_board::content_type_of(*file));
+    response->write(SimpleWeb::StatusCode::success_ok, in, headers);
     response->close_connection_after_response = true;
   }
 
@@ -2044,6 +2064,7 @@ namespace nvhttp {
     https_server.resource["^/tuna/bitrate$"]["GET"] = tunaBitrate;
     https_server.resource["^/tuna/network$"]["GET"] = tunaNetwork;
     https_server.resource["^/tuna/report$"]["GET"] = tunaReport;
+    https_server.resource["^/tuna/sound$"]["GET"] = tunaSound;
     https_server.resource["^/tuna/vdisplay$"]["GET"] = tunaVdisplay;
     https_server.resource["^/tuna/vdisplay/repair$"]["GET"] = tunaVdisplay;
     https_server.resource["^/tuna/file$"]["GET"] = tunaFile;

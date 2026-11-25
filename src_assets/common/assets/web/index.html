@@ -172,6 +172,36 @@
           </button>
         </div>
         <p class="home-message-status" v-if="message.status" role="status" :class="{ 'home-message-error': message.error }">{{ message.status }}</p>
+
+        <!-- Sound board: plays on the TV, with the typed message if there is one -->
+        <div class="home-sounds" v-if="sounds.length">
+          <span class="home-message-label">{{ $t('index.sounds_title') }}</span>
+          <div class="home-message-quick">
+            <span class="home-sound" v-for="snd in sounds" :key="snd.name">
+              <button type="button" class="btn btn-sm btn-outline-secondary" :disabled="message.sending"
+                      @click="sendTvMessage(message.text.trim() || '', snd.name)">
+                <i class="fas fa-volume-high" aria-hidden="true"></i> {{ snd.name }}
+              </button>
+              <button type="button" class="btn btn-sm btn-link home-sound-remove" v-if="!snd.builtIn"
+                      :title="$t('index.sounds_remove', { name: snd.name })" :aria-label="$t('index.sounds_remove', { name: snd.name })"
+                      @click="removeSound(snd.name)"><i class="fas fa-xmark"></i></button>
+            </span>
+            <button type="button" class="btn btn-sm btn-link" @click="soundForm.open = !soundForm.open">
+              <i class="fas fa-plus" aria-hidden="true"></i> {{ $t('index.sounds_add') }}
+            </button>
+          </div>
+          <div class="home-sound-add" v-if="soundForm.open">
+            <input type="text" class="form-control" maxlength="40" v-model="soundForm.name" :placeholder="$t('index.sounds_name')"
+                   :aria-label="$t('index.sounds_name')">
+            <input type="file" class="form-control" accept=".ogg,.mp3,.wav,audio/ogg,audio/mpeg,audio/wav" ref="soundFile"
+                   :aria-label="$t('index.sounds_file')" @change="pickSoundFile">
+            <button type="button" class="btn btn-primary" :disabled="soundForm.saving || !soundForm.name.trim()" @click="addSound">
+              {{ $t('index.sounds_save') }}
+            </button>
+            <p class="home-message-status" :class="{ 'home-message-error': soundForm.error }" v-if="soundForm.status">{{ soundForm.status }}</p>
+            <p class="home-message-status" v-else>{{ $t('index.sounds_hint') }}</p>
+          </div>
+        </div>
       </form>
     </div>
 
@@ -335,6 +365,9 @@
         statusTimer: null,
         recap: null,
         recapTimer: null,
+        sounds: [],
+        soundMaxBytes: 2097152,
+        soundForm: { open: false, name: '', file: null, saving: false, status: '', error: false },
         message: { text: '', device: '', sending: false, status: '', error: false, id: 0, waitFor: [], shown: false },
       }
     },
@@ -364,6 +397,7 @@
           if (!document.hidden && !this.ending) this.loadStatus();
         }, 5000);
         this.loadRecap();
+        this.loadSounds();
         this.recapTimer = setInterval(() => {
           if (!document.hidden) this.loadRecap();
         }, 60000);
@@ -465,9 +499,9 @@
        * Show a message on the TV. TunaReceive picks it up with its next report to the PC, within
        * about five seconds; the page then says which screens it reached.
        */
-      async sendTvMessage(text) {
-        const body = { text: (text ?? this.message.text).trim(), device: this.message.device };
-        if (!body.text) return;
+      async sendTvMessage(text, sound) {
+        const body = { text: (text ?? this.message.text).trim(), device: this.message.device, sound: sound || '' };
+        if (!body.text && !body.sound) return;
         this.message = { ...this.message, sending: true, status: '', error: false };
         try {
           const r = await fetch('./api/tv-message', {
@@ -478,13 +512,70 @@
             this.message = { ...this.message, sending: false, error: true, status: r.error || this.$t('index.message_failed') };
             return;
           }
-          if (text === undefined) this.message.text = '';
+          if (text === undefined || (sound && body.text)) this.message.text = '';
           this.message = { ...this.message, sending: false, id: r.id, waitFor: r.devices, shown: false,
                            status: this.$t('index.message_sent', { devices: r.devices.join(', ') }) };
           this.followTvMessage(r.id, r.devices);
         } catch (e) {
           this.message = { ...this.message, sending: false, error: true, status: this.$t('index.message_failed') };
         }
+      },
+      async loadSounds() {
+        try {
+          const r = await fetch('./api/sounds', { credentials: 'include' }).then((r) => r.json());
+          this.sounds = r.sounds || [];
+          this.soundMaxBytes = r.maxBytes || 2097152;
+        } catch (e) {
+          this.sounds = [];
+        }
+      },
+      pickSoundFile(event) {
+        const file = event.target.files && event.target.files[0];
+        this.soundForm.file = file || null;
+        if (file && !this.soundForm.name.trim()) {
+          this.soundForm.name = file.name.replace(/\.[^.]+$/, '').replace(/[^A-Za-z0-9 '!_-]/g, ' ').trim().slice(0, 40);
+        }
+      },
+      async addSound() {
+        const file = this.soundForm.file;
+        if (!file) {
+          this.soundForm = { ...this.soundForm, error: true, status: this.$t('index.sounds_pick') };
+          return;
+        }
+        if (file.size > this.soundMaxBytes) {
+          this.soundForm = { ...this.soundForm, error: true, status: this.$t('index.sounds_too_big') };
+          return;
+        }
+        this.soundForm = { ...this.soundForm, saving: true, status: '', error: false };
+        try {
+          const data = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(String(reader.result).split(',')[1] || '');
+            reader.onerror = () => reject(reader.error);
+            reader.readAsDataURL(file);
+          });
+          const extension = (file.name.match(/\.[^.]+$/) || [''])[0];
+          const r = await fetch('./api/sounds', {
+            credentials: 'include', method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: this.soundForm.name.trim(), extension, data }),
+          }).then((r) => r.json());
+          if (!r.status) {
+            this.soundForm = { ...this.soundForm, saving: false, error: true, status: r.error || this.$t('index.sounds_failed') };
+            return;
+          }
+          this.soundForm = { open: false, name: '', file: null, saving: false, status: '', error: false };
+          await this.loadSounds();
+        } catch (e) {
+          this.soundForm = { ...this.soundForm, saving: false, error: true, status: this.$t('index.sounds_failed') };
+        }
+      },
+      async removeSound(name) {
+        if (!confirm(this.$t('index.sounds_remove_confirm', { name }))) return;
+        await fetch('./api/sounds/delete', {
+          credentials: 'include', method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name }),
+        }).catch(() => {});
+        await this.loadSounds();
       },
       async followTvMessage(id, devices) {
         const sleep = (ms) => new Promise((r) => setTimeout(r, ms));

@@ -1663,3 +1663,33 @@ html[data-ts-theme=gold][data-bs-theme=dark] {
         width: 100%;
     }
 }
+
+.home-sounds {
+    margin-top: 0.9rem;
+}
+
+.home-sound {
+    display: inline-flex;
+    align-items: center;
+}
+
+.home-sound-remove {
+    padding: 0 0.3rem;
+    color: var(--bs-secondary-color);
+}
+
+.home-sound-add {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.home-sound-add .form-control {
+    flex: 1 1 14rem;
+    width: auto;
+}
+
+.home-sound-add .home-message-status {
+    flex-basis: 100%;
+}
