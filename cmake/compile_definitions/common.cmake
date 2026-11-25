@@ -48,7 +48,9 @@ elseif(UNIX)
     endif()
 endif()
 
-include_directories(BEFORE SYSTEM "${CMAKE_SOURCE_DIR}/third-party/nv-codec-headers/include")
+# A plain include directory, not a system one: the prebuilt dependencies ship an older copy of these
+# headers in a system directory, and plain include directories are searched before system ones
+include_directories(BEFORE "${CMAKE_SOURCE_DIR}/third-party/nv-codec-headers/include")
 file(GLOB NVENC_SOURCES CONFIGURE_DEPENDS "src/nvenc/*.cpp" "src/nvenc/*.h")
 list(APPEND PLATFORM_TARGET_FILES ${NVENC_SOURCES})
 
