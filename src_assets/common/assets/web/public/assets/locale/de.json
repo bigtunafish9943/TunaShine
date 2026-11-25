@@ -718,7 +718,8 @@
     "vdisplay_repair": "Reparieren",
     "whatsnew_title": "Neu in {version}",
     "whatsnew_since": "Seit {version}, der Version, die dieser Browser zuletzt gesehen hat:",
-    "whatsnew_ok": "Verstanden"
+    "whatsnew_ok": "Verstanden",
+    "watch": "Zuschauen"
   },
   "navbar": {
     "applications": "Apps",
@@ -1107,7 +1108,8 @@
     "never": "nie",
     "just_now": "gerade eben",
     "minutes_ago": "vor {n} Min.",
-    "hours_ago": "vor {n} Std."
+    "hours_ago": "vor {n} Std.",
+    "watch": "Im Browser zuschauen"
   },
   "tvset": {
     "title": "Einstellungen des Fernsehers",
@@ -1257,5 +1259,21 @@
         "expect": "Beide zeigen einmal, was sich geändert hat, und dann nicht wieder."
       }
     }
+  },
+  "watch": {
+    "title": "Zuschauen",
+    "watching": "Du schaust",
+    "picture": "Das Spiel, wie es gestreamt wird",
+    "live": "LIVE",
+    "connecting": "Verbinde mit dem Stream…",
+    "waiting": "Gerade streamt niemand. Das Bild erscheint hier, sobald ein Gerät zu spielen beginnt.",
+    "ended": "Der Stream ist zu Ende. Zuschauen beginnt von selbst wieder, wenn jemand spielt.",
+    "error": "Der Stream ist nicht erreichbar. Versuche es erneut…",
+    "unsupported": "Dieser Browser kann den Stream nicht abspielen. Nutze ein aktuelles Chrome, Edge, Firefox oder Safari.",
+    "sound_on": "Ton an",
+    "sound_off": "Ton aus",
+    "fullscreen": "Vollbild",
+    "note": "Nur zuschauen: Nichts hier steuert das Spiel.",
+    "no_sound_here": "Nur zuschauen. Dieser Browser kann den Ton nicht abspielen; versuche Chrome oder Edge."
   }
 }

@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="auto">
+
+<head>
+  <%- header %>
+  <meta name="theme-color" content="#041431">
+  <style>
+    body {
+      padding-left: 0 !important;
+      background-color: var(--bs-body-bg);
+    }
+
+    .watch {
+      max-width: 72rem;
+      margin: 0 auto;
+      padding: 1rem 1rem 2rem;
+    }
+
+    .watch-top {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .watch-brand {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 700;
+      color: var(--bs-emphasis-color);
+      text-decoration: none;
+    }
+
+    .watch-brand img {
+      width: 28px;
+      height: 28px;
+    }
+
+    .watch-title {
+      flex: 1 1 auto;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--bs-secondary-color);
+    }
+
+    .watch-title b {
+      color: var(--bs-emphasis-color);
+    }
+
+    .watch-stage {
+      position: relative;
+      aspect-ratio: 16 / 9;
+      background: #000;
+      border-radius: 0.9rem;
+      overflow: hidden;
+      border: 1px solid var(--ts-surface-border, rgba(255, 255, 255, 0.1));
+    }
+
+    .watch-stage canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .watch-stage:fullscreen {
+      border-radius: 0;
+      border: 0;
+    }
+
+    .watch-status {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      padding: 1.5rem;
+      text-align: center;
+      color: #e8eef7;
+      background: radial-gradient(circle at center, rgba(4, 20, 49, 0.55), rgba(0, 0, 0, 0.85));
+    }
+
+    .watch-status p {
+      max-width: 34rem;
+      margin: 0;
+    }
+
+    .watch-live {
+      position: absolute;
+      top: 0.75rem;
+      left: 0.75rem;
+      padding: 0.15rem 0.55rem;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #fff;
+      background: rgba(200, 30, 50, 0.85);
+    }
+
+    .watch-controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+    }
+
+    .watch-note {
+      margin-left: auto;
+      font-size: 0.85rem;
+      color: var(--bs-secondary-color);
+    }
+  </style>
+</head>
+
+<body id="app" v-cloak>
+  <main class="watch">
+    <div class="watch-top">
+      <a class="watch-brand" href="./">
+        <img src="./images/logo-tunastream-45.png" alt="">
+        TunaStream
+      </a>
+      <span class="watch-title" v-if="app">{{ $t('watch.watching') }} <b>{{ app }}</b></span>
+      <span class="watch-title" v-else>{{ $t('watch.title') }}</span>
+    </div>
+
+    <div class="watch-stage" ref="stage">
+      <canvas ref="canvas" width="1280" height="720" :aria-label="$t('watch.picture')" role="img"></canvas>
+      <span class="watch-live" v-if="state === 'playing'">{{ $t('watch.live') }}</span>
+      <div class="watch-status" v-if="state !== 'playing'" role="status">
+        <div class="spinner-border" v-if="state === 'connecting'" aria-hidden="true"></div>
+        <p>{{ statusText }}</p>
+      </div>
+    </div>
+
+    <div class="watch-controls">
+      <button type="button" class="btn btn-sm" :class="soundOn ? 'btn-primary' : 'btn-outline-secondary'"
+              @click="toggleSound" :disabled="!audioSupported" :aria-pressed="soundOn">
+        <i class="fas" :class="soundOn ? 'fa-volume-high' : 'fa-volume-xmark'" aria-hidden="true"></i>
+        {{ soundOn ? $t('watch.sound_on') : $t('watch.sound_off') }}
+      </button>
+      <button type="button" class="btn btn-sm btn-outline-secondary" @click="fullscreen">
+        <i class="fas fa-expand" aria-hidden="true"></i> {{ $t('watch.fullscreen') }}
+      </button>
+      <span class="watch-note">{{ audioSupported ? $t('watch.note') : $t('watch.no_sound_here') }}</span>
+    </div>
+  </main>
+
+  <script type="module">
+    import { createApp } from 'vue'
+    import { initApp } from './init'
+    import { loadAutoTheme } from './theme'
+
+    loadAutoTheme()
+
+    const HEADER = 14
+    const TYPE_INFO = 73, TYPE_VIDEO = 86, TYPE_AUDIO = 65, TYPE_END = 69
+
+    // The H.264 codec string WebCodecs needs, from the sequence parameter set in a key frame
+    function codecFromKeyFrame(data) {
+      for (let i = 0; i + 4 < data.length; i++) {
+        if (data[i] === 0 && data[i + 1] === 0 && data[i + 2] === 1 && (data[i + 3] & 0x1f) === 7) {
+          const hex = (b) => b.toString(16).padStart(2, '0')
+          return 'avc1.' + hex(data[i + 4]) + hex(data[i + 5]) + hex(data[i + 6])
+        }
+      }
+      return null
+    }
+
+    const app = createApp({
+      inject: ['i18n'],
+      data() {
+        return {
+          state: 'connecting',  // connecting, playing, waiting (nobody streaming), ended, error, unsupported
+          message: '',
+          app: '',
+          soundOn: false,
+          audioSupported: typeof window.AudioDecoder !== 'undefined',
+        }
+      },
+      computed: {
+        statusText() {
+          switch (this.state) {
+            case 'unsupported': return this.$t('watch.unsupported')
+            case 'waiting': return this.message || this.$t('watch.waiting')
+            case 'ended': return this.$t('watch.ended')
+            case 'error': return this.message || this.$t('watch.error')
+            default: return this.$t('watch.connecting')
+          }
+        },
+      },
+      created() {
+        this.decoder = null
+        this.needKey = true
+        this.audio = null
+        this.stopped = false
+      },
+      mounted() {
+        this.ctx2d = this.$refs.canvas.getContext('2d')
+        if (typeof window.VideoDecoder === 'undefined') {
+          this.state = 'unsupported'
+          return
+        }
+        this.connect()
+        this.loadApp()
+        this.appTimer = setInterval(() => this.loadApp(), 15000)
+      },
+      beforeUnmount() {
+        this.stopped = true
+        clearInterval(this.appTimer)
+      },
+      methods: {
+        async loadApp() {
+          try {
+            const s = await fetch('./api/status', { credentials: 'include' }).then((r) => r.ok ? r.json() : null)
+            this.app = (s && s.app) || ''
+          } catch (e) { /* keep the last name */ }
+        },
+        retryLater(ms) {
+          if (!this.stopped) setTimeout(() => this.connect(), ms)
+        },
+        async connect() {
+          if (this.state !== 'playing') this.state = 'connecting'
+          let response
+          try {
+            response = await fetch('./api/watch/stream', { credentials: 'include', cache: 'no-store' })
+          } catch (e) {
+            this.state = 'error'
+            this.message = this.$t('watch.error')
+            return this.retryLater(5000)
+          }
+          if (response.status === 409) {
+            const j = await response.json().catch(() => ({}))
+            this.state = 'waiting'
+            this.message = j.error || ''
+            return this.retryLater(5000)
+          }
+          if (!response.ok || !response.body) {
+            this.state = 'error'
+            this.message = ''
+            return this.retryLater(5000)
+          }
+          this.needKey = true
+          const reader = response.body.getReader()
+          let buffer = new Uint8Array(0)
+          let ended = false
+          try {
+            while (true) {
+              const { value, done } = await reader.read()
+              if (done) break
+              const joined = new Uint8Array(buffer.length + value.length)
+              joined.set(buffer)
+              joined.set(value, buffer.length)
+              buffer = joined
+              let offset = 0
+              while (buffer.length - offset >= HEADER) {
+                const view = new DataView(buffer.buffer, buffer.byteOffset + offset)
+                const length = view.getUint32(10, true)
+                if (buffer.length - offset < HEADER + length) break
+                const type = buffer[offset]
+                const key = buffer[offset + 1] === 1
+                const timestamp = Number(view.getBigUint64(2, true))
+                const payload = buffer.subarray(offset + HEADER, offset + HEADER + length)
+                offset += HEADER + length
+                if (type === TYPE_VIDEO) this.onVideo(payload, key, timestamp)
+                else if (type === TYPE_AUDIO) this.onAudio(payload, timestamp)
+                else if (type === TYPE_END) { ended = true }
+              }
+              buffer = buffer.slice(offset)
+              if (ended) break
+            }
+          } catch (e) {
+            // The connection dropped: try again below
+          }
+          if (ended) {
+            this.state = 'ended'
+            return this.retryLater(5000)
+          }
+          // TunaStream closes long responses after a few minutes: carry straight on
+          this.retryLater(200)
+        },
+        makeDecoder(codec) {
+          if (this.decoder && this.decoder.state !== 'closed') {
+            try { this.decoder.close() } catch (e) { /* already closed */ }
+          }
+          this.decoder = new VideoDecoder({
+            output: (frame) => {
+              this.ctx2d.drawImage(frame, 0, 0, this.$refs.canvas.width, this.$refs.canvas.height)
+              frame.close()
+              if (this.state !== 'playing') this.state = 'playing'
+            },
+            error: () => {
+              this.needKey = true
+              this.decoder = null
+            },
+          })
+          this.decoder.configure({ codec, optimizeForLatency: true })
+          this.codec = codec
+        },
+        onVideo(data, key, timestamp) {
+          if (key) {
+            const codec = codecFromKeyFrame(data)
+            if (codec && (!this.decoder || this.decoder.state === 'closed' || codec !== this.codec)) {
+              try { this.makeDecoder(codec) } catch (e) { this.state = 'unsupported'; return }
+            }
+            this.needKey = false
+          }
+          if (this.needKey || !this.decoder || this.decoder.state !== 'configured') return
+          // Falling behind (a slow phone): skip to the next key frame rather than lag
+          if (!key && this.decoder.decodeQueueSize > 6) {
+            this.needKey = true
+            return
+          }
+          try {
+            this.decoder.decode(new EncodedVideoChunk({ type: key ? 'key' : 'delta', timestamp, data }))
+          } catch (e) {
+            this.needKey = true
+          }
+        },
+        startAudio() {
+          const context = new AudioContext({ sampleRate: 48000, latencyHint: 'interactive' })
+          const audio = { context, next: 0, decoder: null }
+          audio.decoder = new AudioDecoder({
+            output: (data) => {
+              try {
+                const frames = data.numberOfFrames
+                const channels = Math.min(2, data.numberOfChannels)
+                const buffer = context.createBuffer(channels, frames, data.sampleRate)
+                for (let ch = 0; ch < channels; ch++) {
+                  const plane = new Float32Array(frames)
+                  data.copyTo(plane, { planeIndex: ch, format: 'f32-planar' })
+                  buffer.copyToChannel(plane, ch)
+                }
+                const now = context.currentTime
+                // Keep the sound close to the picture: never more than a quarter second queued
+                if (audio.next < now + 0.03 || audio.next > now + 0.25) audio.next = now + 0.06
+                const source = context.createBufferSource()
+                source.buffer = buffer
+                source.connect(context.destination)
+                source.start(audio.next)
+                audio.next += buffer.duration
+              } catch (e) { /* a packet that couldn't be played */ }
+              data.close()
+            },
+            error: () => { /* the next packet starts over */ },
+          })
+          audio.decoder.configure({ codec: 'opus', sampleRate: 48000, numberOfChannels: 2 })
+          this.audio = audio
+        },
+        onAudio(data, timestamp) {
+          if (!this.soundOn || !this.audio || this.audio.decoder.state !== 'configured') return
+          try {
+            this.audio.decoder.decode(new EncodedAudioChunk({ type: 'key', timestamp, data }))
+          } catch (e) { /* skip it */ }
+        },
+        toggleSound() {
+          if (!this.audioSupported) return
+          this.soundOn = !this.soundOn
+          if (this.soundOn) {
+            // Browsers only start sound after a tap, which this is
+            if (!this.audio) this.startAudio()
+            this.audio.context.resume()
+          } else if (this.audio) {
+            this.audio.context.suspend()
+          }
+        },
+        fullscreen() {
+          const el = this.$refs.stage
+          if (document.fullscreenElement) document.exitFullscreen()
+          else if (el.requestFullscreen) el.requestFullscreen()
+          else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen()
+        },
+      },
+    })
+
+    initApp(app)
+  </script>
+</body>
+
+</html>

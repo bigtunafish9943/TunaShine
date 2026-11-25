@@ -10,6 +10,7 @@
 
 // local includes
 #include "audio.h"
+#include "watch.h"
 #include "config.h"
 #include "globals.h"
 #include "logging.h"
@@ -135,6 +136,10 @@ namespace audio {
       }
 
       packet.fake_resize(bytes);
+      if (watch::is_watch(channel_data)) {
+        watch::on_audio(std::string_view {(const char *) std::begin(packet), (std::size_t) bytes});
+        continue;
+      }
       packets->raise(channel_data, std::move(packet));
     }
   }
@@ -196,8 +201,9 @@ namespace audio {
 
     BOOST_LOG(info) << "Selected audio sink: "sv << *sink;
 
-    // Only the first to start a session may change the default sink
-    if (!ref->sink_flag->exchange(true, std::memory_order_acquire)) {
+    // Only the first to start a session may change the default sink. A browser watching the
+    // stream never does: it listens to whatever the streaming device hears.
+    if (!watch::is_watch(channel_data) && !ref->sink_flag->exchange(true, std::memory_order_acquire)) {
       if (config::stream.shared_pc && ref->sink.host != *sink) {
         // Shared PC mode: the PC keeps its own speakers; only the app's sound goes to the stream
         ref->restore_sink = false;

@@ -718,7 +718,8 @@
     "vdisplay_repair": "Réparer",
     "whatsnew_title": "Nouveautés de la version {version}",
     "whatsnew_since": "Depuis la version {version}, la dernière vue par ce navigateur :",
-    "whatsnew_ok": "Compris"
+    "whatsnew_ok": "Compris",
+    "watch": "Regarder"
   },
   "navbar": {
     "applications": "Apps",
@@ -1107,7 +1108,8 @@
     "never": "jamais",
     "just_now": "à l'instant",
     "minutes_ago": "il y a {n} min",
-    "hours_ago": "il y a {n} h"
+    "hours_ago": "il y a {n} h",
+    "watch": "Regarder dans le navigateur"
   },
   "tvset": {
     "title": "Réglages de la télé",
@@ -1257,5 +1259,21 @@
         "expect": "Chacun montre une fois ce qui a changé, puis plus jamais."
       }
     }
+  },
+  "watch": {
+    "title": "Regarder",
+    "watching": "Vous regardez",
+    "picture": "Le jeu tel qu'il est streamé",
+    "live": "EN DIRECT",
+    "connecting": "Connexion au stream…",
+    "waiting": "Personne ne streame en ce moment. L'image apparaît ici dès qu'un appareil commence à jouer.",
+    "ended": "Le stream est terminé. La diffusion reprend toute seule quand quelqu'un joue.",
+    "error": "Le stream est injoignable. Nouvelle tentative…",
+    "unsupported": "Ce navigateur ne peut pas lire le stream. Utilisez une version récente de Chrome, Edge, Firefox ou Safari.",
+    "sound_on": "Son activé",
+    "sound_off": "Son coupé",
+    "fullscreen": "Plein écran",
+    "note": "Regarder uniquement : rien ici ne contrôle le jeu.",
+    "no_sound_here": "Regarder uniquement. Ce navigateur ne peut pas lire le son ; essayez Chrome ou Edge."
   }
 }

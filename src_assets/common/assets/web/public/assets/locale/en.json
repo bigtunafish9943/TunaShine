@@ -723,7 +723,8 @@
     "welcome": "Hello, TunaStream!",
     "whatsnew_title": "What's new in {version}",
     "whatsnew_since": "Since {version}, the version this browser last saw:",
-    "whatsnew_ok": "Got it"
+    "whatsnew_ok": "Got it",
+    "watch": "Watch"
   },
   "login": {
     "save_password": "Remember Password"
@@ -1107,7 +1108,8 @@
     "never": "never",
     "just_now": "just now",
     "minutes_ago": "{n} min ago",
-    "hours_ago": "{n} h ago"
+    "hours_ago": "{n} h ago",
+    "watch": "Watch in the browser"
   },
   "tvset": {
     "title": "TV settings",
@@ -1257,5 +1259,21 @@
         "expect": "Each shows what changed once, and not again."
       }
     }
+  },
+  "watch": {
+    "title": "Watch",
+    "watching": "Watching",
+    "picture": "The game as it streams",
+    "live": "LIVE",
+    "connecting": "Connecting to the stream…",
+    "waiting": "Nobody is streaming right now. The picture appears here as soon as a device starts playing.",
+    "ended": "The stream ended. Watching starts again by itself when someone plays.",
+    "error": "The stream couldn't be reached. Trying again…",
+    "unsupported": "This browser can't play the stream. Use a recent Chrome, Edge, Firefox or Safari.",
+    "sound_on": "Sound on",
+    "sound_off": "Sound off",
+    "fullscreen": "Full screen",
+    "note": "Watch only: nothing here controls the game.",
+    "no_sound_here": "Watch only. This browser can't play the sound; try Chrome or Edge."
   }
 }

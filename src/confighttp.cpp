@@ -18,6 +18,7 @@
 #include <thread>
 #include <numeric>
 #include <algorithm>
+#include <condition_variable>
 #include <cctype>
 
 // lib includes
@@ -31,6 +32,7 @@
 // local includes
 #include "config.h"
 #include "confighttp.h"
+#include "watch.h"
 #include "crypto.h"
 #include "display_device.h"
 #include "file_handler.h"
@@ -706,6 +708,113 @@ namespace confighttp {
     headers.emplace("X-Frame-Options", "DENY");
     headers.emplace("Content-Security-Policy", "frame-ancestors 'none';");
     response->write(content, headers);
+  }
+
+  /**
+   * @brief The Watch page: the stream in a browser, to watch only.
+   */
+  void getWatchPage(resp_https_t response, req_https_t request) {
+    if (!authenticate(response, request, true)) {
+      return;
+    }
+
+    print_req(request);
+
+    std::string content = file_handler::read_file(WEB_DIR "watch.html");
+    SimpleWeb::CaseInsensitiveMultimap headers;
+    headers.emplace("Content-Type", "text/html; charset=utf-8");
+    headers.emplace("X-Frame-Options", "DENY");
+    headers.emplace("Content-Security-Policy", "frame-ancestors 'none';");
+    response->write(content, headers);
+  }
+
+  /**
+   * @brief GET /api/watch/stream: the stream for the Watch page, as one long response of short
+   *        messages (see watch.cpp). Ends when the stream does, or the browser goes away.
+   */
+  void getWatchStream(resp_https_t response, req_https_t request) {
+    if (!authenticate(response, request)) {
+      return;
+    }
+
+    std::string error;
+    auto viewer = watch::join(error);
+    if (!viewer) {
+      nlohmann::json out;
+      out["status"] = false;
+      out["error"] = error;
+      SimpleWeb::CaseInsensitiveMultimap headers;
+      headers.emplace("Content-Type", "application/json");
+      response->write(SimpleWeb::StatusCode::client_error_conflict, out.dump(), headers);
+      return;
+    }
+
+    response->close_connection_after_response = true;
+    SimpleWeb::CaseInsensitiveMultimap headers;
+    headers.emplace("Content-Type", "application/octet-stream");
+    headers.emplace("Cache-Control", "no-store");
+    headers.emplace("X-Content-Type-Options", "nosniff");
+    response->write(SimpleWeb::StatusCode::success_ok, headers);
+
+    // Sending happens on a thread of its own, one write at a time, so a slow browser only ever
+    // holds one write: what it can't take is skipped ahead to the next key frame in watch.cpp.
+    std::thread([response, viewer]() {
+      struct flow_t {
+        std::mutex lock;
+        std::condition_variable cv;
+        bool in_flight = false;
+        bool failed = false;
+      };
+      auto flow = std::make_shared<flow_t>();
+      auto done = util::fail_guard([&]() {
+        watch::leave(viewer);
+      });
+
+      auto send = [&](std::string &&bytes) -> bool {
+        {
+          std::unique_lock lk {flow->lock};
+          flow->cv.wait_for(lk, 5s, [&]() {
+            return !flow->in_flight || flow->failed;
+          });
+          if (flow->failed || flow->in_flight) {
+            return false;
+          }
+          flow->in_flight = true;
+        }
+        response->write(bytes.data(), (std::streamsize) bytes.size());
+        response->send([flow](const SimpleWeb::error_code &ec) {
+          std::lock_guard lk {flow->lock};
+          flow->in_flight = false;
+          if (ec) {
+            flow->failed = true;
+          }
+          flow->cv.notify_all();
+        });
+        return true;
+      };
+
+      if (!send(std::string {})) {
+        return;
+      }
+      std::string message;
+      while (watch::next(*viewer, message, 1s)) {
+        if (message.empty()) {
+          continue;
+        }
+        // Whatever else is ready goes in the same write
+        std::string batch = std::move(message);
+        while (batch.size() < 256 * 1024 && watch::next(*viewer, message, 0ms) && !message.empty()) {
+          batch += message;
+        }
+        if (!send(std::move(batch))) {
+          break;
+        }
+      }
+      std::unique_lock lk {flow->lock};
+      flow->cv.wait_for(lk, 2s, [&]() {
+        return !flow->in_flight;
+      });
+    }).detach();
   }
 
   namespace checklist {
@@ -1488,6 +1597,8 @@ namespace confighttp {
     nlohmann::json output_tree;
     output_tree["status"] = true;
     output_tree["app"] = proc::proc.get_last_run_app_name();
+    // Browsers watching the stream from the Watch page
+    output_tree["watchers"] = watch::viewers();
     output_tree["sessions"] = rtsp_stream::session_count();
     output_tree["version"] = PROJECT_VERSION;
     nlohmann::json controllers = nlohmann::json::array();
@@ -2886,6 +2997,8 @@ namespace confighttp {
     server.resource["^/live.webmanifest$"]["GET"] = getLiveManifest;
     server.resource["^/live/?$"]["GET"] = getLivePage;
     server.resource["^/checklist/?$"]["GET"] = getChecklistPage;
+    server.resource["^/watch/?$"]["GET"] = getWatchPage;
+    server.resource["^/api/watch/stream$"]["GET"] = getWatchStream;
     server.resource["^/api/checklist$"]["GET"] = getChecklist;
     server.resource["^/api/checklist$"]["POST"] = postChecklist;
     server.resource["^/api/cover$"]["GET"] = getCover;

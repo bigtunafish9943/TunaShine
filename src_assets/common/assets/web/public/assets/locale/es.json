@@ -718,7 +718,8 @@
     "vdisplay_repair": "Repararlo",
     "whatsnew_title": "Novedades de {version}",
     "whatsnew_since": "Desde {version}, la última versión que vio este navegador:",
-    "whatsnew_ok": "Entendido"
+    "whatsnew_ok": "Entendido",
+    "watch": "Ver"
   },
   "navbar": {
     "applications": "Apps",
@@ -1107,7 +1108,8 @@
     "never": "nunca",
     "just_now": "ahora mismo",
     "minutes_ago": "hace {n} min",
-    "hours_ago": "hace {n} h"
+    "hours_ago": "hace {n} h",
+    "watch": "Ver en el navegador"
   },
   "tvset": {
     "title": "Configuración de la tele",
@@ -1257,5 +1259,21 @@
         "expect": "Cada uno muestra una vez lo que cambió, y no vuelve a hacerlo."
       }
     }
+  },
+  "watch": {
+    "title": "Ver",
+    "watching": "Viendo",
+    "picture": "El juego tal como se transmite",
+    "live": "EN DIRECTO",
+    "connecting": "Conectando con la transmisión…",
+    "waiting": "Nadie está transmitiendo ahora. La imagen aparece aquí en cuanto un dispositivo empiece a jugar.",
+    "ended": "La transmisión terminó. Vuelve a verse sola cuando alguien juegue.",
+    "error": "No se puede llegar a la transmisión. Volviendo a intentarlo…",
+    "unsupported": "Este navegador no puede reproducir la transmisión. Usa una versión reciente de Chrome, Edge, Firefox o Safari.",
+    "sound_on": "Sonido activado",
+    "sound_off": "Sonido desactivado",
+    "fullscreen": "Pantalla completa",
+    "note": "Solo para ver: nada de aquí controla el juego.",
+    "no_sound_here": "Solo para ver. Este navegador no puede reproducir el sonido; prueba Chrome o Edge."
   }
 }

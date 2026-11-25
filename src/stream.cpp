@@ -37,6 +37,7 @@ extern "C" {
 #include "replay.h"
 #include "process.h"
 #include "stream.h"
+#include "watch.h"
 #include "sync.h"
 #include "system_tray.h"
 #include "thread_safe.h"
@@ -2499,6 +2500,9 @@ namespace stream {
         // Cancel the kill task if we manage to return from this function
         task_pool.cancel(force_kill);
       });
+
+      // A browser watching follows the devices' screen, which may change or go away now
+      watch::stop();
 
       BOOST_LOG(debug) << "Waiting for video to end..."sv;
       session.videoThread.join();
