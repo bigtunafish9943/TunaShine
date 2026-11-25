@@ -1327,7 +1327,7 @@
       },
       "wgc": {
         "title": "Windows.Graphics.Capture",
-        "how": "Stell unter Einstellungen > Erweitert die Methode der Bildschirmaufnahme auf Windows.Graphics.Capture und speichere. Streame ein Spiel, drück dann am PC Win+L oder öffne eine UAC-Abfrage und geh zurück.",
+        "how": "Stell unter Einstellungen > Videokodierung die Methode der Bildschirmaufnahme auf Windows.Graphics.Capture und speichere. Streame ein Spiel, drück dann am PC Win+L oder öffne eine UAC-Abfrage und geh zurück.",
         "expect": "Der Stream läuft, Sperrbildschirm oder UAC-Abfrage erscheinen auf dem Fernseher, und das Spiel kommt danach zurück. Wenn etwas nicht stimmt, stell wieder auf „Automatisch“."
       }
     }

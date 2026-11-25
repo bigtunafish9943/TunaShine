@@ -1327,7 +1327,7 @@
       },
       "wgc": {
         "title": "Windows.Graphics.Capture",
-        "how": "Under Settings > Advanced, set Screen capture method to Windows.Graphics.Capture and save. Stream a game, then press Win+L or open a UAC prompt on the PC, and go back.",
+        "how": "Under Settings > Video encoding, set Screen capture method to Windows.Graphics.Capture and save. Stream a game, then press Win+L or open a UAC prompt on the PC, and go back.",
         "expect": "The stream works, the lock screen or UAC prompt shows on the TV, and the game comes back when it closes. If anything looks wrong, set it back to Automatic."
       }
     }

@@ -1327,7 +1327,7 @@
       },
       "wgc": {
         "title": "Windows.Graphics.Capture",
-        "how": "En Configuración > Avanzado, elige Windows.Graphics.Capture como método de captura y guarda. Transmite un juego, pulsa Win+L o abre un aviso de UAC en el PC y vuelve.",
+        "how": "En Configuración > Codificación de vídeo, elige Windows.Graphics.Capture como método de captura y guarda. Transmite un juego, pulsa Win+L o abre un aviso de UAC en el PC y vuelve.",
         "expect": "La transmisión funciona, la pantalla de bloqueo o el aviso de UAC aparecen en la tele y el juego vuelve después. Si algo no va bien, vuelve a Automático."
       }
     }

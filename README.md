@@ -206,7 +206,7 @@ grant more, so if a new device says `Permission Denied`, or its mouse and keyboa
 - **Other virtual display drivers.** Remove them before using TunaStream; two at once cause conflicts.
 - **Laptops with two GPUs.** Under **Settings > Screen and sound > Advanced settings**, set *Graphics card* to
   the discrete GPU.
-- **Windows.Graphics.Capture** (*Settings > Advanced > Screen capture method*) can be smoother with frame
+- **Windows.Graphics.Capture** (*Settings > Video encoding > Screen capture method*) can be smoother with frame
   generation and windowed games. TunaStream captures through a helper in your signed-in session, and uses
   Desktop Duplication on the lock screen, during UAC prompts and when nobody is signed in. *Automatic* uses
   Desktop Duplication.

@@ -1327,7 +1327,7 @@
       },
       "wgc": {
         "title": "Windows.Graphics.Capture",
-        "how": "Dans Réglages > Avancé, choisissez Windows.Graphics.Capture comme méthode de capture et enregistrez. Streamez un jeu, puis faites Win+L ou ouvrez une invite UAC sur le PC, et revenez.",
+        "how": "Dans Réglages > Encodage vidéo, choisissez Windows.Graphics.Capture comme méthode de capture et enregistrez. Streamez un jeu, puis faites Win+L ou ouvrez une invite UAC sur le PC, et revenez.",
         "expect": "Le stream fonctionne, l'écran de verrouillage ou l'invite UAC s'affiche sur la télé, et le jeu revient ensuite. En cas de souci, revenez à Automatique."
       }
     }
