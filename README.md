@@ -159,8 +159,8 @@ grant more, so if a new device says `Permission Denied`, or its mouse and keyboa
 - **Using the PC while it streams.** Turn on *Shared PC* under **Settings > General** (see above). Without it,
   the stream's virtual display is an extra monitor on the same Windows desktop,
   so your real monitor stays usable. While someone is streaming, the virtual display is the main display, so
-  games open on the stream. So do new windows and notifications: turn on Do Not Disturb if those shouldn't show
-  on the TV. Windows still has one mouse, one keyboard and one focused window for both of you, so clicking a window
+  games open on the stream. So do new windows; notifications are kept off it by *Do not disturb during
+  streams* (on by default). Windows still has one mouse, one keyboard and one focused window for both of you, so clicking a window
   on your monitor takes focus away from the game. It works best when the person streaming plays with a
   controller: under **Devices**, edit their device and choose *Controller only*, and under
   **Settings > Screen and sound** turn on *Keep my mouse off the stream's screen*.

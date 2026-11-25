@@ -982,6 +982,18 @@ namespace platf {
   /// A streaming device's controller was used just now (shared PC mode gives the game focus back).
   void note_controller_input();
 
+  /**
+   * @brief Turn Windows' "Do not disturb" on while a stream runs, so notifications don't pop up
+   *        on the stream (they still collect in the notification centre).
+   * @details Turning it off only undoes what TunaStream did: if Do not disturb was already on, or the
+   *          person at the PC changed it during the stream, it is left alone. A mark in the config
+   *          folder lets the next start turn it off if TunaStream stopped while it was on.
+   */
+  void quiet_notifications(bool quiet);
+
+  /// At start up: turn Do not disturb off if TunaStream left it on.
+  void quiet_notifications_cleanup();
+
   std::string
   get_clipboard();
 

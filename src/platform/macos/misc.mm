@@ -230,6 +230,12 @@ namespace platf {
   void set_stream_audio_device(const std::wstring &) {
   }
 
+  void quiet_notifications(bool) {
+  }
+
+  void quiet_notifications_cleanup() {
+  }
+
   void note_controller_input() {
   }
 

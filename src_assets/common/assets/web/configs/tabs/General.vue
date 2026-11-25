@@ -154,6 +154,23 @@ onMounted(() => {
               v-if="config.shared_pc !== 'disabled'"
     ></Checkbox>
 
+    <!-- Shared PC: windowed games fill the TV -->
+    <Checkbox class="mb-3"
+              id="shared_pc_borderless"
+              locale-prefix="config"
+              v-model="config.shared_pc_borderless"
+              default="true"
+              v-if="config.shared_pc !== 'disabled'"
+    ></Checkbox>
+
+    <!-- Do not disturb during streams -->
+    <Checkbox class="mb-3"
+              id="quiet_notifications"
+              locale-prefix="config"
+              v-model="config.quiet_notifications"
+              default="true"
+    ></Checkbox>
+
     <!-- Seasonal themes -->
     <Checkbox class="mb-3"
               id="ui_theme_seasonal"

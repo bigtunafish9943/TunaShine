@@ -590,6 +590,11 @@ namespace proc {
                                                   platf::herd_new_windows(this->display_name, steam_app);
     }
 
+    // No notification pop-ups on the stream (Settings > Do not disturb during streams)
+    if (config::stream.quiet_notifications) {
+      platf::quiet_notifications(true);
+    }
+
     _app_prep_begin = std::begin(_app.prep_cmds);
     _app_prep_it = _app_prep_begin;
 
@@ -793,6 +798,10 @@ namespace proc {
     reclaim_primary_display();
     display_restore_failed = false;
 
+    if (config::stream.quiet_notifications) {
+      platf::quiet_notifications(true);
+    }
+
     if (config::tunastream.game_frame_limit && frame_limit_fps > 0) {
       platf::set_game_frame_limit(frame_limit_fps);
     }
@@ -841,8 +850,15 @@ namespace proc {
   void proc_t::pause(bool connection_lost) {
     // Nobody is streaming now, so the PC's own frame rate limit applies again
     platf::set_game_frame_limit(0);
-    // ...and windows stay wherever the person at the PC puts them
-    _window_herder.reset();
+    // ...notifications pop up again...
+    platf::quiet_notifications(false);
+    // ...and windows stay wherever the person at the PC puts them. In shared PC mode the app's
+    // windows and sound stay with the stream's screen, so they are still there when the TV
+    // comes back (the game's processes were started before then, so a new watcher wouldn't
+    // know them)
+    if (!config::stream.shared_pc) {
+      _window_herder.reset();
+    }
 
     if (!running()) {
       BOOST_LOG(info) << "Session already stopped, do not run pause commands.";
@@ -969,6 +985,7 @@ namespace proc {
   void proc_t::terminate(bool immediate, bool needs_refresh) {
     ++session_generation;
     platf::set_game_frame_limit(0);
+    platf::quiet_notifications(false);
     _window_herder.reset();
     frame_limit_fps = 0;
     std::error_code ec;

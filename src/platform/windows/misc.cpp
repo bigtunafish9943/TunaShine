@@ -7,6 +7,8 @@
 #include <cstring>
 #include <thread>
 #include <filesystem>
+#include <fstream>
+#include <functional>
 #include <iomanip>
 #include <iterator>
 #include <mutex>
@@ -577,6 +579,117 @@ namespace platf {
     }
 
     return ec;
+  }
+
+  namespace {
+    // Windows' "Do not disturb" (Focus assist on Windows 10) is a per-user WNF state: 0 is off,
+    // 1 lets only priority notifications through, 2 only alarms. Settings and the action centre
+    // change it the same way.
+    using wnf_update_t = LONG(NTAPI *)(const ULONG64 *state, const void *buffer, ULONG length, const void *type_id, const void *scope, ULONG match_stamp, ULONG check_stamp);
+    using wnf_query_t = LONG(NTAPI *)(const ULONG64 *state, const void *type_id, const void *scope, ULONG *stamp, void *buffer, ULONG *size);
+    constexpr ULONG64 WNF_SHEL_QUIETHOURS_ACTIVE_PROFILE_CHANGED = 0x0D83063EA3BF1C75ull;
+    constexpr DWORD QUIET_PROFILE = 1;  // priority only: what turning on Do not disturb sets
+
+    std::mutex quiet_lock;
+    bool quiet_by_us = false;
+
+    std::filesystem::path quiet_marker() {
+      return appdata() / L"dnd_on_by_tunastream"sv;
+    }
+
+    /// Runs as the signed-in user (the state is theirs), when TunaStream runs as SYSTEM
+    bool as_signed_in_user(const std::function<void()> &work) {
+      if (!is_running_as_system()) {
+        work();
+        return true;
+      }
+      HANDLE token = retrieve_users_token(false);
+      if (!token) {
+        return false;
+      }
+      auto close = util::fail_guard([token]() {
+        CloseHandle(token);
+      });
+      return !impersonate_current_user(token, work);
+    }
+
+    /// The current profile, or -1 if it can't be read
+    int quiet_profile() {
+      static auto query = reinterpret_cast<wnf_query_t>(GetProcAddress(GetModuleHandleW(L"ntdll.dll"), "NtQueryWnfStateData"));
+      if (!query) {
+        return -1;
+      }
+      int result = -1;
+      as_signed_in_user([&]() {
+        ULONG stamp = 0;
+        DWORD profile = 0;
+        ULONG size = sizeof(profile);
+        if (query(&WNF_SHEL_QUIETHOURS_ACTIVE_PROFILE_CHANGED, nullptr, nullptr, &stamp, &profile, &size) == 0) {
+          result = size == 0 ? 0 : static_cast<int>(profile);
+        }
+      });
+      return result;
+    }
+
+    bool set_quiet_profile(DWORD profile) {
+      static auto update = reinterpret_cast<wnf_update_t>(GetProcAddress(GetModuleHandleW(L"ntdll.dll"), "NtUpdateWnfStateData"));
+      if (!update) {
+        return false;
+      }
+      LONG status = -1;
+      as_signed_in_user([&]() {
+        status = update(&WNF_SHEL_QUIETHOURS_ACTIVE_PROFILE_CHANGED, &profile, sizeof(profile), nullptr, nullptr, 0, 0);
+      });
+      if (status != 0) {
+        BOOST_LOG(warning) << "Couldn't change Do not disturb: 0x"sv << util::hex(status).to_string_view();
+      }
+      return status == 0;
+    }
+  }  // namespace
+
+  void quiet_notifications(bool quiet) {
+    std::lock_guard lg {quiet_lock};
+    std::error_code ec;
+    if (quiet) {
+      if (quiet_by_us) {
+        return;
+      }
+      const int profile = quiet_profile();
+      if (profile != 0) {
+        // Already on (or unknown): it isn't ours to turn off later
+        if (profile > 0) {
+          BOOST_LOG(info) << "Do not disturb was already on"sv;
+        }
+        return;
+      }
+      if (set_quiet_profile(QUIET_PROFILE) && quiet_profile() == static_cast<int>(QUIET_PROFILE)) {
+        quiet_by_us = true;
+        std::ofstream {quiet_marker()} << "1";
+        BOOST_LOG(info) << "Do not disturb on for the stream"sv;
+      }
+      return;
+    }
+    if (!quiet_by_us) {
+      return;
+    }
+    quiet_by_us = false;
+    std::filesystem::remove(quiet_marker(), ec);
+    // Only undo our own change: if the person at the PC changed it since, leave it
+    if (quiet_profile() == static_cast<int>(QUIET_PROFILE) && set_quiet_profile(0)) {
+      BOOST_LOG(info) << "Do not disturb off again"sv;
+    }
+  }
+
+  void quiet_notifications_cleanup() {
+    std::lock_guard lg {quiet_lock};
+    std::error_code ec;
+    if (!std::filesystem::exists(quiet_marker(), ec)) {
+      return;
+    }
+    std::filesystem::remove(quiet_marker(), ec);
+    if (quiet_profile() == static_cast<int>(QUIET_PROFILE) && set_quiet_profile(0)) {
+      BOOST_LOG(info) << "Turned off Do not disturb that was left on by the last stream"sv;
+    }
   }
 
   /**
