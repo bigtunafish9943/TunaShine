@@ -5,6 +5,7 @@
 #pragma once
 
 // standard includes
+#include <filesystem>
 #include <string>
 #include <vector>
 
@@ -27,4 +28,10 @@ namespace game_library {
    *          Empty on platforms other than Windows.
    */
   std::vector<game_t> find_installed_games();
+
+  /// Only the games installed through Steam (see find_installed_games()).
+  std::vector<game_t> find_steam_games();
+
+  /// Where Steam is installed, or empty when it isn't (or on platforms other than Windows).
+  std::filesystem::path steam_dir();
 }  // namespace game_library

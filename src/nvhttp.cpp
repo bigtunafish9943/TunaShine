@@ -33,6 +33,7 @@
 #include "logging.h"
 #include "network.h"
 #include "nvhttp.h"
+#include "box_art.h"
 #include "platform/common.h"
 #include "process.h"
 #include "rtsp.h"
@@ -1558,7 +1559,8 @@ namespace nvhttp {
 
     std::ifstream in(app_image, std::ios::binary);
     SimpleWeb::CaseInsensitiveMultimap headers;
-    headers.emplace("Content-Type", "image/png");
+    // Covers from Steam are JPEG
+    headers.emplace("Content-Type", box_art::content_type_of(app_image));
     response->write(SimpleWeb::StatusCode::success_ok, in, headers);
     response->close_connection_after_response = true;
   }

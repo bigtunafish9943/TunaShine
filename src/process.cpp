@@ -35,6 +35,7 @@
 #include "logging.h"
 #include "platform/common.h"
 #include "process.h"
+#include "box_art.h"
 #include "httpcommon.h"
 #include "system_tray.h"
 #include "utility.h"
@@ -1088,6 +1089,13 @@ namespace proc {
     });
     auto app_image_path = iter == _apps.end() ? std::string() : iter->image_path;
 
+    // No picture of its own: a Steam game gets its cover from Steam
+    if (iter != _apps.end() && app_image_path.empty()) {
+      if (auto cover = box_art::cover_for(*iter, true); !cover.empty()) {
+        return cover;
+      }
+    }
+
     return validate_app_image_path(app_image_path);
   }
 
@@ -1840,6 +1848,7 @@ namespace proc {
 
     if (proc_opt) {
       proc = std::move(*proc_opt);
+      box_art::prefetch(proc.get_apps());
     }
   }
 }  // namespace proc

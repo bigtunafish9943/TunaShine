@@ -116,11 +116,16 @@ namespace game_library {
       return {};
     }
 
-    void find_steam_games(std::vector<game_t> &out) {
+    std::wstring steam_root_dir() {
       auto root = reg_string(HKEY_LOCAL_MACHINE, L"SOFTWARE\\WOW6432Node\\Valve\\Steam", L"InstallPath");
       if (root.empty()) {
         root = reg_string(HKEY_LOCAL_MACHINE, L"SOFTWARE\\Valve\\Steam", L"InstallPath");
       }
+      return root;
+    }
+
+    void find_steam_games(std::vector<game_t> &out) {
+      auto root = steam_root_dir();
       if (root.empty()) {
         return;
       }
@@ -588,8 +593,30 @@ namespace game_library {
     BOOST_LOG(info) << "Found "sv << games.size() << " games and programs installed on this PC"sv;
     return games;
   }
+
+  std::vector<game_t> find_steam_games() {
+    std::vector<game_t> games;
+    try {
+      find_steam_games(games);
+    } catch (const std::exception &e) {
+      BOOST_LOG(warning) << "Looking for Steam games failed: "sv << e.what();
+    }
+    return games;
+  }
+
+  std::filesystem::path steam_dir() {
+    return fs::path {steam_root_dir()};
+  }
 #else
   std::vector<game_t> find_installed_games() {
+    return {};
+  }
+
+  std::vector<game_t> find_steam_games() {
+    return {};
+  }
+
+  std::filesystem::path steam_dir() {
     return {};
   }
 #endif
