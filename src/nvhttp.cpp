@@ -948,6 +948,8 @@ namespace nvhttp {
 
       // TunaReceive wears the same colour theme as this PC's web page, unless told otherwise
       tree.put("root.TunaTheme", config::effective_theme());
+      // Changes whenever TunaStream's own app pictures change, so TunaReceive fetches them again
+      tree.put("root.TunaArt", "themed-1");
 
     #ifdef _WIN32
       tree.put("root.VirtualDisplayCapable", true);
