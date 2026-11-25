@@ -113,6 +113,7 @@ namespace stream {
       int bitrate_kbps;  ///< Bitrate the video is being sent at right now
       int fec_percent;  ///< Error correction being added to each frame right now
       int picture_scale;  ///< Picture size in percent of what the device asked for
+      bool split_frames;  ///< Each frame is encoded on two encoder chips at once
       device_view_t view;  ///< What the device sees, when it reports it
       int send_rate_mbps;  ///< Rate packets are paced at
       double window_s;  ///< Seconds the figures cover

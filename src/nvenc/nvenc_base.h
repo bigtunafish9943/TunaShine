@@ -81,6 +81,11 @@ namespace nvenc {
      */
     bool set_bitrate(uint32_t kbps);
 
+    /// True when each frame is split across two NVENC chips.
+    bool splits_frames() const {
+      return split_active;
+    }
+
   protected:
     /**
      * @brief Required. Used for loading NvEnc library and setting `nvenc` variable with `NvEncodeAPICreateInstance()`.
