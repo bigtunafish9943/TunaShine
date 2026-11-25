@@ -24,6 +24,7 @@
 
 // lib includes
 #include <curl/curl.h>
+#include <nlohmann/json.hpp>
 
 // local includes
 #include "box_art.h"
@@ -122,10 +123,85 @@ namespace box_art {
       return it == steam_names.end() ? std::string {} : it->second;
     }
 
-    std::string steam_id_for(const proc::ctx_t &app) {
+    size_t append_text(char *data, size_t size, size_t count, void *user) {
+      auto *out = static_cast<std::string *>(user);
+      if (out->size() + size * count > 512 * 1024) {
+        return 0;
+      }
+      out->append(data, size * count);
+      return size * count;
+    }
+
+    /// Names already looked up on the Steam store: the app id found, or empty for none
+    std::map<std::string, std::string> store_lookups;
+
+    /**
+     * A game from another store (Epic, GOG, Xbox...) is often on Steam too: look its name up on
+     * the Steam store and take the result only when the name matches exactly.
+     */
+    std::string steam_id_from_store(const std::string &name) {
+      const auto key = normalise(name);
+      static const std::set<std::string> not_games {"desktop", "steambigpicture", "steam", "virtualdesktop", "terminate"};
+      if (key.size() < 3 || not_games.contains(key)) {
+        return {};
+      }
+      {
+        std::lock_guard lg {lock};
+        if (auto it = store_lookups.find(key); it != store_lookups.end()) {
+          return it->second;
+        }
+      }
+      std::string found;
+      CURL *curl = curl_easy_init();
+      if (curl) {
+        char *escaped = curl_easy_escape(curl, name.c_str(), (int) name.size());
+        const std::string url = "https://store.steampowered.com/api/storesearch/?l=english&cc=US&term="s + (escaped ? escaped : "");
+        if (escaped) {
+          curl_free(escaped);
+        }
+        std::string body;
+        curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, append_text);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &body);
+        curl_easy_setopt(curl, CURLOPT_FAILONERROR, 1L);
+        curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 4L);
+        curl_easy_setopt(curl, CURLOPT_TIMEOUT, 8L);
+        curl_easy_setopt(curl, CURLOPT_SSLVERSION, CURL_SSLVERSION_TLSv1_2);
+#ifdef _WIN32
+        curl_easy_setopt(curl, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NATIVE_CA);
+#endif
+        const auto result = curl_easy_perform(curl);
+        curl_easy_cleanup(curl);
+        if (result == CURLE_OK) {
+          try {
+            auto json = nlohmann::json::parse(body);
+            for (const auto &item : json.value("items", nlohmann::json::array())) {
+              if (normalise(item.value("name", "")) == key && item.contains("id")) {
+                found = std::to_string(item["id"].get<long long>());
+                break;
+              }
+            }
+          } catch (const std::exception &) {
+          }
+        } else if (result == CURLE_COULDNT_RESOLVE_HOST || result == CURLE_COULDNT_CONNECT || result == CURLE_OPERATION_TIMEDOUT) {
+          return {};  // offline: don't remember a miss
+        }
+      }
+      std::lock_guard lg {lock};
+      store_lookups[key] = found;
+      if (!found.empty()) {
+        BOOST_LOG(info) << "["sv << name << "] found on the Steam store (app "sv << found << ')';
+      }
+      return found;
+    }
+
+    std::string steam_id_for(const proc::ctx_t &app, bool allow_download) {
       auto id = steam_id_in_commands(app);
       if (id.empty()) {
         id = steam_id_for_name(app.name);
+      }
+      if (id.empty() && allow_download) {
+        id = steam_id_from_store(app.name);
       }
       return id;
     }
@@ -273,7 +349,7 @@ namespace box_art {
   std::string cover_for(const proc::ctx_t &app, bool allow_download) {
     std::string id;
     try {
-      id = steam_id_for(app);
+      id = steam_id_for(app, allow_download);
     } catch (const std::exception &e) {
       BOOST_LOG(debug) << "Looking up the Steam game for ["sv << app.name << "] failed: "sv << e.what();
     }
