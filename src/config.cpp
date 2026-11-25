@@ -1377,7 +1377,7 @@ namespace config {
       config::tunastream.flags[config::flag::UPNP].flip();
     }
 
-    string_restricted_f(vars, "ui_theme", config::tunastream.ui_theme, {"deepsea"sv, "reef"sv, "kelp"sv, "midnight"sv, "gold"sv});
+    string_restricted_f(vars, "ui_theme", config::tunastream.ui_theme, {"deepsea"sv, "reef"sv, "kelp"sv, "midnight"sv, "gold"sv, "halloween"sv, "autumn"sv, "winter"sv, "summer"sv});
     bool_f(vars, "ui_theme_seasonal", config::tunastream.ui_theme_seasonal);
 
     string_restricted_f(vars, "locale", config::tunastream.locale, {
