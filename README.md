@@ -71,6 +71,22 @@ and every step was tightened:
   problem from a client problem in one press. TunaReceive's *Check my controller* shows what the controller is
   and whether it can rumble.
 
+## From the couch, and from your phone
+
+- **Messages and sounds on the TV.** Type a message on the home page, or tap a ready-made one ("Dinner's
+  ready!"), and it pops up over the game within a few seconds. Six built-in sounds (doorbell, dinner bell, air
+  horn...) play on the TV too, and you can add your own.
+- **Screenshots and instant replay.** On the TV, View + R1 saves a screenshot (on the TV and in your
+  Pictures\TunaStream folder), and View + L1 saves the last 30 seconds as a clip in Videos\TunaStream, exactly as
+  the stream looked. *Make this week's highlights* joins the end of each replay into one clip.
+- **A Live page for your phone.** Scan the QR code on the home page: what's playing with its cover, the frame
+  rate as it happens, controller batteries, the message and sound buttons and End session. Add it to your home
+  screen to open it like an app.
+- **Now playing on the tray icon.** Hover over TunaStream's icon by the clock to see who is playing what.
+- **Shared PC mode.** Keep using the PC while someone streams: your monitor stays the main screen, only the
+  game's windows go to the TV, only the game's sound goes to the stream, and your mouse can't wander onto the
+  TV's screen. *Settings > General*.
+
 ## Everything else
 
 - **Streams on its own virtual monitor.** Every stream gets a virtual display sized to the device you are playing
@@ -84,15 +100,21 @@ and every step was tightened:
   Settings in plain words, with the technical ones tucked away. Pairing and permissions together on one Devices
   page.
 - **Your last seven days.** The home page shows play time for each day, the most-played games and how smooth the
-  streams were. The record stays on the PC.
+  streams were, with milestones as they're reached. The record stays on the PC.
+- **A reminder when a game runs slow.** When a game itself draws fewer than 59 frames a second, the home page
+  says so and names the fix in the game's settings, and keeps a reminder until it runs at full rate.
 - **Game covers from Steam.** Steam games added as apps get their cover on the client's game tiles: a custom cover
   you set in your Steam library first, then the one Steam shows, fetched by itself.
 - **Controller batteries** on the home page next to each controller, in red when one is low.
-- **Five colour themes**: Deep Sea, Coral Reef, Kelp Forest, Midnight and Golden Hour, in light and dark.
-  TunaReceive wears the PC's theme by default, or its own if you pick one. *Settings > General*.
+- **Five colour themes**: Deep Sea, Coral Reef, Kelp Forest, Midnight and Golden Hour, in light and dark, plus
+  seasonal ones for Halloween, autumn, winter and summer. TunaReceive wears the PC's theme by default, or its own
+  if you pick one. *Settings > General*.
 - **Updates itself.** When a new version is out, a banner offers *Update now*; TunaStream downloads it, checks it
   against GitHub's published checksum and installs it, keeping your settings and paired devices.
-- **A log you can keep.** The Troubleshooting page shows the log and saves it as a file to attach to a bug report.
+- **Troubleshooting that helps.** The log, ready to save and attach to a bug report; a rumble test; and a Wi-Fi
+  check that lists the networks nearby and says which channel is quietest.
+- **Backup and restore.** One file with your settings, apps, sounds and play history, and your pairings if you
+  tick them. TunaReceive can keep its own backup on the PC and get it back on a new TV.
 - **Permissions for each device**, with one-click presets such as *Controller only*.
 - **Send files to the TV** from the home page; they arrive in TunaReceive's Downloads.
 - **Hardware encoding** on AMD, Intel and Nvidia GPUs, with a software fallback.
@@ -133,7 +155,8 @@ grant more, so if a new device says `Permission Denied`, or its mouse and keyboa
 
 ## Good to know
 
-- **Using the PC while it streams.** The stream's virtual display is an extra monitor on the same Windows desktop,
+- **Using the PC while it streams.** Turn on *Shared PC* under **Settings > General** (see above). Without it,
+  the stream's virtual display is an extra monitor on the same Windows desktop,
   so your real monitor stays usable. While someone is streaming, the virtual display is the main display, so
   games open on the stream. So do new windows and notifications: turn on Do Not Disturb if those shouldn't show
   on the TV. Windows still has one mouse, one keyboard and one focused window for both of you, so clicking a window
