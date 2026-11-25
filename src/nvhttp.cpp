@@ -35,6 +35,7 @@
 #include "nvhttp.h"
 #include "box_art.h"
 #include "captures.h"
+#include "play_history.h"
 #include "settings_backup.h"
 #include "sound_board.h"
 #include "tv_messages.h"
@@ -1935,6 +1936,25 @@ namespace nvhttp {
   }
 
   /**
+   * The last seven days of play, for TunaReceive's "Your week": GET /tuna/recap?tz=<minutes east of UTC>.
+   */
+  void tunaRecap(resp_https_t response, req_https_t request) {
+    print_req<TunaStreamHTTPS>(request);
+    auto args = request->parse_query_string();
+    int tz = 0;
+    try {
+      tz = std::stoi(get_arg(args, "tz", "0"));
+    } catch (const std::exception &) {
+    }
+    auto out = play_history::recap_with_milestones(7, tz);
+    SimpleWeb::CaseInsensitiveMultimap headers;
+    headers.emplace("Content-Type", "application/json");
+    headers.emplace("Cache-Control", "no-store");
+    response->write(SimpleWeb::StatusCode::success_ok, out.dump(), headers);
+    response->close_connection_after_response = true;
+  }
+
+  /**
    * A sound-board sound: GET /tuna/sound?name=. TunaReceive fetches it when the home page sends it.
    */
   void tunaSound(resp_https_t response, req_https_t request) {
@@ -2182,6 +2202,7 @@ namespace nvhttp {
     https_server.resource["^/tuna/network$"]["GET"] = tunaNetwork;
     https_server.resource["^/tuna/report$"]["GET"] = tunaReport;
     https_server.resource["^/tuna/sound$"]["GET"] = tunaSound;
+    https_server.resource["^/tuna/recap$"]["GET"] = tunaRecap;
     https_server.resource["^/tuna/screenshot$"]["POST"] = tunaScreenshot;
     https_server.resource["^/tuna/replay$"]["GET"] = tunaReplay;
     https_server.resource["^/tuna/backup$"]["POST"] = tunaBackupSave;
