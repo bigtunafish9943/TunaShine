@@ -4,6 +4,8 @@
  */
 // standard includes
 #include <csignal>
+#include <cstring>
+#include <thread>
 #include <filesystem>
 #include <iomanip>
 #include <iterator>
@@ -44,6 +46,8 @@
 #undef NTDDI_VERSION
 #define NTDDI_VERSION NTDDI_WIN10
 #include <Shlwapi.h>
+#include <shlobj.h>
+#include <knownfolders.h>
 
 // local includes
 #include "misc.h"
@@ -128,6 +132,8 @@ namespace platf {
   decltype(WlanEnumInterfaces) *fn_WlanEnumInterfaces = nullptr;
   decltype(WlanSetInterface) *fn_WlanSetInterface = nullptr;
   decltype(WlanQueryInterface) *fn_WlanQueryInterface = nullptr;
+  decltype(WlanGetNetworkBssList) *fn_WlanGetNetworkBssList = nullptr;
+  decltype(WlanScan) *fn_WlanScan = nullptr;
 
   std::filesystem::path appdata() {
     WCHAR tunastream_path[MAX_PATH];
@@ -1149,6 +1155,9 @@ namespace platf {
       fn_WlanSetInterface = (decltype(fn_WlanSetInterface)) GetProcAddress(wlanapi, "WlanSetInterface");
       // Only used for the "this PC is on Wi-Fi" readout, so it is allowed to be missing
       fn_WlanQueryInterface = (decltype(fn_WlanQueryInterface)) GetProcAddress(wlanapi, "WlanQueryInterface");
+      // Only used for the Wi-Fi channel advice
+      fn_WlanGetNetworkBssList = (decltype(fn_WlanGetNetworkBssList)) GetProcAddress(wlanapi, "WlanGetNetworkBssList");
+      fn_WlanScan = (decltype(fn_WlanScan)) GetProcAddress(wlanapi, "WlanScan");
 
       if (!fn_WlanOpenHandle || !fn_WlanCloseHandle || !fn_WlanFreeMemory || !fn_WlanEnumInterfaces || !fn_WlanSetInterface) {
         BOOST_LOG(error) << "wlanapi.dll is missing exports?"sv;
@@ -1164,6 +1173,25 @@ namespace platf {
         return;
       }
     });
+  }
+
+  std::filesystem::path user_folder(user_folder_e folder) {
+    // TunaStream runs as a service, so ask for the folder of whoever is signed in at the console
+    HANDLE token = retrieve_users_token(false);
+    if (!token) {
+      return {};
+    }
+    PWSTR path = nullptr;
+    const KNOWNFOLDERID &id = folder == user_folder_e::videos ? FOLDERID_Videos : FOLDERID_Pictures;
+    std::filesystem::path result;
+    if (SUCCEEDED(SHGetKnownFolderPath(id, KF_FLAG_DEFAULT, token, &path)) && path) {
+      result = std::filesystem::path {path};
+    }
+    if (path) {
+      CoTaskMemFree(path);
+    }
+    CloseHandle(token);
+    return result;
   }
 
   network_link_t network_link() {
@@ -1249,6 +1277,88 @@ namespace platf {
           fn_WlanFreeMemory(data);
         }
         break;
+      }
+      fn_WlanFreeMemory(interfaces);
+    }
+    fn_WlanCloseHandle(handle, nullptr);
+    return out;
+  }
+
+  /// The Wi-Fi channel a centre frequency (in kHz) belongs to
+  static int channel_of(ULONG khz) {
+    const int mhz = (int) (khz / 1000);
+    if (mhz == 2484) {
+      return 14;
+    }
+    if (mhz >= 2412 && mhz < 2484) {
+      return (mhz - 2407) / 5;
+    }
+    if (mhz >= 5160 && mhz <= 5885) {
+      return (mhz - 5000) / 5;
+    }
+    if (mhz >= 5955 && mhz <= 7115) {
+      return (mhz - 5950) / 5;  // 6 GHz
+    }
+    return 0;
+  }
+
+  wifi_survey_t wifi_survey(bool scan_first) {
+    wifi_survey_t out;
+    load_wlanapi();
+    if (!fn_WlanOpenHandle || !fn_WlanGetNetworkBssList) {
+      return out;
+    }
+    HANDLE handle = nullptr;
+    DWORD negotiated_version;
+    if (fn_WlanOpenHandle(WLAN_API_MAKE_VERSION(2, 0), nullptr, &negotiated_version, &handle) != ERROR_SUCCESS) {
+      return out;
+    }
+    PWLAN_INTERFACE_INFO_LIST interfaces = nullptr;
+    if (fn_WlanEnumInterfaces(handle, nullptr, &interfaces) == ERROR_SUCCESS && interfaces) {
+      for (DWORD i = 0; i < interfaces->dwNumberOfItems; i++) {
+        const auto &info = interfaces->InterfaceInfo[i];
+        auto guid = &info.InterfaceGuid;
+        out.available = true;
+        if (scan_first && fn_WlanScan) {
+          fn_WlanScan(handle, guid, nullptr, nullptr, nullptr);
+          // Scans take a few seconds; the list fills in as they finish
+          std::this_thread::sleep_for(std::chrono::seconds(4));
+        }
+
+        // The network this adapter is on, to mark it in the list
+        std::string connected_bssid;
+        DWORD data_size = 0;
+        PVOID data = nullptr;
+        if (fn_WlanQueryInterface && info.isState == wlan_interface_state_connected &&
+            fn_WlanQueryInterface(handle, guid, wlan_intf_opcode_current_connection, nullptr, &data_size, &data, nullptr) == ERROR_SUCCESS && data) {
+          if (data_size >= sizeof(WLAN_CONNECTION_ATTRIBUTES)) {
+            auto attributes = (PWLAN_CONNECTION_ATTRIBUTES) data;
+            connected_bssid.assign((const char *) attributes->wlanAssociationAttributes.dot11Bssid, 6);
+          }
+          fn_WlanFreeMemory(data);
+        }
+
+        PWLAN_BSS_LIST list = nullptr;
+        if (fn_WlanGetNetworkBssList(handle, guid, nullptr, dot11_BSS_type_any, FALSE, nullptr, &list) == ERROR_SUCCESS && list) {
+          for (DWORD n = 0; n < list->dwNumberOfItems; n++) {
+            const auto &bss = list->wlanBssEntries[n];
+            wifi_network_t network;
+            network.name.assign((const char *) bss.dot11Ssid.ucSSID, std::min<ULONG>(bss.dot11Ssid.uSSIDLength, 32));
+            network.channel = channel_of(bss.ulChCenterFrequency);
+            const auto mhz = bss.ulChCenterFrequency / 1000;
+            network.band = mhz < 3000 ? 2 : mhz < 5935 ? 5 : 6;
+            network.signal = (int) bss.uLinkQuality;
+            network.connected = !connected_bssid.empty() &&
+                                std::memcmp(connected_bssid.data(), bss.dot11Bssid, 6) == 0;
+            if (network.channel > 0) {
+              out.networks.push_back(std::move(network));
+            }
+          }
+          fn_WlanFreeMemory(list);
+        }
+        if (!out.networks.empty()) {
+          break;
+        }
       }
       fn_WlanFreeMemory(interfaces);
     }

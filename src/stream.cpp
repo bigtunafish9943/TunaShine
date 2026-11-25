@@ -5,6 +5,7 @@
 
 // standard includes
 #include <deque>
+#include <filesystem>
 #include <iomanip>
 #include <fstream>
 #include <future>
@@ -31,7 +32,9 @@ extern "C" {
 #include "logging.h"
 #include "network.h"
 #include "platform/common.h"
+#include "captures.h"
 #include "play_history.h"
+#include "replay.h"
 #include "process.h"
 #include "stream.h"
 #include "sync.h"
@@ -457,6 +460,10 @@ namespace stream {
       int minutes = 0;
       int smooth_minutes = 0;
       double fps_sum = 0;
+      // Minutes the game itself drew too few frames: fewer than 59 a second when 60 or more were
+      // asked for, and the capture had no frames to spare, so the stream wasn't the limit
+      int slow_game_minutes = 0;
+      double slow_game_fps_sum = 0;
       std::atomic_int send_rate_mbps {0};
       std::atomic_int bitrate_kbps {0};  // current bitrate, once it has been changed mid-stream
       std::atomic_int fec_percent {0};  // error correction being added to each frame right now
@@ -470,6 +477,9 @@ namespace stream {
 
     // Times the client asked for lost video to be repaired or resent
     std::atomic_uint32_t loss_events {0};
+
+    // The last 30 seconds, for instant replay (null when it's turned off)
+    std::unique_ptr<replay::buffer_t> replay;
 
     // Error correction that sizes itself (only touched by the video sending thread)
     struct {
@@ -1428,6 +1438,13 @@ namespace stream {
       }
     }
     out.picture_scale = h.picture_scale.load();
+    out.slow_game_minutes = h.slow_game_minutes;
+    out.slow_game_fps = h.slow_game_minutes ? h.slow_game_fps_sum / h.slow_game_minutes : 0;
+    out.width = session.config.monitor.width;
+    out.height = session.config.monitor.height;
+    if (h.first_frame != std::chrono::steady_clock::time_point {}) {
+      out.running_s = std::chrono::duration<double>(std::chrono::steady_clock::now() - h.first_frame).count();
+    }
     out.split_frames = h.split_frames.load();
     if (h.device_view_at != std::chrono::steady_clock::time_point {} &&
         std::chrono::steady_clock::now() - h.device_view_at < 15s) {
@@ -1519,6 +1536,14 @@ namespace stream {
       h.fps_sum += s.fps;
       if (s.recoveries == 0 && (!s.view.known || (s.view.slow_pct < 5 && s.view.loss_pct < 1))) {
         ++h.smooth_minutes;
+      }
+      if (s.target_fps >= 60 && s.fps >= 20 && s.fps < 59 && s.skipped_per_sec < 1 && s.window_s >= 5) {
+        ++h.slow_game_minutes;
+        h.slow_game_fps_sum += s.fps;
+        if (h.slow_game_minutes == 2) {
+          BOOST_LOG(info) << "The game on "sv << s.device << " is drawing only "sv << std::fixed << std::setprecision(1)
+                          << s.fps << " frames a second; the stream could carry "sv << s.target_fps;
+        }
       }
       BOOST_LOG(info) << "Stream health for "sv << s.device << ": "sv
                       << std::fixed << std::setprecision(1) << s.fps << " of "sv << s.target_fps << " fps, "sv
@@ -1660,6 +1685,16 @@ namespace stream {
 
           payload_with_replacements = replace(payload, frame_old, frame_new);
           payload = {(char *) payload_with_replacements.data(), payload_with_replacements.size()};
+        }
+      }
+
+      // Instant replay keeps a copy of each frame, and asks for a keyframe now and then
+      if (session->replay) {
+        const auto now = std::chrono::steady_clock::now();
+        session->replay->add_video(packet->frame_timestamp.value_or(now), packet->is_idr(),
+                                   (const std::uint8_t *) payload.data(), payload.size());
+        if (session->replay->wants_keyframe(now)) {
+          session->video.idr_events->raise(true);
         }
       }
 
@@ -1989,6 +2024,10 @@ namespace stream {
 
       TUPLE_2D_REF(channel_data, packet_data, *packet);
       auto session = (session_t *) channel_data;
+
+      if (session->replay) {
+        session->replay->add_audio(std::chrono::steady_clock::now(), (const std::uint8_t *) std::begin(packet_data), packet_data.size());
+      }
 
       auto sequenceNumber = session->audio.sequenceNumber;
       auto timestamp = session->audio.timestamp;
@@ -2351,6 +2390,19 @@ namespace stream {
       return clamped;
     }
 
+    std::string save_replay(session_t &session, std::string &name) {
+      if (!session.replay) {
+        return "off";
+      }
+      const auto dir = captures::clip_dir();
+      std::error_code ec;
+      std::filesystem::create_directories(dir, ec);
+      auto app = proc::proc.get_last_run_app_name();
+      name = captures::file_name(app.empty() ? session.device_name : app, ".mkv");
+      auto u8 = (dir / std::filesystem::path {std::u8string(name.begin(), name.end())}).u8string();
+      return session.replay->save(std::string(u8.begin(), u8.end()));
+    }
+
     health_t set_device_view(session_t &session, const device_view_t &view) {
       std::lock_guard lg {session.health.lock};
       session.health.device_view = view;
@@ -2489,11 +2541,15 @@ namespace stream {
             played.minutes = h.minutes;
             played.smooth_minutes = h.smooth_minutes;
             played.avg_fps = h.minutes ? h.fps_sum / h.minutes : 0;
+            played.slow_game_minutes = h.slow_game_minutes;
+            played.slow_game_fps = h.slow_game_minutes ? h.slow_game_fps_sum / h.slow_game_minutes : 0;
           }
         }
         played.device = session.device_name;
         played.app = proc::proc.get_last_run_app_name();
         played.target_fps = session.config.monitor.framerate;
+        played.width = session.config.monitor.width;
+        played.height = session.config.monitor.height;
         played.lost_video = (int) session.loss_events.load();
         try {
           play_history::record(played);
@@ -2612,6 +2668,17 @@ namespace stream {
       session->video.picture_scale_events = mail->event<int>(mail::picture_scale);
       session->video.encoder_info_events = mail->event<int>(mail::encoder_info);
       session->video.lowseq = 0;
+      if (config::stream.instant_replay) {
+        const auto layout = audio::stream_layout(config.audio);
+        replay_mkv::opus_layout_t opus {layout.channels, layout.streams, layout.coupled_streams, {}};
+        std::copy(std::begin(layout.mapping), std::end(layout.mapping), std::begin(opus.mapping));
+        const auto codec = config.monitor.videoFormat == 2 ? replay_mkv::codec_e::av1 :
+                           config.monitor.videoFormat == 1 ? replay_mkv::codec_e::hevc :
+                                                             replay_mkv::codec_e::h264;
+        session->replay = std::make_unique<replay::buffer_t>(codec, config.monitor.width, config.monitor.height,
+                                                             config.monitor.dynamicRange ? 10 : 8,
+                                                             config.monitor.chromaSamplingType == 1, opus);
+      }
       session->video.ping_payload = launch_session.av_ping_payload;
       if (config.encryptionFlagsEnabled & SS_ENC_VIDEO) {
         BOOST_LOG(info) << "Video encryption enabled"sv;

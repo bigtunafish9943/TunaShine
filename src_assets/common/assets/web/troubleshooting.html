@@ -97,6 +97,71 @@
         </div>
       </div>
     </div>
+    <!-- Backup and restore -->
+    <div class="card p-2 my-4">
+      <div class="card-body">
+        <h2 id="backup">{{ $t('troubleshooting.backup_title') }}</h2>
+        <p>{{ $t('troubleshooting.backup_desc') }}</p>
+        <div class="form-check mb-2">
+          <input class="form-check-input" type="checkbox" id="backup_pairings" v-model="backupPairings">
+          <label class="form-check-label" for="backup_pairings">{{ $t('troubleshooting.backup_pairings') }}</label>
+        </div>
+        <div class="alert alert-warning" v-if="backupPairings">{{ $t('troubleshooting.backup_pairings_warning') }}</div>
+        <a class="btn btn-primary mb-3" :href="'./api/backup' + (backupPairings ? '?pairings=1' : '')">
+          <i class="fas fa-download" aria-hidden="true"></i> {{ $t('troubleshooting.backup_download') }}
+        </a>
+
+        <h3 class="h6 mt-2">{{ $t('troubleshooting.restore_title') }}</h3>
+        <p>{{ $t('troubleshooting.restore_desc') }}</p>
+        <div class="d-flex flex-wrap gap-2 align-items-center">
+          <input type="file" class="form-control w-auto" accept=".json,application/json" ref="restoreFile" :aria-label="$t('troubleshooting.restore_title')">
+          <button class="btn btn-outline-danger" :disabled="restoring" @click="restoreBackup">{{ $t('troubleshooting.restore_button') }}</button>
+        </div>
+        <div class="alert mt-2" :class="restoreError ? 'alert-danger' : 'alert-success'" v-if="restoreStatus">{{ restoreStatus }}</div>
+
+        <template v-if="receiverBackups.length">
+          <h3 class="h6 mt-4">{{ $t('troubleshooting.receiver_backups_title') }}</h3>
+          <p>{{ $t('troubleshooting.receiver_backups_desc') }}</p>
+          <ul>
+            <li v-for="b in receiverBackups" :key="b.name">{{ b.device }}, {{ new Date(b.made * 1000).toLocaleString() }}</li>
+          </ul>
+        </template>
+      </div>
+    </div>
+    <!-- Wi-Fi channel advice, from the networks this PC can hear -->
+    <div class="card p-2 my-4" v-if="platform === 'windows'">
+      <div class="card-body">
+        <h2 id="wifi_channel">{{ $t('troubleshooting.wifi_title') }}</h2>
+        <p>{{ $t('troubleshooting.wifi_desc') }}</p>
+        <div v-if="wifi">
+          <div class="alert alert-secondary" v-if="!wifi.available">{{ $t('troubleshooting.wifi_no_adapter') }}</div>
+          <template v-else>
+            <div class="alert" :class="wifiAdvice.level === 'good' ? 'alert-success' : 'alert-warning'">
+              <p class="mb-1" v-for="line in wifiAdvice.lines" :key="line">{{ line }}</p>
+            </div>
+            <p class="text-body-secondary" v-if="wifi.streaming">{{ $t('troubleshooting.wifi_streaming') }}</p>
+            <table class="table table-sm ts-wifi-table" v-if="wifiAdvice.channels.length">
+              <thead>
+                <tr><th>{{ $t('troubleshooting.wifi_channel') }}</th><th>{{ $t('troubleshooting.wifi_networks') }}</th><th>{{ $t('troubleshooting.wifi_strongest') }}</th></tr>
+              </thead>
+              <tbody>
+                <tr v-for="c in wifiAdvice.channels" :key="c.band + '-' + c.channel" :class="{ 'table-active': c.mine, 'ts-wifi-best': c.best }">
+                  <td>{{ c.channel }} <span class="text-body-secondary">({{ c.band === 2 ? '2.4' : c.band }} GHz)</span>
+                    <span v-if="c.mine" class="badge text-bg-primary ms-1">{{ $t('troubleshooting.wifi_yours') }}</span>
+                    <span v-if="c.best" class="badge text-bg-success ms-1">{{ $t('troubleshooting.wifi_quietest') }}</span></td>
+                  <td>{{ c.count }}</td>
+                  <td>{{ c.strongest }}%</td>
+                </tr>
+              </tbody>
+            </table>
+          </template>
+        </div>
+        <button class="btn btn-primary" :disabled="wifiScanning" @click="scanWifi">
+          <span class="spinner-border spinner-border-sm me-1" v-if="wifiScanning" aria-hidden="true"></span>
+          {{ $t(wifi ? 'troubleshooting.wifi_again' : 'troubleshooting.wifi_button') }}
+        </button>
+      </div>
+    </div>
     <!-- Restart TunaStream -->
     <div class="card p-2 my-4">
       <div class="card-body">
@@ -203,12 +268,78 @@
           serverQuitting: false,
           serverQuit: false,
           platform: "",
+          wifi: null,
+          wifiScanning: false,
+          backupPairings: false,
+          restoring: false,
+          restoreStatus: '',
+          restoreError: false,
+          receiverBackups: [],
         };
       },
       computed: {
         // One computed block only: a second one replaces this one, and the log box goes blank
         vdisplayStatusName() {
           return { 0: 'ok', 1: 'unknown', '-1': 'failed', '-2': 'version', '-3': 'watchdog' }[this.vdisplayStatus] || 'unknown';
+        },
+        /**
+         * Which channel is quietest. Each network nearby counts for its signal strength, on its
+         * own channel and (on 2.4 GHz, where channels overlap) the ones next to it. Only the
+         * channels routers normally use are suggested: 1, 6 and 11 on 2.4 GHz, and the groups that
+         * start at 36 and 149 on 5 GHz, which need no radar checks.
+         */
+        wifiAdvice() {
+          const t = (k, v) => this.$t('troubleshooting.' + k, v);
+          const out = { level: 'good', lines: [], channels: [] };
+          if (!this.wifi || !this.wifi.available) return out;
+          const nets = this.wifi.networks || [];
+          const mine = nets.find((n) => n.connected);
+          // A group of 5 GHz channels used together by an 80 MHz network
+          const group5 = (ch) => ch >= 149 ? 149 + Math.floor((ch - 149) / 16) * 16 : 36 + Math.floor((ch - 36) / 16) * 16;
+          const others = nets.filter((n) => !n.connected && n.name !== (mine && mine.name));
+          const load = (band, ch) => others.reduce((sum, n) => {
+            if (n.band !== band) return sum;
+            if (band === 2) return sum + (Math.abs(n.channel - ch) < 5 ? n.signal * (n.channel === ch ? 1 : 0.6) : 0);
+            if (band === 5) return sum + (group5(n.channel) === group5(ch) ? n.signal : 0);
+            return sum;
+          }, 0);
+          // The table: every channel heard on, quietest marked
+          const byChannel = {};
+          for (const n of nets) {
+            const key = n.band + '-' + n.channel;
+            byChannel[key] = byChannel[key] || { band: n.band, channel: n.channel, count: 0, strongest: 0, mine: false, best: false };
+            byChannel[key].count += 1;
+            byChannel[key].strongest = Math.max(byChannel[key].strongest, n.signal);
+            byChannel[key].mine = byChannel[key].mine || n.connected;
+          }
+          if (!mine) {
+            out.level = 'warn';
+            out.lines.push(t('wifi_not_connected', { n: nets.length }));
+          } else if (mine.band === 6) {
+            out.lines.push(t('wifi_6ghz', { ch: mine.channel }));
+          } else {
+            const candidates = mine.band === 2 ? [1, 6, 11] : [36, 149];
+            const scored = candidates.map((ch) => ({ ch, load: load(mine.band, ch) }));
+            scored.sort((a, b) => a.load - b.load);
+            const best = scored[0];
+            const current = load(mine.band, mine.channel);
+            const band = mine.band === 2 ? '2.4' : '5';
+            out.lines.push(t('wifi_current', { ch: mine.channel, band, n: others.filter((n) => n.band === mine.band).length }));
+            if (best.load + 40 < current) {
+              out.level = 'warn';
+              out.lines.push(t('wifi_change', { ch: best.ch }));
+            } else {
+              out.lines.push(t('wifi_fine'));
+            }
+            if (mine.band === 2) {
+              out.level = 'warn';
+              out.lines.push(t('wifi_use_5'));
+            }
+            const key = mine.band + '-' + best.ch;
+            if (byChannel[key]) byChannel[key].best = true;
+          }
+          out.channels = Object.values(byChannel).sort((a, b) => a.band - b.band || a.channel - b.channel);
+          return out;
         },
         actualLogs() {
           if (!this.logFilter) return this.logs;
@@ -230,11 +361,56 @@
         }, 5000);
         this.refreshLogs();
         this.refreshVdisplay();
+        this.loadReceiverBackups();
       },
       beforeDestroy() {
         clearInterval(this.logInterval);
       },
       methods: {
+        async restoreBackup() {
+          const file = this.$refs.restoreFile && this.$refs.restoreFile.files[0];
+          if (!file) {
+            this.restoreError = true;
+            this.restoreStatus = this.$t('troubleshooting.restore_pick');
+            return;
+          }
+          if (!confirm(this.$t('troubleshooting.restore_confirm'))) return;
+          this.restoring = true;
+          this.restoreStatus = '';
+          try {
+            const text = await file.text();
+            const r = await fetch('./api/restore', {
+              credentials: 'include', method: 'POST', headers: { 'Content-Type': 'application/json' }, body: text,
+            }).then((r) => r.json());
+            this.restoreError = !r.status;
+            this.restoreStatus = r.status ? this.$t('troubleshooting.restore_done') : (r.error || this.$t('troubleshooting.restore_failed'));
+            if (r.status) {
+              // TunaStream restarts with the restored settings; come back once it answers
+              setTimeout(() => location.reload(), 12000);
+            }
+          } catch (e) {
+            this.restoreError = true;
+            this.restoreStatus = this.$t('troubleshooting.restore_failed');
+          }
+          this.restoring = false;
+        },
+        async loadReceiverBackups() {
+          try {
+            const r = await fetch('./api/receiver-backups', { credentials: 'include' }).then((r) => r.json());
+            this.receiverBackups = r.backups || [];
+          } catch (e) {
+            this.receiverBackups = [];
+          }
+        },
+        async scanWifi() {
+          this.wifiScanning = true;
+          try {
+            this.wifi = await fetch("./api/wifi?scan=1", { credentials: 'include' }).then((r) => r.json());
+          } catch (e) {
+            this.wifi = { available: false, networks: [] };
+          }
+          this.wifiScanning = false;
+        },
         async refreshVdisplay() {
           try {
             const status = await fetch("./api/status", { credentials: 'include' }).then((r) => r.ok ? r.json() : null);

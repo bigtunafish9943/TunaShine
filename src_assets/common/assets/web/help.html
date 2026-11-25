@@ -142,13 +142,72 @@
           Each stream gets its own screen on this PC, sized for the TV, and TunaStream makes it the main display while
           someone is playing. Programs that remember their monitor (Steam's Big Picture, some games) can still open on
           your monitor, so for three minutes after a game starts TunaStream moves its new windows onto the stream's
-          screen. Windows you open yourself stay where they are.
+          screen (for as long as it runs, in <em>Shared PC</em> mode). Windows you open yourself stay where they are.
         </p>
         <ul>
           <li>If the TV shows a blank screen and the home page says the virtual screen has a problem, press
             <em>Repair virtual screen</em> on the <a href="./troubleshooting">Troubleshooting</a> page.</li>
           <li>The log shows each window it moved: <code>Moved a window onto the stream's screen</code>.</li>
         </ul>
+      </div>
+    </div>
+
+    <div class="card p-2 my-4" id="shared-pc">
+      <div class="card-body">
+        <h2>Using the PC while someone streams</h2>
+        <p>
+          Turn on <em>Shared PC</em> under <a href="./config">Settings &gt; General</a>. Your monitor stays the main
+          screen, so your taskbar, windows and notifications stay with you; the streamed game's windows are kept on
+          the TV's screen; only the game's sound goes to the stream, while yours stays on your speakers; and your
+          mouse can't wander onto the TV's screen.
+        </p>
+        <ul>
+          <li>Windows has one keyboard focus. When you click your own windows, most games keep running and keep
+            reading the controller, but some pause; look for a "pause in background" option in the game.</li>
+          <li>Under <a href="./pin">Devices</a>, the <em>Controller only</em> preset keeps the TV's mouse and keyboard
+            off your desktop.</li>
+          <li>The log says which program's sound was sent to the stream: <code>Shared PC mode: ... sound goes to the
+            stream</code>.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card p-2 my-4" id="play-time">
+      <div class="card-body">
+        <h2>Play time, messages and sounds</h2>
+        <p>
+          Set a daily limit for each device under <a href="./pin">Devices &gt; Daily play time</a>. The TV is warned at
+          10, 5 and 1 minute left, then the game closes, and that device can't start another stream until tomorrow.
+          <em>+15 min</em> on the home page or the phone page gives more time today.
+        </p>
+        <p>
+          While someone plays, the home page (and the phone page, from the QR code) can show a message on the TV or
+          play a sound. Add your own sounds with <em>Add a sound</em>: OGG, MP3 or WAV, a few seconds long.
+        </p>
+      </div>
+    </div>
+
+    <div class="card p-2 my-4" id="hdr">
+      <div class="card-body">
+        <h2>HDR looks washed out, too dark or too bright</h2>
+        <p>
+          Games pick their HDR brightness from what Windows says the screen can show. The stream's screen is a
+          virtual one, so Windows doesn't know your TV's real limits and reports a very bright screen; games then aim
+          for highlights the TV can't show. TunaReceive tells TunaStream how bright your TV says it can go, and the
+          home page shows it under Playing now.
+        </p>
+        <p>To fix it, calibrate the stream's screen once with Windows' own tool:</p>
+        <ol>
+          <li>Install <strong>Windows HDR Calibration</strong> from the Microsoft Store (free, Windows 11).</li>
+          <li>Start a stream with HDR on, from the device you calibrate for.</li>
+          <li>Open Windows HDR Calibration on the stream's screen (it opens on the main display; with
+            <em>Shared PC</em> on, drag it to the TV's screen first).</li>
+          <li>Follow its three test patterns with the controller, looking at the TV.</li>
+        </ol>
+        <p>
+          Windows keeps the result for that screen, and the stream's screen keeps the same identity for each device,
+          so it lasts. Games then aim for your TV's real brightness.
+        </p>
       </div>
     </div>
 

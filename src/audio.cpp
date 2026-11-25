@@ -83,6 +83,18 @@ namespace audio {
     },
   };
 
+  stream_layout_t stream_layout(const config_t &config) {
+    auto stream = stream_configs[map_stream(config.channels, config.flags[config_t::HIGH_QUALITY])];
+    if (config.flags[config_t::CUSTOM_SURROUND_PARAMS]) {
+      apply_surround_params(stream, config.customStreamParams);
+    }
+    stream_layout_t layout {stream.channelCount, stream.streams, stream.coupledStreams, {0, 1, 2, 3, 4, 5, 6, 7}};
+    for (int i = 0; i < stream.channelCount && i < 8; ++i) {
+      layout.mapping[i] = stream.mapping[i];
+    }
+    return layout;
+  }
+
   void encodeThread(sample_queue_t samples, config_t config, void *channel_data) {
     auto packets = mail::man->queue<packet_t>(mail::audio_packets);
     auto stream = stream_configs[map_stream(config.channels, config.flags[config_t::HIGH_QUALITY])];
@@ -186,11 +198,19 @@ namespace audio {
 
     // Only the first to start a session may change the default sink
     if (!ref->sink_flag->exchange(true, std::memory_order_acquire)) {
-      // If the selected sink is different than the current one, change sinks.
-      ref->restore_sink = ref->sink.host != *sink;
-      if (ref->restore_sink) {
-        if (control->set_sink(*sink)) {
+      if (config::stream.shared_pc && ref->sink.host != *sink) {
+        // Shared PC mode: the PC keeps its own speakers; only the app's sound goes to the stream
+        ref->restore_sink = false;
+        if (control->use_sink_without_default(*sink)) {
           return;
+        }
+      } else {
+        // If the selected sink is different than the current one, change sinks.
+        ref->restore_sink = ref->sink.host != *sink;
+        if (ref->restore_sink) {
+          if (control->set_sink(*sink)) {
+            return;
+          }
         }
       }
     }

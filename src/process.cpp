@@ -423,7 +423,9 @@ namespace proc {
           }
 
           // Check the ISOLATED DISPLAY configuration setting and rearrange the displays
-          if (config::video.isolated_virtual_display_option == true) {
+          // Shared PC mode always keeps the mouse off the stream's screen, so a stray mouse
+          // doesn't click into the game on the TV
+          if (config::video.isolated_virtual_display_option == true || config::stream.shared_pc) {
             // Apply the isolated display settings
             VDISPLAY::changeDisplaySettings2(vdisplayName.c_str(), render_width, render_height, target_fps, true);
           }
@@ -431,7 +433,9 @@ namespace proc {
           // Games and new windows open on the primary display, so make the virtual display
           // primary for them to show up in the stream. The other displays stay active, and
           // Windows picks its usual primary again once the virtual display is removed.
-          if (config::video.virtual_display_primary) {
+          // Shared PC mode leaves the PC's own screen as the main one; the app's windows are kept
+          // on the stream's screen instead (see below)
+          if (config::video.virtual_display_primary && !config::stream.shared_pc) {
             // Remember what was primary so it can be handed back while nobody is streaming
             if (!primary_before_vdisplay.empty() && primary_before_vdisplay != vdisplayName) {
               this->previous_primary_display = platf::to_utf8(primary_before_vdisplay);
@@ -577,7 +581,8 @@ namespace proc {
       for (auto &cmd : _app.prep_cmds) {
         steam_app = steam_app || mentions_steam(cmd.do_cmd);
       }
-      _window_herder = platf::herd_new_windows(this->display_name, steam_app);
+      _window_herder = config::stream.shared_pc ? platf::keep_app_on_stream(this->display_name, steam_app) :
+                                                  platf::herd_new_windows(this->display_name, steam_app);
     }
 
     _app_prep_begin = std::begin(_app.prep_cmds);
@@ -757,7 +762,7 @@ namespace proc {
 #ifdef _WIN32
     // The primary display is handed back to the PC while nobody is streaming (see pause()).
     // Make the virtual display primary again now that a client is back.
-    if (this->virtual_display && config::video.virtual_display_primary && !this->display_name.empty()) {
+    if (this->virtual_display && config::video.virtual_display_primary && !config::stream.shared_pc && !this->display_name.empty()) {
       auto vdisplay_name = platf::from_utf8(this->display_name);
       auto current_primary = VDISPLAY::getPrimaryDisplay();
       if (current_primary != vdisplay_name) {

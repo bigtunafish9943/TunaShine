@@ -176,6 +176,13 @@ namespace config {
     // Start at fec_percentage, then use less while the connection is clean and more while it isn't
     bool adaptive_fec;
 
+    // Keep the last 30 seconds of each stream so they can be saved as a clip (View + L1 on the TV)
+    bool instant_replay;
+
+    // Let the person at the PC keep using it: the PC's own screen stays the main one, and only the
+    // streamed app's sound goes to the stream
+    bool shared_pc;
+
     // Peak rate video packets are sent at, in Mbps; 0 picks one from the stream's bitrate
     int video_send_rate;
 
@@ -271,6 +278,7 @@ namespace config {
     bool envvar_compatibility_mode;
     std::string locale;
     std::string ui_theme;  ///< Colour theme for the web page and TunaReceive: deepsea, reef, kelp, midnight or gold
+    bool ui_theme_seasonal;  ///< Wear a seasonal theme in its season (Halloween, autumn, winter, summer)
     int min_log_level;
     std::bitset<flag::FLAG_SIZE> flags;
     std::string credentials_file;
@@ -308,6 +316,12 @@ namespace config {
   extern nvhttp_t nvhttp;
   extern input_t input;
   extern tunastream_t tunastream;
+
+  /**
+   * @brief The theme to wear today: the seasonal one while its season lasts (when turned on),
+   *        otherwise the one chosen in Settings.
+   */
+  std::string effective_theme();
 
   int parse(int argc, char *argv[]);
   std::unordered_map<std::string, std::string> parse_config(const std::string_view &file_content);

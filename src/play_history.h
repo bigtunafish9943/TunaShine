@@ -23,6 +23,10 @@ namespace play_history {
     int minutes = 0;  ///< Whole minutes that were measured
     int smooth_minutes = 0;  ///< Minutes with no lost video and few frames arriving late
     int lost_video = 0;  ///< Times the device asked for lost video to be repaired
+    int slow_game_minutes = 0;  ///< Minutes the game itself drew fewer than 59 frames a second
+    double slow_game_fps = 0;  ///< Its frame rate over those minutes
+    int width = 0;  ///< Picture size the device asked for
+    int height = 0;
   };
 
   /// Add a finished stream. Streams shorter than a minute are left out.
@@ -34,4 +38,13 @@ namespace play_history {
    * @param utc_offset_minutes The viewer's offset from UTC, so days start at their midnight.
    */
   nlohmann::json recap(int days, int utc_offset_minutes);
+
+  /// Seconds this device has streamed today (local time), from finished streams.
+  std::int64_t seconds_today(const std::string &device);
+
+  /// Milestones reached, newest first: [{"id", "at"}] (at: seconds since 1970).
+  nlohmann::json milestones();
+
+  /// recap() with the milestones added.
+  nlohmann::json recap_with_milestones(int days, int utc_offset_minutes);
 }  // namespace play_history

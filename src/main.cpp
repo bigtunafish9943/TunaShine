@@ -18,6 +18,7 @@
 #include "logging.h"
 #include "main.h"
 #include "nvhttp.h"
+#include "play_limits.h"
 #include "process.h"
 #include "system_tray.h"
 #include "upnp.h"
@@ -338,6 +339,9 @@ int main(int argc, char *argv[]) {
 #endif
 
   proc::refresh(config::stream.file_apps);
+
+  // Daily play-time limits, with warnings on the TV
+  play_limits::start();
 
   // If any of the following fail, we log an error and continue event though tunastream will not function correctly.
   // This allows access to the UI to fix configuration problems or view the logs.

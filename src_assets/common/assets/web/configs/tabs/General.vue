@@ -137,6 +137,30 @@ onMounted(() => {
     ></Checkbox>
   
 
+    <!-- Shared PC mode -->
+    <Checkbox class="mb-3"
+              id="shared_pc"
+              locale-prefix="config"
+              v-model="config.shared_pc"
+              default="false"
+    ></Checkbox>
+
+    <!-- Seasonal themes -->
+    <Checkbox class="mb-3"
+              id="ui_theme_seasonal"
+              locale-prefix="config"
+              v-model="config.ui_theme_seasonal"
+              default="true"
+    ></Checkbox>
+
+    <!-- Instant replay -->
+    <Checkbox class="mb-3"
+              id="instant_replay"
+              locale-prefix="config"
+              v-model="config.instant_replay"
+              default="true"
+    ></Checkbox>
+
     <!-- Enable Discovery -->
     <Checkbox class="mb-3"
               id="enable_discovery"

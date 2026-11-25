@@ -34,6 +34,12 @@
 #include "network.h"
 #include "nvhttp.h"
 #include "box_art.h"
+#include "captures.h"
+#include "play_history.h"
+#include "play_limits.h"
+#include "settings_backup.h"
+#include "sound_board.h"
+#include "tv_messages.h"
 #include "platform/common.h"
 #include "process.h"
 #include "rtsp.h"
@@ -940,7 +946,7 @@ namespace nvhttp {
       tree.put("root.Permission", std::to_string((uint32_t)named_cert_p->perm));
 
       // TunaReceive wears the same colour theme as this PC's web page, unless told otherwise
-      tree.put("root.TunaTheme", config::tunastream.ui_theme);
+      tree.put("root.TunaTheme", config::effective_theme());
 
     #ifdef _WIN32
       tree.put("root.VirtualDisplayCapable", true);
@@ -1205,6 +1211,15 @@ namespace nvhttp {
 
       return;
     }
+    // A device that has used up today's play time can't start another stream
+    if (std::string why; !play_limits::may_stream(named_cert_p->name, why)) {
+      BOOST_LOG(info) << "Stream refused for "sv << named_cert_p->name << ": "sv << why;
+      tree.put("root.resume", 0);
+      // 429: TunaReceive explains it as play time being up, rather than a permission problem
+      tree.put("root.<xmlattr>.status_code", 429);
+      tree.put("root.<xmlattr>.status_message", why);
+      return;
+    }
     if (
       args.find("rikey"s) == std::end(args) ||
       args.find("rikeyid"s) == std::end(args) ||
@@ -1388,6 +1403,14 @@ namespace nvhttp {
       tree.put("root.<xmlattr>.status_code", 403);
       tree.put("root.<xmlattr>.status_message", "Permission denied");
 
+      return;
+    }
+    if (std::string why; !play_limits::may_stream(named_cert_p->name, why)) {
+      BOOST_LOG(info) << "Stream refused for "sv << named_cert_p->name << ": "sv << why;
+      tree.put("root.resume", 0);
+      // 429: TunaReceive explains it as play time being up, rather than a permission problem
+      tree.put("root.<xmlattr>.status_code", 429);
+      tree.put("root.<xmlattr>.status_message", why);
       return;
     }
 
@@ -1779,6 +1802,7 @@ namespace nvhttp {
     view.latency_ms = (int) number("latency", 10000);
     view.kbps = (int) number("kbps", 1000000);
     view.setting_kbps = (int) number("setting", 1000000);
+    view.hdr_peak_nits = (int) number("hdrpeak", 10000);
 
     nlohmann::json out;
     auto session = rtsp_stream::find_session(named_cert_p->uuid);
@@ -1798,11 +1822,172 @@ namespace nvhttp {
         {"pictureScale", pc.picture_scale},
         {"splitFrames", pc.split_frames},
       };
+      // Messages typed on the home page for this device
+      nlohmann::json messages = nlohmann::json::array();
+      for (const auto &m : tv_messages::take(named_cert_p->name)) {
+        messages.push_back({{"id", m.id}, {"text", m.text}, {"sound", m.sound}});
+      }
+      if (!messages.empty()) {
+        out["messages"] = messages;
+        BOOST_LOG(info) << "Message delivered to "sv << named_cert_p->name;
+      }
     }
     SimpleWeb::CaseInsensitiveMultimap headers;
     headers.emplace("Content-Type", "application/json");
     headers.emplace("Cache-Control", "no-store");
     response->write(SimpleWeb::StatusCode::success_ok, out.dump(), headers);
+    response->close_connection_after_response = true;
+  }
+
+  /**
+   * A screenshot taken on the device: POST /tuna/screenshot with the PNG or JPEG as the body.
+   * Saved in the signed-in user's Pictures\TunaStream folder, named after the game.
+   */
+  void tunaScreenshot(resp_https_t response, req_https_t request) {
+    print_req<TunaStreamHTTPS>(request);
+    auto named_cert_p = get_verified_cert(request);
+    if (!(named_cert_p->perm & PERM::_allow_view)) {
+      response->write(SimpleWeb::StatusCode::client_error_unauthorized);
+      response->close_connection_after_response = true;
+      return;
+    }
+    std::string bytes;
+    if (request->content.size() <= captures::MAX_SCREENSHOT_BYTES) {
+      bytes = request->content.string();
+    }
+    auto app = proc::proc.get_last_run_app_name();
+    auto path = captures::save_screenshot(app.empty() ? named_cert_p->name : app, bytes);
+    nlohmann::json out;
+    out["saved"] = !path.empty();
+    if (!path.empty()) {
+      auto name = path.filename().u8string();
+      out["name"] = std::string(name.begin(), name.end());
+    }
+    SimpleWeb::CaseInsensitiveMultimap headers;
+    headers.emplace("Content-Type", "application/json");
+    response->write(path.empty() ? SimpleWeb::StatusCode::client_error_bad_request : SimpleWeb::StatusCode::success_ok, out.dump(), headers);
+    response->close_connection_after_response = true;
+  }
+
+  /**
+   * Instant replay: GET /tuna/replay saves the last 30 seconds of this device's stream as a clip in
+   * the signed-in user's Videos\TunaStream folder. Answers {"saved", "name"} or {"saved": false, "reason"}.
+   */
+  void tunaReplay(resp_https_t response, req_https_t request) {
+    print_req<TunaStreamHTTPS>(request);
+    auto named_cert_p = get_verified_cert(request);
+    nlohmann::json out;
+    auto session = rtsp_stream::find_session(named_cert_p->uuid);
+    if (!session) {
+      out["saved"] = false;
+      out["reason"] = "not streaming";
+    } else {
+      std::string name;
+      auto error = stream::session::save_replay(*session, name);
+      out["saved"] = error.empty();
+      if (error.empty()) {
+        out["name"] = name;
+      } else {
+        out["reason"] = error;
+        BOOST_LOG(warning) << "Replay not saved: "sv << error;
+      }
+    }
+    SimpleWeb::CaseInsensitiveMultimap headers;
+    headers.emplace("Content-Type", "application/json");
+    response->write(SimpleWeb::StatusCode::success_ok, out.dump(), headers);
+    response->close_connection_after_response = true;
+  }
+
+  /**
+   * TunaReceive's backups, kept on this PC.
+   * POST /tuna/backup keeps the body (TunaReceive's backup JSON);
+   * GET /tuna/backups lists them; GET /tuna/backup?name= returns one.
+   * Only devices allowed to launch apps can read them back, as a backup may hold a device's pairing.
+   */
+  void tunaBackupSave(resp_https_t response, req_https_t request) {
+    print_req<TunaStreamHTTPS>(request);
+    auto named_cert_p = get_verified_cert(request);
+    auto name = settings_backup::keep_receiver_backup(named_cert_p->name, request->content.string());
+    nlohmann::json out;
+    out["saved"] = !name.empty();
+    out["name"] = name;
+    SimpleWeb::CaseInsensitiveMultimap headers;
+    headers.emplace("Content-Type", "application/json");
+    response->write(name.empty() ? SimpleWeb::StatusCode::client_error_bad_request : SimpleWeb::StatusCode::success_ok, out.dump(), headers);
+    response->close_connection_after_response = true;
+  }
+
+  void tunaBackupList(resp_https_t response, req_https_t request) {
+    print_req<TunaStreamHTTPS>(request);
+    auto named_cert_p = get_verified_cert(request);
+    nlohmann::json list = nlohmann::json::array();
+    if (!!(named_cert_p->perm & PERM::_all_actions)) {
+      for (const auto &b : settings_backup::receiver_backups()) {
+        list.push_back({{"name", b.name}, {"device", b.device}, {"made", b.made}, {"size", b.size}});
+      }
+    }
+    nlohmann::json out;
+    out["backups"] = list;
+    SimpleWeb::CaseInsensitiveMultimap headers;
+    headers.emplace("Content-Type", "application/json");
+    response->write(SimpleWeb::StatusCode::success_ok, out.dump(), headers);
+    response->close_connection_after_response = true;
+  }
+
+  void tunaBackupGet(resp_https_t response, req_https_t request) {
+    print_req<TunaStreamHTTPS>(request);
+    auto named_cert_p = get_verified_cert(request);
+    auto args = request->parse_query_string();
+    std::string content;
+    if (!!(named_cert_p->perm & PERM::_all_actions)) {
+      content = settings_backup::receiver_backup(get_arg(args, "name", ""));
+    }
+    if (content.empty()) {
+      response->write(SimpleWeb::StatusCode::client_error_not_found);
+      response->close_connection_after_response = true;
+      return;
+    }
+    SimpleWeb::CaseInsensitiveMultimap headers;
+    headers.emplace("Content-Type", "application/json");
+    response->write(SimpleWeb::StatusCode::success_ok, content, headers);
+    response->close_connection_after_response = true;
+  }
+
+  /**
+   * The last seven days of play, for TunaReceive's "Your week": GET /tuna/recap?tz=<minutes east of UTC>.
+   */
+  void tunaRecap(resp_https_t response, req_https_t request) {
+    print_req<TunaStreamHTTPS>(request);
+    auto args = request->parse_query_string();
+    int tz = 0;
+    try {
+      tz = std::stoi(get_arg(args, "tz", "0"));
+    } catch (const std::exception &) {
+    }
+    auto out = play_history::recap_with_milestones(7, tz);
+    SimpleWeb::CaseInsensitiveMultimap headers;
+    headers.emplace("Content-Type", "application/json");
+    headers.emplace("Cache-Control", "no-store");
+    response->write(SimpleWeb::StatusCode::success_ok, out.dump(), headers);
+    response->close_connection_after_response = true;
+  }
+
+  /**
+   * A sound-board sound: GET /tuna/sound?name=. TunaReceive fetches it when the home page sends it.
+   */
+  void tunaSound(resp_https_t response, req_https_t request) {
+    print_req<TunaStreamHTTPS>(request);
+    auto args = request->parse_query_string();
+    auto file = sound_board::file_for(get_arg(args, "name", ""));
+    if (!file) {
+      response->write(SimpleWeb::StatusCode::client_error_not_found);
+      response->close_connection_after_response = true;
+      return;
+    }
+    std::ifstream in(*file, std::ios::binary);
+    SimpleWeb::CaseInsensitiveMultimap headers;
+    headers.emplace("Content-Type", sound_board::content_type_of(*file));
+    response->write(SimpleWeb::StatusCode::success_ok, in, headers);
     response->close_connection_after_response = true;
   }
 
@@ -2034,6 +2219,13 @@ namespace nvhttp {
     https_server.resource["^/tuna/bitrate$"]["GET"] = tunaBitrate;
     https_server.resource["^/tuna/network$"]["GET"] = tunaNetwork;
     https_server.resource["^/tuna/report$"]["GET"] = tunaReport;
+    https_server.resource["^/tuna/sound$"]["GET"] = tunaSound;
+    https_server.resource["^/tuna/recap$"]["GET"] = tunaRecap;
+    https_server.resource["^/tuna/screenshot$"]["POST"] = tunaScreenshot;
+    https_server.resource["^/tuna/replay$"]["GET"] = tunaReplay;
+    https_server.resource["^/tuna/backup$"]["POST"] = tunaBackupSave;
+    https_server.resource["^/tuna/backup$"]["GET"] = tunaBackupGet;
+    https_server.resource["^/tuna/backups$"]["GET"] = tunaBackupList;
     https_server.resource["^/tuna/vdisplay$"]["GET"] = tunaVdisplay;
     https_server.resource["^/tuna/vdisplay/repair$"]["GET"] = tunaVdisplay;
     https_server.resource["^/tuna/file$"]["GET"] = tunaFile;

@@ -14,6 +14,7 @@
 #include <mutex>
 #include <set>
 #include <sstream>
+#include <ctime>
 #include <thread>
 #include <numeric>
 #include <algorithm>
@@ -47,6 +48,12 @@
 #include "file_outbox.h"
 #include "pairing_backup.h"
 #include "play_history.h"
+#include "play_limits.h"
+#include "box_art.h"
+#include "captures.h"
+#include "settings_backup.h"
+#include "sound_board.h"
+#include "tv_messages.h"
 #include "updater.h"
 #include "utility.h"
 #include "uuid.h"
@@ -561,6 +568,89 @@ namespace confighttp {
   }
 
   /**
+   * @brief The home-screen icon for the phone page: /images/tunastream-app-512.png or -180.png.
+   */
+  void getAppIcon(resp_https_t response, req_https_t request) {
+    const bool small = request->path.find("180") != std::string::npos;
+    std::ifstream in(small ? WEB_DIR "images/tunastream-app-180.png" : WEB_DIR "images/tunastream-app-512.png", std::ios::binary);
+    SimpleWeb::CaseInsensitiveMultimap headers;
+    headers.emplace("Content-Type", "image/png");
+    headers.emplace("Cache-Control", "public, max-age=86400");
+    response->write(SimpleWeb::StatusCode::success_ok, in, headers);
+  }
+
+  /**
+   * @brief Lets a phone add the Live page to its home screen like an app.
+   */
+  void getLiveManifest(resp_https_t response, req_https_t request) {
+    nlohmann::json manifest {
+      {"name", "TunaStream Live"},
+      {"short_name", "TunaStream"},
+      {"start_url", "./live"},
+      {"scope", "./"},
+      {"display", "standalone"},
+      {"background_color", "#041431"},
+      {"theme_color", "#041431"},
+      {"icons", nlohmann::json::array({
+        {{"src", "./images/tunastream-app-180.png"}, {"sizes", "180x180"}, {"type", "image/png"}},
+        {{"src", "./images/tunastream-app-512.png"}, {"sizes", "512x512"}, {"type", "image/png"}},
+      })},
+    };
+    SimpleWeb::CaseInsensitiveMultimap headers;
+    headers.emplace("Content-Type", "application/manifest+json");
+    response->write(SimpleWeb::StatusCode::success_ok, manifest.dump(), headers);
+  }
+
+  /**
+   * @brief The Live page: what's playing, on a phone.
+   */
+  void getLivePage(resp_https_t response, req_https_t request) {
+    if (!authenticate(response, request, true)) {
+      return;
+    }
+
+    print_req(request);
+
+    std::string content = file_handler::read_file(WEB_DIR "live.html");
+    SimpleWeb::CaseInsensitiveMultimap headers;
+    headers.emplace("Content-Type", "text/html; charset=utf-8");
+    headers.emplace("X-Frame-Options", "DENY");
+    headers.emplace("Content-Security-Policy", "frame-ancestors 'none';");
+    response->write(content, headers);
+  }
+
+  /**
+   * @brief An app's picture, by name, for the Live page: GET /api/cover?app=...
+   */
+  void getCover(resp_https_t response, req_https_t request) {
+    if (!authenticate(response, request)) {
+      return;
+    }
+
+    auto args = request->parse_query_string();
+    const auto name = args.find("app") != args.end() ? args.find("app")->second : std::string {};
+    std::string path;
+    for (const auto &app : proc::proc.get_apps()) {
+      if (app.name == name) {
+        try {
+          path = proc::proc.get_app_image(std::stoi(app.id));
+        } catch (const std::exception &) {
+        }
+        break;
+      }
+    }
+    if (path.empty()) {
+      response->write(SimpleWeb::StatusCode::client_error_not_found);
+      return;
+    }
+    std::ifstream in(path, std::ios::binary);
+    SimpleWeb::CaseInsensitiveMultimap headers;
+    headers.emplace("Content-Type", box_art::content_type_of(path));
+    headers.emplace("Cache-Control", "private, max-age=600");
+    response->write(SimpleWeb::StatusCode::success_ok, in, headers);
+  }
+
+  /**
    * @brief Check if a path is a child of another path.
    * @param base The base path.
    * @param query The path to check.
@@ -887,8 +977,303 @@ namespace confighttp {
       // Keep the defaults
     }
 
-    auto output_tree = play_history::recap(days, tz);
+    auto output_tree = play_history::recap_with_milestones(days, tz);
     output_tree["status"] = true;
+    send_response(response, output_tree);
+  }
+
+  /**
+   * @brief Show a short message on the screen of a device that is streaming.
+   * @details Body: {"text": "...", "device": "name"} (device empty or left out: every device
+   *          that is streaming). TunaReceive shows it within about five seconds.
+   */
+  void postTvMessage(resp_https_t response, req_https_t request) {
+    if (!validateContentType(response, request, "application/json") || !authenticate(response, request)) {
+      return;
+    }
+
+    print_req(request);
+
+    nlohmann::json output_tree;
+    try {
+      std::stringstream ss;
+      ss << request->content.rdbuf();
+      auto input = nlohmann::json::parse(ss.str());
+      const auto text = input.value("text", "");
+      const auto device = input.value("device", "");
+      const auto sound = input.value("sound", "");
+      if (!sound.empty() && !sound_board::file_for(sound)) {
+        bad_request(response, request, "There is no sound called " + sound);
+        return;
+      }
+
+      std::vector<std::string> streaming;
+      for (const auto &h : stream::session::health()) {
+        if (device.empty() || h.device == device) {
+          streaming.push_back(h.device);
+        }
+      }
+      if (streaming.empty()) {
+        output_tree["status"] = false;
+        output_tree["error"] = device.empty() ? "Nobody is streaming right now." : device + " isn't streaming right now.";
+        send_response(response, output_tree);
+        return;
+      }
+      const auto id = tv_messages::post(device, text, sound);
+      if (!id) {
+        bad_request(response, request, "The message is empty");
+        return;
+      }
+      BOOST_LOG(info) << "Message for "sv << (device.empty() ? "every streaming device"s : device) << " queued"sv;
+      output_tree["status"] = true;
+      output_tree["id"] = id;
+      output_tree["devices"] = streaming;
+      send_response(response, output_tree);
+    } catch (std::exception &e) {
+      BOOST_LOG(warning) << "TvMessage: "sv << e.what();
+      bad_request(response, request, e.what());
+    }
+  }
+
+  /**
+   * @brief The newest screenshots and clips: {"captures": [{"name", "kind", "modified", "size"}]}.
+   */
+  void getCaptures(resp_https_t response, req_https_t request) {
+    if (!authenticate(response, request)) {
+      return;
+    }
+
+    nlohmann::json list = nlohmann::json::array();
+    for (const auto &c : captures::recent(24)) {
+      list.push_back({{"name", c.name}, {"kind", c.kind}, {"modified", c.modified}, {"size", c.size}});
+    }
+    auto folder = [](const std::filesystem::path &p) {
+      auto u8 = p.u8string();
+      return std::string(u8.begin(), u8.end());
+    };
+    nlohmann::json output_tree;
+    output_tree["status"] = true;
+    output_tree["captures"] = list;
+    output_tree["screenshotFolder"] = folder(captures::screenshot_dir());
+    output_tree["clipFolder"] = folder(captures::clip_dir());
+    send_response(response, output_tree);
+  }
+
+  /**
+   * @brief Make this week's highlights from the instant replays saved: POST /api/highlights.
+   */
+  void postHighlights(resp_https_t response, req_https_t request) {
+    if (!validateContentType(response, request, "application/json") || !authenticate(response, request)) {
+      return;
+    }
+
+    print_req(request);
+
+    std::string name;
+    auto error = captures::make_highlights(name);
+    nlohmann::json output_tree;
+    output_tree["status"] = error.empty();
+    if (error.empty()) {
+      output_tree["name"] = name;
+    } else {
+      output_tree["error"] = error;
+    }
+    send_response(response, output_tree);
+  }
+
+  /**
+   * @brief One screenshot or clip: GET /api/captures/file?kind=screenshot|clip&name=...
+   */
+  void getCaptureFile(resp_https_t response, req_https_t request) {
+    if (!authenticate(response, request)) {
+      return;
+    }
+
+    auto args = request->parse_query_string();
+    auto kind = args.find("kind") != args.end() ? args.find("kind")->second : std::string {};
+    auto name = args.find("name") != args.end() ? args.find("name")->second : std::string {};
+    auto path = captures::file_for(kind, name);
+    if (path.empty()) {
+      response->write(SimpleWeb::StatusCode::client_error_not_found);
+      return;
+    }
+    auto ext = path.extension().string();
+    std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+    const char *type = ext == ".png" ? "image/png" : (ext == ".jpg" || ext == ".jpeg") ? "image/jpeg" : ext == ".mp4" ? "video/mp4" : ext == ".mkv" ? "video/x-matroska" : "application/octet-stream";
+    std::ifstream in(path, std::ios::binary);
+    SimpleWeb::CaseInsensitiveMultimap headers;
+    headers.emplace("Content-Type", type);
+    headers.emplace("Cache-Control", "private, max-age=3600");
+    response->write(SimpleWeb::StatusCode::success_ok, in, headers);
+  }
+
+  /**
+   * @brief Wi-Fi networks this PC can hear, for the channel advice: GET /api/wifi?scan=1.
+   * @details The adapter is only asked to scan when nobody is streaming, since a scan briefly
+   *          takes the Wi-Fi off its channel.
+   */
+  void getWifi(resp_https_t response, req_https_t request) {
+    if (!authenticate(response, request)) {
+      return;
+    }
+
+    auto args = request->parse_query_string();
+    const bool asked = args.find("scan") != args.end();
+    const bool streaming = rtsp_stream::session_count() > 0;
+    const auto survey = platf::wifi_survey(asked && !streaming);
+    nlohmann::json networks = nlohmann::json::array();
+    for (const auto &n : survey.networks) {
+      networks.push_back({{"name", n.name}, {"channel", n.channel}, {"band", n.band}, {"signal", n.signal}, {"connected", n.connected}});
+    }
+    nlohmann::json output_tree;
+    output_tree["status"] = true;
+    output_tree["available"] = survey.available;
+    output_tree["scanned"] = asked && !streaming;
+    output_tree["streaming"] = streaming;
+    output_tree["networks"] = networks;
+    send_response(response, output_tree);
+  }
+
+  /**
+   * @brief Play-time limits: GET lists every device with its limits and today's time.
+   */
+  void getPlayLimits(resp_https_t response, req_https_t request) {
+    if (!authenticate(response, request)) {
+      return;
+    }
+
+    nlohmann::json output_tree;
+    output_tree["status"] = true;
+    output_tree["devices"] = play_limits::status();
+    send_response(response, output_tree);
+  }
+
+  /**
+   * @brief Set the limits: {"devices": {"<name>": {"weekday": minutes, "weekend": minutes}}}.
+   */
+  void postPlayLimits(resp_https_t response, req_https_t request) {
+    if (!validateContentType(response, request, "application/json") || !authenticate(response, request)) {
+      return;
+    }
+
+    print_req(request);
+
+    try {
+      std::stringstream ss;
+      ss << request->content.rdbuf();
+      auto input = nlohmann::json::parse(ss.str());
+      play_limits::set_limits(input.value("devices", nlohmann::json::object()));
+      nlohmann::json output_tree;
+      output_tree["status"] = true;
+      send_response(response, output_tree);
+    } catch (std::exception &e) {
+      bad_request(response, request, e.what());
+    }
+  }
+
+  /**
+   * @brief Give a device more time today: {"device", "minutes"}.
+   */
+  void postPlayExtend(resp_https_t response, req_https_t request) {
+    if (!validateContentType(response, request, "application/json") || !authenticate(response, request)) {
+      return;
+    }
+
+    print_req(request);
+
+    try {
+      std::stringstream ss;
+      ss << request->content.rdbuf();
+      auto input = nlohmann::json::parse(ss.str());
+      play_limits::extend(input.value("device", ""), input.value("minutes", 15));
+      nlohmann::json output_tree;
+      output_tree["status"] = true;
+      send_response(response, output_tree);
+    } catch (std::exception &e) {
+      bad_request(response, request, e.what());
+    }
+  }
+
+  /**
+   * @brief The sound board: {"sounds": [{"name", "builtIn"}], "maxBytes"}.
+   */
+  void getSounds(resp_https_t response, req_https_t request) {
+    if (!authenticate(response, request)) {
+      return;
+    }
+
+    nlohmann::json sounds = nlohmann::json::array();
+    for (const auto &sound : sound_board::list()) {
+      sounds.push_back({{"name", sound.name}, {"builtIn", sound.built_in}});
+    }
+    nlohmann::json output_tree;
+    output_tree["status"] = true;
+    output_tree["sounds"] = sounds;
+    output_tree["maxBytes"] = sound_board::MAX_BYTES;
+    send_response(response, output_tree);
+  }
+
+  /**
+   * @brief Add a sound to the sound board. Body: {"name", "extension", "data" (base64)}.
+   */
+  void addSound(resp_https_t response, req_https_t request) {
+    if (!validateContentType(response, request, "application/json") || !authenticate(response, request)) {
+      return;
+    }
+
+    nlohmann::json output_tree;
+    try {
+      std::stringstream ss;
+      ss << request->content.rdbuf();
+      auto input = nlohmann::json::parse(ss.str());
+      auto bytes = SimpleWeb::Crypto::Base64::decode(input.value("data", ""));
+      auto error = sound_board::add(input.value("name", ""), input.value("extension", ""), bytes);
+      output_tree["status"] = error.empty();
+      if (!error.empty()) {
+        output_tree["error"] = error;
+      }
+      send_response(response, output_tree);
+    } catch (std::exception &e) {
+      BOOST_LOG(warning) << "AddSound: "sv << e.what();
+      bad_request(response, request, e.what());
+    }
+  }
+
+  /**
+   * @brief Remove one of your own sounds. Body: {"name"}.
+   */
+  void removeSound(resp_https_t response, req_https_t request) {
+    if (!validateContentType(response, request, "application/json") || !authenticate(response, request)) {
+      return;
+    }
+
+    nlohmann::json output_tree;
+    try {
+      std::stringstream ss;
+      ss << request->content.rdbuf();
+      auto input = nlohmann::json::parse(ss.str());
+      output_tree["status"] = sound_board::remove(input.value("name", ""));
+      send_response(response, output_tree);
+    } catch (std::exception &e) {
+      bad_request(response, request, e.what());
+    }
+  }
+
+  /**
+   * @brief Which devices recent messages have reached: {"messages": [{"id", "deliveredTo": [...]}]}.
+   */
+  void getTvMessages(resp_https_t response, req_https_t request) {
+    if (!authenticate(response, request)) {
+      return;
+    }
+
+    nlohmann::json messages = nlohmann::json::array();
+    for (const auto &[id, devices] : tv_messages::delivered()) {
+      messages.push_back({{"id", id}, {"deliveredTo", devices}});
+    }
+    nlohmann::json output_tree;
+    output_tree["status"] = true;
+    output_tree["messages"] = messages;
     send_response(response, output_tree);
   }
 
@@ -934,6 +1319,10 @@ namespace confighttp {
         {"pictureScale", h.picture_scale},
         {"splitFrames", h.split_frames},
         {"windowS", h.window_s},
+        {"slowGameMinutes", h.slow_game_minutes},
+        {"slowGameFps", h.slow_game_fps},
+        {"width", h.width},
+        {"height", h.height},
       });
       if (h.view.known) {
         streams.back()["deviceView"] = {
@@ -944,6 +1333,7 @@ namespace confighttp {
           {"latencyMs", h.view.latency_ms},
           {"kbps", h.view.kbps},
           {"settingKbps", h.view.setting_kbps},
+          {"hdrPeakNits", h.view.hdr_peak_nits},
         };
       }
     }
@@ -1436,6 +1826,8 @@ namespace confighttp {
     output_tree["status"] = true;
     output_tree["platform"] = TUNASTREAM_PLATFORM;
     output_tree["version"] = PROJECT_VERSION;
+    // For the phone QR code on the home page
+    output_tree["lanAddress"] = platf::get_local_ip_for_gateway();
 #ifdef _WIN32
     output_tree["vdisplayStatus"] = (int)proc::vDisplayDriverStatus;
 #endif
@@ -1460,7 +1852,7 @@ namespace confighttp {
     output_tree["status"] = true;
     output_tree["locale"] = config::tunastream.locale;
     // Every page asks for this first, so the colour theme comes along with it
-    output_tree["theme"] = config::tunastream.ui_theme;
+    output_tree["theme"] = config::effective_theme();
     send_response(response, output_tree);
   }
 
@@ -1857,6 +2249,88 @@ namespace confighttp {
   }
 
   /**
+   * @brief Download a backup of TunaStream's settings: GET /api/backup?pairings=1 to include pairings.
+   */
+  void getBackup(resp_https_t response, req_https_t request) {
+    if (!authenticate(response, request)) {
+      return;
+    }
+
+    print_req(request);
+
+    auto args = request->parse_query_string();
+    const bool pairings = args.find("pairings") != args.end() && args.find("pairings")->second == "1";
+    const auto backup = settings_backup::make(pairings);
+    const auto now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+    std::tm local {};
+#ifdef _WIN32
+    localtime_s(&local, &now);
+#else
+    localtime_r(&now, &local);
+#endif
+    char date[16];
+    std::strftime(date, sizeof(date), "%Y-%m-%d", &local);
+    SimpleWeb::CaseInsensitiveMultimap headers;
+    headers.emplace("Content-Type", "application/json");
+    headers.emplace("Content-Disposition", "attachment; filename=\"TunaStream backup "s + date + (pairings ? " with pairings"s : ""s) + ".json\"");
+    headers.emplace("Cache-Control", "no-store");
+    response->write(SimpleWeb::StatusCode::success_ok, backup.dump(), headers);
+  }
+
+  /**
+   * @brief Restore a backup (the body is the backup file), then restart TunaStream.
+   */
+  void postRestore(resp_https_t response, req_https_t request) {
+    if (!validateContentType(response, request, "application/json") || !authenticate(response, request)) {
+      return;
+    }
+
+    print_req(request);
+
+    nlohmann::json output_tree;
+    std::string error;
+    try {
+      std::stringstream ss;
+      ss << request->content.rdbuf();
+      error = settings_backup::restore(nlohmann::json::parse(ss.str()));
+    } catch (const std::exception &) {
+      error = "That file isn't a TunaStream backup.";
+    }
+    output_tree["status"] = error.empty();
+    if (!error.empty()) {
+      output_tree["error"] = error;
+      send_response(response, output_tree);
+      return;
+    }
+    send_response(response, output_tree);
+
+    // Restart a moment later so the answer gets back first; the restored settings load on start
+    std::thread([]() {
+      std::this_thread::sleep_for(1500ms);
+      proc::proc.terminate();
+      platf::restart();
+    }).detach();
+  }
+
+  /**
+   * @brief TunaReceive backups kept on this PC: {"backups": [{"name", "device", "made", "size"}]}.
+   */
+  void getReceiverBackups(resp_https_t response, req_https_t request) {
+    if (!authenticate(response, request)) {
+      return;
+    }
+
+    nlohmann::json list = nlohmann::json::array();
+    for (const auto &b : settings_backup::receiver_backups()) {
+      list.push_back({{"name", b.name}, {"device", b.device}, {"made", b.made}, {"size", b.size}});
+    }
+    nlohmann::json output_tree;
+    output_tree["status"] = true;
+    output_tree["backups"] = list;
+    send_response(response, output_tree);
+  }
+
+  /**
    * @brief Quit TunaStream.
    * @param response The HTTP response object.
    * @param request The HTTP request object.
@@ -2063,6 +2537,18 @@ namespace confighttp {
     server.resource["^/api/rumble-test$"]["POST"] = rumbleTest;
     server.resource["^/api/status$"]["GET"] = getStatus;
     server.resource["^/api/recap$"]["GET"] = getRecap;
+    server.resource["^/api/tv-message$"]["POST"] = postTvMessage;
+    server.resource["^/api/tv-message$"]["GET"] = getTvMessages;
+    server.resource["^/api/sounds$"]["GET"] = getSounds;
+    server.resource["^/api/play-limits$"]["GET"] = getPlayLimits;
+    server.resource["^/api/play-limits$"]["POST"] = postPlayLimits;
+    server.resource["^/api/play-limits/extend$"]["POST"] = postPlayExtend;
+    server.resource["^/api/captures$"]["GET"] = getCaptures;
+    server.resource["^/api/wifi$"]["GET"] = getWifi;
+    server.resource["^/api/captures/file$"]["GET"] = getCaptureFile;
+    server.resource["^/api/highlights$"]["POST"] = postHighlights;
+    server.resource["^/api/sounds$"]["POST"] = addSound;
+    server.resource["^/api/sounds/delete$"]["POST"] = removeSound;
     server.resource["^/api/update$"]["GET"] = getUpdate;
     server.resource["^/api/update$"]["POST"] = startUpdate;
     server.resource["^/api/vdisplay/repair$"]["POST"] = repairVirtualDisplay;
@@ -2075,6 +2561,9 @@ namespace confighttp {
     server.resource["^/api/config$"]["POST"] = saveConfig;
     server.resource["^/api/configLocale$"]["GET"] = getLocale;
     server.resource["^/api/restart$"]["POST"] = restart;
+    server.resource["^/api/backup$"]["GET"] = getBackup;
+    server.resource["^/api/restore$"]["POST"] = postRestore;
+    server.resource["^/api/receiver-backups$"]["GET"] = getReceiverBackups;
     server.resource["^/api/quit$"]["POST"] = quit;
     server.resource["^/api/reset-display-device-persistence$"]["POST"] = resetDisplayDevicePersistence;
     server.resource["^/api/password$"]["POST"] = savePassword;
@@ -2089,6 +2578,10 @@ namespace confighttp {
     server.resource["^/api/covers/upload$"]["POST"] = uploadCover;
     server.resource["^/images/tunastream.ico$"]["GET"] = getFaviconImage;
     server.resource["^/images/logo-tunastream-45.png$"]["GET"] = getTunaStreamLogoImage;
+    server.resource["^/images/tunastream-app-(180|512).png$"]["GET"] = getAppIcon;
+    server.resource["^/live.webmanifest$"]["GET"] = getLiveManifest;
+    server.resource["^/live/?$"]["GET"] = getLivePage;
+    server.resource["^/api/cover$"]["GET"] = getCover;
     server.resource["^/assets\\/.+$"]["GET"] = getNodeModules;
     server.config.reuse_address = true;
     server.config.address = net::af_to_any_address_string(address_family);

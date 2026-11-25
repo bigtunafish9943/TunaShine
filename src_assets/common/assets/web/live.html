@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="auto">
+
+<head>
+  <%- header %>
+  <link rel="manifest" href="./live.webmanifest">
+  <link rel="apple-touch-icon" href="./images/tunastream-app-180.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="TunaStream">
+  <meta name="theme-color" content="#041431">
+  <style>
+    body {
+      padding-left: 0 !important;
+      background-color: var(--bs-body-bg);
+    }
+
+    .live {
+      max-width: 34rem;
+      margin: 0 auto;
+      padding: 1rem 1rem 3rem;
+    }
+
+    .live-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+    }
+
+    .live-brand {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 700;
+      color: var(--bs-emphasis-color);
+      text-decoration: none;
+    }
+
+    .live-brand img {
+      width: 28px;
+      height: 28px;
+    }
+
+    .live-pc {
+      color: var(--bs-secondary-color);
+      font-size: 0.9rem;
+    }
+
+    .live-player {
+      position: relative;
+      overflow: hidden;
+      border-radius: 1rem;
+      background-color: var(--ts-surface);
+      border: 1px solid var(--ts-surface-border);
+      margin-bottom: 1rem;
+    }
+
+    .live-cover {
+      position: absolute;
+      inset: 0;
+      background-size: cover;
+      background-position: center;
+      opacity: 0.28;
+      filter: blur(2px);
+    }
+
+    .live-player-body {
+      position: relative;
+      display: flex;
+      gap: 1rem;
+      padding: 1rem;
+    }
+
+    .live-cover-tile {
+      width: 6.5rem;
+      flex: 0 0 auto;
+      aspect-ratio: 2 / 3;
+      border-radius: 0.6rem;
+      background-size: cover;
+      background-position: center;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+    }
+
+    .live-app {
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: var(--bs-emphasis-color);
+      line-height: 1.2;
+      margin: 0 0 0.2rem;
+    }
+
+    .live-device {
+      color: var(--bs-secondary-color);
+      margin: 0 0 0.6rem;
+    }
+
+    .live-fps {
+      display: flex;
+      align-items: baseline;
+      gap: 0.35rem;
+    }
+
+    .live-fps-number {
+      font-size: 2.6rem;
+      font-weight: 800;
+      line-height: 1;
+      color: var(--ts-accent);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .live-fps-label {
+      color: var(--bs-secondary-color);
+    }
+
+    .live-spark {
+      width: 100%;
+      height: 46px;
+      margin-top: 0.4rem;
+    }
+
+    .live-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      padding: 0 1rem 1rem;
+      position: relative;
+    }
+
+    .live-chip {
+      padding: 0.2rem 0.65rem;
+      border-radius: 1rem;
+      background-color: var(--bs-tertiary-bg);
+      font-size: 0.85rem;
+    }
+
+    .live-chip-low {
+      color: var(--bs-danger-text-emphasis);
+      font-weight: 600;
+    }
+
+    .live-section {
+      margin-bottom: 1.2rem;
+    }
+
+    .live-section h2 {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 0.6rem;
+      color: var(--bs-emphasis-color);
+    }
+
+    .live-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+    }
+
+    .live-buttons .btn {
+      border-radius: 1.2rem;
+      padding: 0.45rem 0.9rem;
+    }
+
+    .live-message-row {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.6rem;
+    }
+
+    .live-status {
+      margin-top: 0.5rem;
+      color: var(--bs-secondary-color);
+      min-height: 1.5rem;
+    }
+
+    .live-idle {
+      text-align: center;
+      padding: 2.5rem 1rem;
+      color: var(--bs-secondary-color);
+    }
+
+    .live-idle i {
+      font-size: 2.4rem;
+      color: var(--ts-accent);
+      margin-bottom: 0.8rem;
+    }
+
+    .live-week {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: var(--bs-emphasis-color);
+    }
+  </style>
+</head>
+
+<body id="app" v-cloak>
+  <main class="live">
+    <div class="live-top">
+      <a class="live-brand" href="./">
+        <img src="./images/logo-tunastream-45.png" alt="">
+        TunaStream
+      </a>
+      <span class="live-pc">{{ $t('live.updated') }}</span>
+    </div>
+
+    <template v-if="players.length">
+      <section class="live-player" v-for="p in players" :key="p.device">
+        <div class="live-cover" :style="coverStyle"></div>
+        <div class="live-player-body">
+          <div class="live-cover-tile" :style="coverStyle" v-if="app"></div>
+          <div class="flex-grow-1">
+            <p class="live-app">{{ app || $t('live.desktop') }}</p>
+            <p class="live-device">{{ $t('live.on_device', { device: p.device }) }}</p>
+            <div class="live-fps" v-if="p.health">
+              <span class="live-fps-number">{{ Math.round(p.health.fps) }}</span>
+              <span class="live-fps-label">{{ $t('live.fps_of', { target: p.health.targetFps }) }}</span>
+            </div>
+            <svg class="live-spark" v-if="(history[p.device] || []).length > 1" viewBox="0 0 120 40" preserveAspectRatio="none" aria-hidden="true">
+              <polyline :points="sparkPoints(p)" fill="none" stroke="var(--ts-accent)" stroke-width="2" vector-effect="non-scaling-stroke" />
+            </svg>
+          </div>
+        </div>
+        <div class="live-chips">
+          <span class="live-chip" v-if="p.health">{{ $t('live.mbps', { mbps: Math.round(p.health.bitrateKbps / 1000) }) }}</span>
+          <span class="live-chip" v-if="p.health && p.health.deviceView">{{ $t('live.delay', { ms: p.health.deviceView.latencyMs }) }}</span>
+          <span class="live-chip" v-if="playLeft(p.device) !== null">
+            <i class="fas fa-hourglass-half" aria-hidden="true"></i> {{ $t('live.left', { left: minutesText(playLeft(p.device)) }) }}
+          </span>
+          <button type="button" class="live-chip btn btn-sm btn-outline-secondary" v-if="playLeft(p.device) !== null" @click="extendPlay(p.device)">{{ $t('live.extend') }}</button>
+          <span class="live-chip" v-for="c in p.controllers" :key="c.controller" :class="{ 'live-chip-low': c.battery >= 0 && c.battery <= 15 && !c.charging }">
+            <i class="fas fa-gamepad" aria-hidden="true"></i>
+            {{ c.battery >= 0 ? (c.charging ? $t('live.battery_charging', { pct: c.battery }) : $t('live.battery', { pct: c.battery })) : $t('live.controller', { n: c.controller + 1 }) }}
+          </span>
+        </div>
+      </section>
+
+      <section class="live-section">
+        <h2>{{ $t('live.message_title') }}</h2>
+        <div class="live-buttons">
+          <button class="btn btn-outline-secondary" v-for="q in quickMessages" :key="q" :disabled="sending" @click="send(q, '')">{{ q }}</button>
+        </div>
+        <form class="live-message-row" @submit.prevent="send(text, '')">
+          <input class="form-control" type="text" maxlength="200" v-model="text" :placeholder="$t('live.message_placeholder')" :aria-label="$t('live.message_placeholder')">
+          <button class="btn btn-primary" type="submit" :disabled="sending || !text.trim()"><i class="fas fa-paper-plane"></i></button>
+        </form>
+      </section>
+
+      <section class="live-section" v-if="sounds.length">
+        <h2>{{ $t('live.sounds_title') }}</h2>
+        <div class="live-buttons">
+          <button class="btn btn-outline-secondary" v-for="s in sounds" :key="s.name" :disabled="sending" @click="send('', s.name)">
+            <i class="fas fa-volume-high" aria-hidden="true"></i> {{ s.name }}
+          </button>
+        </div>
+      </section>
+
+      <p class="live-status" role="status">{{ status }}</p>
+
+      <section class="live-section">
+        <button class="btn btn-outline-danger w-100" :disabled="ending" @click="endSession">
+          <i class="fas fa-stop" aria-hidden="true"></i> {{ $t('live.end_session') }}
+        </button>
+      </section>
+    </template>
+
+    <section class="live-idle" v-else-if="loaded">
+      <i class="fas fa-couch" aria-hidden="true"></i>
+      <p>{{ $t('live.nobody') }}</p>
+      <p v-if="week !== null"><span class="live-week">{{ week }}</span><br>{{ $t('live.this_week') }}</p>
+      <a class="btn btn-outline-secondary mt-2" href="./">{{ $t('live.open_home') }}</a>
+    </section>
+  </main>
+
+  <script type="module">
+    import { createApp } from 'vue'
+    import { initApp } from './init'
+    import { loadAutoTheme } from './theme'
+
+    // Light or dark as the phone is set, in the PC's colour theme (there's no navigation bar here to do it)
+    loadAutoTheme()
+
+    const app = createApp({
+      inject: ['i18n'],
+      data() {
+        return {
+          loaded: false,
+          app: '',
+          players: [],
+          history: {},
+          sounds: [],
+          text: '',
+          sending: false,
+          ending: false,
+          status: '',
+          week: null,
+          timer: null,
+          playLimits: [],
+          ticks: 0,
+        };
+      },
+      computed: {
+        coverStyle() {
+          return this.app ? { backgroundImage: `url("./api/cover?app=${encodeURIComponent(this.app)}")` } : {};
+        },
+        quickMessages() {
+          return [this.$t('index.message_quick_dinner'), this.$t('index.message_quick_ten'),
+                  this.$t('index.message_quick_bed'), this.$t('index.message_quick_come')];
+        },
+      },
+      created() {
+        this.refresh();
+        this.loadSounds();
+        this.loadWeek();
+        this.loadPlayLimits();
+        this.timer = setInterval(() => {
+          if (document.hidden) return;
+          this.refresh();
+          if (++this.ticks % 5 === 0) this.loadPlayLimits();
+        }, 2000);
+      },
+      methods: {
+        async refresh() {
+          try {
+            const s = await fetch('./api/status', { credentials: 'include' }).then((r) => r.ok ? r.json() : null);
+            if (!s) return;
+            this.app = s.app || '';
+            const streams = s.streams || [];
+            const controllers = s.controllers || [];
+            this.players = streams.map((h) => ({
+              device: h.device,
+              health: h,
+              controllers: controllers.filter((c) => c.device === h.device),
+            }));
+            // The last two minutes of frame rate, for the line under the number
+            for (const h of streams) {
+              const list = this.history[h.device] || [];
+              list.push(h.fps);
+              if (list.length > 60) list.shift();
+              this.history = { ...this.history, [h.device]: list };
+            }
+            this.loaded = true;
+          } catch (e) {
+            // Try again next time
+          }
+        },
+        sparkPoints(p) {
+          const list = this.history[p.device] || [];
+          const top = Math.max(p.health ? p.health.targetFps : 60, ...list, 1);
+          return list.map((v, i) => `${(i / Math.max(1, list.length - 1)) * 120},${40 - (v / top) * 38}`).join(' ');
+        },
+        async loadPlayLimits() {
+          try {
+            const r = await fetch('./api/play-limits', { credentials: 'include' }).then((r) => r.json());
+            this.playLimits = r.devices || [];
+          } catch (e) {
+            this.playLimits = [];
+          }
+        },
+        playLeft(device) {
+          const d = this.playLimits.find((x) => x.name === device);
+          return d && d.leftSeconds >= 0 ? d.leftSeconds : null;
+        },
+        minutesText(seconds) {
+          const m = Math.round(seconds / 60);
+          return m >= 60 ? this.$t('index.recap_hours_minutes', { h: Math.floor(m / 60), m: m % 60 }) : this.$t('index.recap_minutes', { m });
+        },
+        async extendPlay(device) {
+          await fetch('./api/play-limits/extend', {
+            credentials: 'include', method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ device, minutes: 15 }),
+          }).catch(() => {});
+          this.status = this.$t('live.extended');
+          this.loadPlayLimits();
+        },
+        async loadSounds() {
+          try {
+            const r = await fetch('./api/sounds', { credentials: 'include' }).then((r) => r.json());
+            this.sounds = r.sounds || [];
+          } catch (e) {
+            this.sounds = [];
+          }
+        },
+        async loadWeek() {
+          try {
+            const tz = -new Date().getTimezoneOffset();
+            const r = await fetch(`./api/recap?days=7&tz=${tz}`, { credentials: 'include' }).then((r) => r.json());
+            const minutes = Math.round((r.seconds || 0) / 60);
+            this.week = minutes >= 60 ? this.$t('index.recap_hours_minutes', { h: Math.floor(minutes / 60), m: minutes % 60 })
+                                      : this.$t('index.recap_minutes', { m: minutes });
+          } catch (e) {
+            this.week = null;
+          }
+        },
+        async send(text, sound) {
+          text = (text || '').trim();
+          if (!text && !sound) return;
+          this.sending = true;
+          try {
+            const r = await fetch('./api/tv-message', {
+              credentials: 'include', method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ text, sound, device: '' }),
+            }).then((r) => r.json());
+            this.status = r.status ? this.$t('live.sent') : (r.error || this.$t('index.message_failed'));
+            if (r.status && text === this.text.trim()) this.text = '';
+          } catch (e) {
+            this.status = this.$t('index.message_failed');
+          }
+          this.sending = false;
+        },
+        async endSession() {
+          if (!confirm(this.$t('live.end_confirm'))) return;
+          this.ending = true;
+          try {
+            await fetch('./api/apps/close', { credentials: 'include', method: 'POST', headers: { 'Content-Type': 'application/json' } });
+            this.status = this.$t('live.ended');
+          } catch (e) {
+            this.status = this.$t('index.message_failed');
+          }
+          this.ending = false;
+          this.refresh();
+        },
+      },
+    });
+
+    initApp(app);
+  </script>
+</body>

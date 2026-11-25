@@ -10,6 +10,7 @@
 #include <functional>
 #include <mutex>
 #include <string>
+#include <vector>
 
 // lib includes
 #include <boost/core/noncopyable.hpp>
@@ -556,6 +557,15 @@ namespace platf {
   public:
     virtual int set_sink(const std::string &sink) = 0;
 
+    /**
+     * @brief Shared PC mode: get the sink ready and capture from it, without making it the PC's
+     *        default sound device. The stream's app is routed to it on its own (see herd_new_windows).
+     * @return 0 on success. Where this isn't supported it falls back to set_sink().
+     */
+    virtual int use_sink_without_default(const std::string &sink) {
+      return set_sink(sink);
+    }
+
     virtual std::unique_ptr<mic_t> microphone(const std::uint8_t *mapping, int channels, std::uint32_t sample_rate, std::uint32_t frame_size) = 0;
 
     /**
@@ -899,6 +909,39 @@ namespace platf {
 
   network_link_t network_link();
 
+  /// One Wi-Fi network this computer can hear.
+  struct wifi_network_t {
+    std::string name;  ///< Network name, empty when hidden
+    int channel = 0;
+    int band = 0;  ///< 2 (2.4 GHz), 5 or 6
+    int signal = 0;  ///< 0 to 100
+    bool connected = false;  ///< The network this computer is on
+  };
+
+  /// What a Wi-Fi scan found, for the channel advice on the Troubleshooting page.
+  struct wifi_survey_t {
+    bool available = false;  ///< False when this computer has no Wi-Fi adapter (or isn't Windows)
+    std::vector<wifi_network_t> networks;
+  };
+
+  /**
+   * @brief The Wi-Fi networks nearby, from the adapter's last scan.
+   * @param scan_first Ask the adapter to scan first (takes a few seconds). Never while streaming.
+   */
+  wifi_survey_t wifi_survey(bool scan_first);
+
+  /// A folder of the signed-in user's, such as their Pictures folder.
+  enum class user_folder_e {
+    pictures,
+    videos,
+  };
+
+  /**
+   * @brief Where the signed-in user's Pictures or Videos folder is, for saving screenshots and clips.
+   * @return Empty when nobody is signed in or it can't be found (or on platforms other than Windows).
+   */
+  std::filesystem::path user_folder(user_folder_e folder);
+
   /**
    * @brief Cap games at the stream's frame rate, so each frame the game draws is one the stream sends.
    * @details Uses the graphics driver's own frame rate limit where available (NVIDIA). A limit the
@@ -923,6 +966,16 @@ namespace platf {
    * @return The watcher, or nullptr where this isn't supported.
    */
   std::unique_ptr<window_herder_t> herd_new_windows(const std::string &display_name, bool include_steam);
+
+  /**
+   * @brief Shared PC mode: the windows the app opens are kept on the stream's display for as
+   *        long as it runs, and its sound is sent to the stream's sound device while everything
+   *        else keeps playing on the PC's own speakers.
+   */
+  std::unique_ptr<window_herder_t> keep_app_on_stream(const std::string &display_name, bool include_steam);
+
+  /// The sound device the stream captures in shared PC mode (Windows endpoint id), or empty.
+  void set_stream_audio_device(const std::wstring &device_id);
 
   std::string
   get_clipboard();

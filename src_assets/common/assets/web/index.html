@@ -110,6 +110,12 @@
               {{ $t(c.charging ? 'index.battery_charging' : 'index.battery_level', { pct: c.battery }) }}
             </span>
           </span>
+          <!-- Today's play time, when the device has a limit -->
+          <span class="home-playtime" v-if="playLeft(player.device) !== null">
+            <i class="fas fa-hourglass-half" aria-hidden="true"></i>
+            {{ $t('index.playtime_left', { left: playTime(playLeft(player.device)) }) }}
+            <button type="button" class="btn btn-sm btn-link p-0 ms-1" @click="extendPlay(player.device)">{{ $t('index.playtime_extend') }}</button>
+          </span>
           <!-- How smoothly the stream is running, and what to do about it -->
           <div class="home-health" v-if="player.health">
             <template v-for="v in [healthVerdict(player.health)]">
@@ -144,13 +150,77 @@
                   setting: Math.round(player.health.deviceView.settingKbps / 1000)
                 }) }}
               </span>
+              <span class="d-block" v-if="player.health.deviceView && player.health.deviceView.hdrPeakNits > 0">
+                {{ $t('index.health_hdr_peak', { nits: player.health.deviceView.hdrPeakNits }) }}
+                <a href="./help#hdr">{{ $t('index.health_hdr_link') }}</a>
+              </span>
               <span class="d-block" v-if="player.health.pictureScale && player.health.pictureScale < 100">
                 {{ $t('index.health_scaled', { pct: player.health.pictureScale }) }}
               </span>
             </p>
+            <!-- The game itself is drawing too few frames: the fix is in the game, not the stream -->
+            <div class="home-fps-note" v-if="player.health.slowGameMinutes >= 2" role="note">
+              <i class="fas fa-gauge-high" aria-hidden="true"></i>
+              <div>
+                <p class="home-fps-title">{{ $t('index.fps_note_title', { fps: Math.round(player.health.slowGameFps), target: player.health.targetFps }) }}</p>
+                <p class="home-fps-desc">{{ $t('index.fps_note_desc', { target: player.health.targetFps }) }}</p>
+              </div>
+            </div>
           </div>
         </li>
       </ul>
+
+      <!-- A short message shown on the TV over the game -->
+      <form class="home-message" v-if="streamingDevices.length" @submit.prevent="sendTvMessage()">
+        <label class="home-message-label" for="tv-message">{{ $t('index.message_title') }}</label>
+        <div class="home-message-quick">
+          <button type="button" class="btn btn-sm btn-outline-secondary" v-for="q in quickMessages" :key="q"
+                  :disabled="message.sending" @click="sendTvMessage(q)">{{ q }}</button>
+        </div>
+        <div class="home-message-row">
+          <select class="form-select home-message-device" v-if="streamingDevices.length > 1" v-model="message.device"
+                  :aria-label="$t('index.message_to')">
+            <option value="">{{ $t('index.message_everyone') }}</option>
+            <option v-for="d in streamingDevices" :key="d" :value="d">{{ d }}</option>
+          </select>
+          <input id="tv-message" class="form-control" type="text" maxlength="200" v-model="message.text"
+                 :placeholder="$t('index.message_placeholder')" autocomplete="off">
+          <button type="submit" class="btn btn-primary" :disabled="message.sending || !message.text.trim()">
+            <i class="fas fa-paper-plane"></i> {{ $t('index.message_send') }}
+          </button>
+        </div>
+        <p class="home-message-status" v-if="message.status" role="status" :class="{ 'home-message-error': message.error }">{{ message.status }}</p>
+
+        <!-- Sound board: plays on the TV, with the typed message if there is one -->
+        <div class="home-sounds" v-if="sounds.length">
+          <span class="home-message-label">{{ $t('index.sounds_title') }}</span>
+          <div class="home-message-quick">
+            <span class="home-sound" v-for="snd in sounds" :key="snd.name">
+              <button type="button" class="btn btn-sm btn-outline-secondary" :disabled="message.sending"
+                      @click="sendTvMessage(message.text.trim() || '', snd.name)">
+                <i class="fas fa-volume-high" aria-hidden="true"></i> {{ snd.name }}
+              </button>
+              <button type="button" class="btn btn-sm btn-link home-sound-remove" v-if="!snd.builtIn"
+                      :title="$t('index.sounds_remove', { name: snd.name })" :aria-label="$t('index.sounds_remove', { name: snd.name })"
+                      @click="removeSound(snd.name)"><i class="fas fa-xmark"></i></button>
+            </span>
+            <button type="button" class="btn btn-sm btn-link" @click="soundForm.open = !soundForm.open">
+              <i class="fas fa-plus" aria-hidden="true"></i> {{ $t('index.sounds_add') }}
+            </button>
+          </div>
+          <div class="home-sound-add" v-if="soundForm.open">
+            <input type="text" class="form-control" maxlength="40" v-model="soundForm.name" :placeholder="$t('index.sounds_name')"
+                   :aria-label="$t('index.sounds_name')">
+            <input type="file" class="form-control" accept=".ogg,.mp3,.wav,audio/ogg,audio/mpeg,audio/wav" ref="soundFile"
+                   :aria-label="$t('index.sounds_file')" @change="pickSoundFile">
+            <button type="button" class="btn btn-primary" :disabled="soundForm.saving || !soundForm.name.trim()" @click="addSound">
+              {{ $t('index.sounds_save') }}
+            </button>
+            <p class="home-message-status" :class="{ 'home-message-error': soundForm.error }" v-if="soundForm.status">{{ soundForm.status }}</p>
+            <p class="home-message-status" v-else>{{ $t('index.sounds_hint') }}</p>
+          </div>
+        </div>
+      </form>
     </div>
 
     <!-- The week's play: time per day, most-played games, and how smooth the streams were -->
@@ -161,6 +231,14 @@
           <span class="home-recap-hours">{{ playTime(recap.seconds) }}</span>
           <span class="home-recap-sub">{{ $t(recap.streams === 1 ? 'index.recap_streams_one' : 'index.recap_streams', { n: recap.streams }) }}</span>
         </p>
+      </div>
+      <!-- Games that ran below full frame rate last time, until they run at full rate again -->
+      <div class="home-fps-note home-fps-reminder" v-for="r in (recap.fpsReminders || [])" :key="r.app" role="note">
+        <i class="fas fa-gauge-high" aria-hidden="true"></i>
+        <div>
+          <p class="home-fps-title">{{ $t(r.width >= 3800 ? 'index.fps_reminder_title_4k' : 'index.fps_reminder_title', { app: r.app || $t('index.recap_unnamed_app'), fps: Math.round(r.fps), target: r.targetFps }) }}</p>
+          <p class="home-fps-desc">{{ $t('index.fps_note_desc', { target: r.targetFps }) }}</p>
+        </div>
       </div>
       <p class="home-recap-empty" v-if="recap.seconds === 0">{{ $t('index.recap_empty') }}</p>
       <template v-else>
@@ -197,6 +275,39 @@
           </div>
         </div>
       </template>
+      <!-- Milestones: the newest few, the ones from this week marked as new -->
+      <div class="home-milestones" v-if="recap.milestones && recap.milestones.length">
+        <h3 class="home-recap-subtitle">{{ $t('index.milestones_title') }}</h3>
+        <ul>
+          <li v-for="m in recap.milestones.slice(0, 6)" :key="m.id" :class="{ 'home-milestone-new': isRecent(m.at) }">
+            <i class="fas fa-trophy" aria-hidden="true"></i>
+            <span>{{ milestoneName(m.id) }}</span>
+            <span class="home-milestone-date">{{ shortDate(m.at) }}</span>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- Screenshots and clips taken from the TV -->
+    <section class="home-captures" v-if="captures.length" aria-labelledby="captures-title">
+      <h2 class="h5" id="captures-title">{{ $t('index.captures_title') }}</h2>
+      <p class="home-captures-where">{{ $t('index.captures_where', { pictures: captureFolders.screenshots, videos: captureFolders.clips }) }}</p>
+      <div class="home-highlights" v-if="captures.some((c) => c.kind === 'clip')">
+        <button class="btn btn-outline-secondary btn-sm" :disabled="highlights.busy" @click="makeHighlights">
+          <span class="spinner-border spinner-border-sm me-1" v-if="highlights.busy" aria-hidden="true"></span>
+          <i class="fas fa-wand-magic-sparkles" aria-hidden="true" v-else></i> {{ $t('index.highlights_button') }}
+        </button>
+        <span class="home-message-status" :class="{ 'home-message-error': highlights.error }" v-if="highlights.status">{{ highlights.status }}</span>
+      </div>
+      <ul class="home-captures-grid">
+        <li v-for="c in captures.slice(0, 8)" :key="c.kind + c.name">
+          <a :href="captureUrl(c)" target="_blank" rel="noopener" :title="c.name">
+            <img v-if="c.kind === 'screenshot'" :src="captureUrl(c)" :alt="c.name" loading="lazy">
+            <span v-else class="home-capture-clip"><i class="fas fa-film" aria-hidden="true"></i></span>
+            <span class="home-capture-name">{{ c.name }}</span>
+          </a>
+        </li>
+      </ul>
     </section>
 
     <!-- First-time setup, shown until a device is paired -->
@@ -258,6 +369,17 @@
         </div>
       </div>
     </div>
+    <!-- Open the Live page on a phone: what's playing, messages, sounds, End session -->
+    <section class="home-phone" v-if="phoneQr" aria-labelledby="phone-title">
+      <div class="home-phone-qr" v-html="phoneQr" role="img" :aria-label="$t('index.phone_qr_label')"></div>
+      <div>
+        <h2 class="h5" id="phone-title">{{ $t('index.phone_title') }}</h2>
+        <p>{{ $t('index.phone_desc') }}</p>
+        <p class="home-phone-url"><a :href="phoneUrl">{{ phoneUrl }}</a></p>
+        <p class="home-phone-note">{{ $t('index.phone_note') }}</p>
+      </div>
+    </section>
+
     <!-- Send a file to a paired device -->
     <Send-File-Card></Send-File-Card>
     <!-- Resources -->
@@ -274,6 +396,7 @@
   import ResourceCard from './ResourceCard.vue'
   import SendFileCard from './SendFileCard.vue'
   import TunaStreamVersion from './tunastream_version'
+  import QRCode from 'qrcode'
 
   console.log("Hello, TunaStream!")
   let app = createApp({
@@ -313,6 +436,16 @@
         statusTimer: null,
         recap: null,
         recapTimer: null,
+        phoneQr: '',
+        phoneUrl: '',
+        playLimits: [],
+        captures: [],
+        highlights: { busy: false, status: '', error: false },
+        captureFolders: { screenshots: '', clips: '' },
+        sounds: [],
+        soundMaxBytes: 2097152,
+        soundForm: { open: false, name: '', file: null, saving: false, status: '', error: false },
+        message: { text: '', device: '', sending: false, status: '', error: false, id: 0, waitFor: [], shown: false },
       }
     },
     async created() {
@@ -340,9 +473,15 @@
         this.statusTimer = setInterval(() => {
           if (!document.hidden && !this.ending) this.loadStatus();
         }, 5000);
+        this.makePhoneQr(config.lanAddress);
+        this.loadPlayLimits();
         this.loadRecap();
+        this.loadSounds();
+        this.loadCaptures();
         this.recapTimer = setInterval(() => {
           if (!document.hidden) this.loadRecap();
+          if (!document.hidden) this.loadCaptures();
+          if (!document.hidden) this.loadPlayLimits();
         }, 60000);
         console.log("Version: ", this.version.version)
         const latest = await fetch("https://api.github.com/repos/bigtunafish9943/TunaStream/releases/latest").then((r) => r.ok ? r.json() : null);
@@ -438,6 +577,168 @@
           this.installUpdate();
         });
       },
+      /**
+       * Show a message on the TV. TunaReceive picks it up with its next report to the PC, within
+       * about five seconds; the page then says which screens it reached.
+       */
+      async sendTvMessage(text, sound) {
+        const body = { text: (text ?? this.message.text).trim(), device: this.message.device, sound: sound || '' };
+        if (!body.text && !body.sound) return;
+        this.message = { ...this.message, sending: true, status: '', error: false };
+        try {
+          const r = await fetch('./api/tv-message', {
+            credentials: 'include', method: 'POST',
+            headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+          }).then((r) => r.json());
+          if (!r.status) {
+            this.message = { ...this.message, sending: false, error: true, status: r.error || this.$t('index.message_failed') };
+            return;
+          }
+          if (text === undefined || (sound && body.text)) this.message.text = '';
+          this.message = { ...this.message, sending: false, id: r.id, waitFor: r.devices, shown: false,
+                           status: this.$t('index.message_sent', { devices: r.devices.join(', ') }) };
+          this.followTvMessage(r.id, r.devices);
+        } catch (e) {
+          this.message = { ...this.message, sending: false, error: true, status: this.$t('index.message_failed') };
+        }
+      },
+      /** A QR code for the Live page at the PC's address on the home network, for a phone camera. */
+      async makePhoneQr(lanAddress) {
+        const host = lanAddress && lanAddress !== '0.0.0.0' ? lanAddress : location.hostname;
+        if (!host || host === 'localhost' || host === '127.0.0.1') return;
+        this.phoneUrl = `https://${host}:${location.port || 47990}/live`;
+        try {
+          this.phoneQr = await QRCode.toString(this.phoneUrl, { type: 'svg', margin: 1, errorCorrectionLevel: 'M',
+                                                               color: { dark: '#041431', light: '#ffffff' } });
+        } catch (e) {
+          this.phoneQr = '';
+        }
+      },
+      async loadPlayLimits() {
+        try {
+          const r = await fetch('./api/play-limits', { credentials: 'include' }).then((r) => r.json());
+          this.playLimits = r.devices || [];
+        } catch (e) {
+          this.playLimits = [];
+        }
+      },
+      /** Seconds of play left today for a device with a limit, otherwise null */
+      playLeft(device) {
+        const d = this.playLimits.find((x) => x.name === device);
+        return d && d.leftSeconds >= 0 ? d.leftSeconds : null;
+      },
+      async extendPlay(device) {
+        await fetch('./api/play-limits/extend', {
+          credentials: 'include', method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ device, minutes: 15 }),
+        }).catch(() => {});
+        this.loadPlayLimits();
+      },
+      async loadCaptures() {
+        try {
+          const r = await fetch('./api/captures', { credentials: 'include' }).then((r) => r.json());
+          this.captures = r.captures || [];
+          this.captureFolders = { screenshots: r.screenshotFolder || '', clips: r.clipFolder || '' };
+        } catch (e) {
+          this.captures = [];
+        }
+      },
+      /** Joins the end of each replay saved this week into one clip. */
+      async makeHighlights() {
+        this.highlights = { busy: true, status: this.$t('index.highlights_busy'), error: false };
+        try {
+          const r = await fetch('./api/highlights', {
+            credentials: 'include', method: 'POST', headers: { 'Content-Type': 'application/json' },
+          }).then((r) => r.json());
+          this.highlights = { busy: false, error: !r.status,
+                              status: r.status ? this.$t('index.highlights_done', { name: r.name }) : (r.error || this.$t('index.highlights_failed')) };
+          if (r.status) this.loadCaptures();
+        } catch (e) {
+          this.highlights = { busy: false, error: true, status: this.$t('index.highlights_failed') };
+        }
+      },
+      captureUrl(c) {
+        return `./api/captures/file?kind=${encodeURIComponent(c.kind)}&name=${encodeURIComponent(c.name)}`;
+      },
+      async loadSounds() {
+        try {
+          const r = await fetch('./api/sounds', { credentials: 'include' }).then((r) => r.json());
+          this.sounds = r.sounds || [];
+          this.soundMaxBytes = r.maxBytes || 2097152;
+        } catch (e) {
+          this.sounds = [];
+        }
+      },
+      pickSoundFile(event) {
+        const file = event.target.files && event.target.files[0];
+        this.soundForm.file = file || null;
+        if (file && !this.soundForm.name.trim()) {
+          this.soundForm.name = file.name.replace(/\.[^.]+$/, '').replace(/[^A-Za-z0-9 '!_-]/g, ' ').trim().slice(0, 40);
+        }
+      },
+      async addSound() {
+        const file = this.soundForm.file;
+        if (!file) {
+          this.soundForm = { ...this.soundForm, error: true, status: this.$t('index.sounds_pick') };
+          return;
+        }
+        if (file.size > this.soundMaxBytes) {
+          this.soundForm = { ...this.soundForm, error: true, status: this.$t('index.sounds_too_big') };
+          return;
+        }
+        this.soundForm = { ...this.soundForm, saving: true, status: '', error: false };
+        try {
+          const data = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(String(reader.result).split(',')[1] || '');
+            reader.onerror = () => reject(reader.error);
+            reader.readAsDataURL(file);
+          });
+          const extension = (file.name.match(/\.[^.]+$/) || [''])[0];
+          const r = await fetch('./api/sounds', {
+            credentials: 'include', method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: this.soundForm.name.trim(), extension, data }),
+          }).then((r) => r.json());
+          if (!r.status) {
+            this.soundForm = { ...this.soundForm, saving: false, error: true, status: r.error || this.$t('index.sounds_failed') };
+            return;
+          }
+          this.soundForm = { open: false, name: '', file: null, saving: false, status: '', error: false };
+          await this.loadSounds();
+        } catch (e) {
+          this.soundForm = { ...this.soundForm, saving: false, error: true, status: this.$t('index.sounds_failed') };
+        }
+      },
+      async removeSound(name) {
+        if (!confirm(this.$t('index.sounds_remove_confirm', { name }))) return;
+        await fetch('./api/sounds/delete', {
+          credentials: 'include', method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name }),
+        }).catch(() => {});
+        await this.loadSounds();
+      },
+      async followTvMessage(id, devices) {
+        const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+        for (let i = 0; i < 12 && this.message.id === id; i++) {
+          await sleep(2000);
+          try {
+            const r = await fetch('./api/tv-message', { credentials: 'include' }).then((r) => r.json());
+            const m = (r.messages || []).find((x) => x.id === id);
+            const reached = m ? m.deliveredTo : [];
+            if (reached.length && this.message.id === id) {
+              this.message.shown = true;
+              this.message.status = this.$t('index.message_shown', { devices: reached.join(', ') });
+              if (devices.every((d) => reached.includes(d))) return;
+            }
+          } catch (e) {
+            // Try again
+          }
+        }
+        if (this.message.id === id && !this.message.shown) {
+          this.message.status = this.$t('index.message_not_shown');
+          this.message.error = true;
+        }
+      },
       /** This week's play, counted in the browser's own time zone. */
       async loadRecap() {
         try {
@@ -467,6 +768,25 @@
           return date.toLocaleDateString(locale, { weekday: 'short' });
         } catch (e) {
           return date.toLocaleDateString(undefined, { weekday: 'short' });
+        }
+      },
+      milestoneName(id) {
+        const hours = id.match(/^hours_(\d+)$/);
+        if (hours) return this.$t(hours[1] === '1' ? 'index.milestone_hours_one' : 'index.milestone_hours', { n: hours[1] });
+        const streams = id.match(/^streams_(\d+)$/);
+        if (streams) return this.$t('index.milestone_streams', { n: streams[1] });
+        const key = 'index.milestone_' + id;
+        const text = this.$t(key);
+        return text === key ? id : text;
+      },
+      isRecent(at) {
+        return Date.now() / 1000 - at < 7 * 86400;
+      },
+      shortDate(at) {
+        try {
+          return new Date(at * 1000).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+        } catch (e) {
+          return '';
         }
       },
       recapBarHeight(seconds) {
@@ -640,6 +960,14 @@
       }
     },
     computed: {
+      /** Devices that are streaming now, which can be sent a message */
+      streamingDevices() {
+        return this.players.filter((p) => p.health).map((p) => p.device).filter((d) => d);
+      },
+      quickMessages() {
+        return [this.$t('index.message_quick_dinner'), this.$t('index.message_quick_ten'),
+                this.$t('index.message_quick_bed'), this.$t('index.message_quick_come')];
+      },
       /** The day chart in words, for screen readers */
       recapDaysLabel() {
         if (!this.recap) return '';

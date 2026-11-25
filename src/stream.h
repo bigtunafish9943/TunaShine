@@ -96,6 +96,7 @@ namespace stream {
       int latency_ms = 0;  ///< Average delay on the device from receiving a frame to showing it
       int kbps = 0;  ///< Bitrate the device is asking for, in the units of its own setting
       int setting_kbps = 0;  ///< The device's bitrate setting
+      int hdr_peak_nits = 0;  ///< The brightest the screen says it can show in HDR, 0 when unknown
     };
 
     /// How smoothly one client's stream is running, measured over the last few seconds.
@@ -117,6 +118,11 @@ namespace stream {
       device_view_t view;  ///< What the device sees, when it reports it
       int send_rate_mbps;  ///< Rate packets are paced at
       double window_s;  ///< Seconds the figures cover
+      int slow_game_minutes;  ///< Minutes the game itself drew fewer than 59 frames a second (see below)
+      double slow_game_fps;  ///< Average frame rate over those minutes
+      int width;  ///< Picture size the device asked for
+      int height;
+      double running_s;  ///< Seconds since the stream's first frame
     };
 
     /// Health of every running stream.
@@ -125,6 +131,13 @@ namespace stream {
     /// Keep what the device reports it sees of its stream, for the health readout.
     /// @return The PC's own figures for the same stream, so the device can report both ends.
     health_t set_device_view(session_t &session, const device_view_t &view);
+
+    /**
+     * @brief Save the last 30 seconds of the stream as a clip in the user's Videos\TunaStream folder.
+     * @param name Set to the clip's file name when it is saved.
+     * @return Empty when saved; "off" when instant replay is turned off; otherwise what went wrong.
+     */
+    std::string save_replay(session_t &session, std::string &name);
 
     state_e state(session_t &session);
     inline bool send(session_t& session, const std::string_view &payload);

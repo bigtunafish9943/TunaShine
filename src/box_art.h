@@ -14,8 +14,9 @@
 namespace box_art {
   /**
    * @brief The cover for an app with no picture of its own, when it is a Steam game.
-   * @details The game is recognised by a steam:// link in its commands, or by its name matching
-   *          a game installed through Steam. The cover comes from your own Steam library (a
+   * @details The game is recognised by a steam:// link in its commands, by its name matching
+   *          a game installed through Steam, or (for games from other stores) by its name matching a
+   *          game on the Steam store exactly. The cover comes from your own Steam library (a
    *          custom cover you set there first, then the one Steam shows), and otherwise from
    *          Steam's store servers; it is kept in the covers folder after that.
    * @param app The app.

@@ -1393,6 +1393,93 @@ html[data-ts-theme=gold][data-bs-theme=dark] {
     --bs-link-hover-color-rgb: 255, 194, 61;
 }
 
+
+/* ---------- Seasonal themes (worn in their season when Seasonal themes is on) ---------- */
+html[data-ts-theme=halloween] {
+    --ts-navy: #120818;
+    --ts-deep: #2e1238;
+    --ts-accent: #ff8a1f;
+    --ts-accent-soft: #ffc48f;
+    --ts-blue: #9b5cff;
+    --ts-accent-rgb: 255, 138, 31;
+    --ts-accent-hover: #ffa552;
+    --ts-accent-active: #e6720a;
+    --ts-outline: #6b3a1a;
+}
+html[data-ts-theme=halloween][data-bs-theme=dark] {
+    --bs-body-bg: #0c0510;
+    --bs-body-color: #f6ecf8;
+    --bs-border-color: #3d1a47;
+    --bs-tertiary-bg: #241030;
+    --ts-surface: #1e0d26;
+    --ts-surface-border: #3d1a47;
+    --bs-link-color-rgb: 255, 196, 143;
+    --bs-link-hover-color-rgb: 255, 138, 31;
+}
+html[data-ts-theme=autumn] {
+    --ts-navy: #140b05;
+    --ts-deep: #3a1f0c;
+    --ts-accent: #ff9f43;
+    --ts-accent-soft: #ffd3a6;
+    --ts-blue: #c0502b;
+    --ts-accent-rgb: 255, 159, 67;
+    --ts-accent-hover: #ffb46d;
+    --ts-accent-active: #e88828;
+    --ts-outline: #6e4523;
+}
+html[data-ts-theme=autumn][data-bs-theme=dark] {
+    --bs-body-bg: #0d0703;
+    --bs-body-color: #f6ece2;
+    --bs-border-color: #4a2a14;
+    --bs-tertiary-bg: #2b180b;
+    --ts-surface: #24140a;
+    --ts-surface-border: #4a2a14;
+    --bs-link-color-rgb: 255, 211, 166;
+    --bs-link-hover-color-rgb: 255, 159, 67;
+}
+html[data-ts-theme=winter] {
+    --ts-navy: #06121f;
+    --ts-deep: #15304a;
+    --ts-accent: #bde8ff;
+    --ts-accent-soft: #e6f6ff;
+    --ts-blue: #6fb6e8;
+    --ts-accent-rgb: 189, 232, 255;
+    --ts-accent-hover: #d4f0ff;
+    --ts-accent-active: #9fd6f5;
+    --ts-outline: #3f6585;
+}
+html[data-ts-theme=winter][data-bs-theme=dark] {
+    --bs-body-bg: #040c15;
+    --bs-body-color: #eef6fc;
+    --bs-border-color: #22405e;
+    --bs-tertiary-bg: #11263b;
+    --ts-surface: #0c1e31;
+    --ts-surface-border: #22405e;
+    --bs-link-color-rgb: 230, 246, 255;
+    --bs-link-hover-color-rgb: 189, 232, 255;
+}
+html[data-ts-theme=summer] {
+    --ts-navy: #03222a;
+    --ts-deep: #0b4552;
+    --ts-accent: #ffd23f;
+    --ts-accent-soft: #ffe995;
+    --ts-blue: #ff7a59;
+    --ts-accent-rgb: 255, 210, 63;
+    --ts-accent-hover: #ffdd6e;
+    --ts-accent-active: #ebbb1f;
+    --ts-outline: #6d6326;
+}
+html[data-ts-theme=summer][data-bs-theme=dark] {
+    --bs-body-bg: #02171c;
+    --bs-body-color: #eefafb;
+    --bs-border-color: #145866;
+    --bs-tertiary-bg: #0a3a44;
+    --ts-surface: #06323c;
+    --ts-surface-border: #145866;
+    --bs-link-color-rgb: 255, 233, 149;
+    --bs-link-hover-color-rgb: 255, 210, 63;
+}
+
 /* Settings: the theme picker */
 .ts-theme-picker {
     display: flex;
@@ -1599,4 +1686,309 @@ html[data-ts-theme=gold][data-bs-theme=dark] {
     margin: 0;
     padding-left: 1.1rem;
     color: var(--bs-secondary-color);
+}
+
+/* ---------- Message to the TV, under Playing now ---------- */
+.home-message {
+    margin-top: 0.9rem;
+    padding-top: 0.9rem;
+    border-top: 1px solid var(--ts-surface-border);
+}
+
+.home-message-label {
+    display: block;
+    font-weight: 600;
+    color: var(--bs-emphasis-color);
+    margin-bottom: 0.5rem;
+}
+
+.home-message-quick {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-bottom: 0.6rem;
+}
+
+.home-message-quick .btn {
+    border-radius: 1rem;
+}
+
+.home-message-row {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.home-message-row .form-control {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.home-message-device {
+    flex: 0 0 auto;
+    width: auto;
+}
+
+.home-message-row .btn {
+    flex: 0 0 auto;
+}
+
+.home-message-status {
+    margin: 0.5rem 0 0;
+    color: var(--bs-secondary-color);
+}
+
+.home-message-error {
+    color: var(--bs-danger-text-emphasis);
+}
+
+@media (max-width: 575.98px) {
+    .home-message-row {
+        flex-wrap: wrap;
+    }
+
+    .home-message-device {
+        width: 100%;
+    }
+}
+
+.home-sounds {
+    margin-top: 0.9rem;
+}
+
+.home-sound {
+    display: inline-flex;
+    align-items: center;
+}
+
+.home-sound-remove {
+    padding: 0 0.3rem;
+    color: var(--bs-secondary-color);
+}
+
+.home-sound-add {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.home-sound-add .form-control {
+    flex: 1 1 14rem;
+    width: auto;
+}
+
+.home-sound-add .home-message-status {
+    flex-basis: 100%;
+}
+
+/* ---------- A game drawing too few frames ---------- */
+.home-fps-note {
+    display: flex;
+    gap: 0.7rem;
+    align-items: flex-start;
+    margin-top: 0.6rem;
+    padding: 0.7rem 0.9rem;
+    border-radius: 0.6rem;
+    background-color: var(--bs-warning-bg-subtle);
+    border: 1px solid var(--bs-warning-border-subtle);
+}
+
+.home-fps-note i {
+    margin-top: 0.2rem;
+    color: var(--bs-warning-text-emphasis);
+}
+
+.home-fps-note p {
+    margin: 0;
+}
+
+.home-fps-title {
+    font-weight: 600;
+    color: var(--bs-emphasis-color);
+}
+
+.home-fps-desc {
+    color: var(--bs-secondary-color);
+    font-size: 0.92rem;
+}
+
+.home-fps-reminder {
+    margin: 0.8rem 0 0;
+}
+
+/* ---------- Screenshots and clips ---------- */
+.home-captures {
+    margin: 0 0 1.5rem;
+    padding: 1rem 1.4rem 1.2rem;
+    background-color: var(--ts-surface);
+    border: 1px solid var(--ts-surface-border);
+    border-radius: 0.75rem;
+}
+
+.home-captures-where {
+    color: var(--bs-secondary-color);
+    font-size: 0.92rem;
+}
+
+.home-captures-grid {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+    gap: 0.75rem;
+}
+
+.home-captures-grid a {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+}
+
+.home-captures-grid img,
+.home-capture-clip {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    border-radius: 0.5rem;
+    background-color: var(--bs-tertiary-bg);
+}
+
+.home-capture-clip {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.6rem;
+    color: var(--ts-accent);
+}
+
+.home-captures-grid a:hover img,
+.home-captures-grid a:focus-visible img {
+    outline: 2px solid var(--ts-accent);
+    outline-offset: 2px;
+}
+
+.home-capture-name {
+    display: block;
+    margin-top: 0.3rem;
+    font-size: 0.8rem;
+    color: var(--bs-secondary-color);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.home-milestones {
+    margin-top: 1.1rem;
+}
+
+.home-milestones ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.home-milestones li {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.3rem 0.75rem;
+    border-radius: 1rem;
+    background-color: var(--bs-tertiary-bg);
+    font-size: 0.9rem;
+}
+
+.home-milestones li i {
+    color: var(--bs-warning-text-emphasis);
+}
+
+.home-milestone-new {
+    outline: 2px solid var(--ts-accent);
+}
+
+.home-milestone-date {
+    color: var(--bs-secondary-color);
+    font-size: 0.8rem;
+}
+
+/* Troubleshooting: Wi-Fi channels */
+.ts-wifi-table {
+    max-width: 32rem;
+}
+
+.ts-wifi-best td {
+    font-weight: 600;
+}
+
+/* ---------- The Live page on a phone ---------- */
+.home-phone {
+    display: flex;
+    gap: 1.25rem;
+    align-items: flex-start;
+    margin: 0 0 1.5rem;
+    padding: 1rem 1.4rem;
+    background-color: var(--ts-surface);
+    border: 1px solid var(--ts-surface-border);
+    border-radius: 0.75rem;
+}
+
+.home-phone-qr {
+    flex: 0 0 9rem;
+    width: 9rem;
+    padding: 0.4rem;
+    background: #ffffff;
+    border-radius: 0.5rem;
+}
+
+.home-phone-qr svg {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+.home-phone-url {
+    font-family: inherit;
+    word-break: break-all;
+}
+
+.home-phone-note {
+    color: var(--bs-secondary-color);
+    font-size: 0.88rem;
+    margin-bottom: 0;
+}
+
+@media (max-width: 575.98px) {
+    .home-phone {
+        flex-direction: column;
+    }
+}
+
+.home-highlights {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    align-items: center;
+    margin-bottom: 0.9rem;
+}
+
+.home-highlights .home-message-status {
+    margin: 0;
+}
+
+/* Devices: daily play time */
+.ts-playtime-input {
+    max-width: 6.5rem;
+}
+
+.home-playtime {
+    color: var(--bs-secondary-color);
+    font-size: 0.9rem;
+}
+
+.home-playtime i {
+    color: var(--ts-accent);
 }
