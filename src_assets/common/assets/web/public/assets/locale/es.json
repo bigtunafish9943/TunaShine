@@ -746,6 +746,7 @@
     "whatsnew_since": "Desde {version}, la última versión que vio este navegador:",
     "whatsnew_ok": "Entendido",
     "watch": "Ver",
+    "share_screen": "Compartir mi pantalla",
     "sharing_who": "Mirando: {names}",
     "sharing_on": "Tu pantalla se está compartiendo con los navegadores que miran, {minutes} minutos más ({viewers} mirando ahora).",
     "sharing_stop": "Dejar de compartir"
