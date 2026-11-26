@@ -67,6 +67,17 @@
       color: var(--bs-secondary-color);
       align-self: center;
     }
+    .self-check {
+      border: 1px solid var(--bs-border-color);
+      border-radius: 0.5rem;
+      padding: 0.9rem 1rem;
+      margin-bottom: 1.5rem;
+      max-width: 70ch;
+    }
+
+    .self-row {
+      padding: 0.2rem 0;
+    }
   </style>
 </head>
 
@@ -75,6 +86,23 @@
   <div class="container mb-5">
     <h1 class="my-4">{{ $t('checklist.title') }}</h1>
     <p style="max-width: 70ch">{{ $t('checklist.intro') }}</p>
+
+    <section class="self-check" aria-labelledby="selfcheck-title">
+      <h2 class="h5" id="selfcheck-title">{{ $t('checklist.self_title') }}</h2>
+      <p class="small text-muted mb-2">{{ $t('checklist.self_desc') }}</p>
+      <ul class="list-unstyled mb-0" v-if="selfChecks.length">
+        <li v-for="c in selfChecks" :key="c.id" class="self-row">
+          <i class="fas fa-fw" :class="c.state === 'ok' ? 'fa-circle-check text-success' : c.state === 'warn' ? 'fa-triangle-exclamation text-warning' : 'fa-circle-info text-secondary'" aria-hidden="true"></i>
+          <span class="visually-hidden">{{ $t('checklist.self_state_' + c.state) }}:</span>
+          {{ $t('checklist.self_' + c.id + '_' + c.state, { detail: c.detail }) }}
+        </li>
+      </ul>
+      <p class="small mb-0" v-else>{{ $t('checklist.self_loading') }}</p>
+      <div class="d-flex flex-wrap align-items-center gap-2 mt-2" v-if="selfChecks.length">
+        <button type="button" class="btn btn-sm btn-outline-secondary" @click="testCheer">{{ $t('checklist.self_cheer') }}</button>
+        <span class="small" role="status">{{ cheerTested ? $t('checklist.self_cheer_look') : '' }}</span>
+      </div>
+    </section>
 
     <div class="check-summary">
       <span><strong>{{ counts.works }}</strong> {{ $t('checklist.count_works') }}</span>
@@ -169,6 +197,8 @@
           results: {},
           notes: {},
           error: '',
+          selfChecks: [],
+          cheerTested: false,
         };
       },
       computed: {
@@ -184,6 +214,7 @@
       },
       created() {
         this.load();
+        this.loadSelfCheck();
       },
       methods: {
         stateOf(id) {
@@ -194,6 +225,18 @@
           const notes = {};
           for (const [id, r] of Object.entries(this.results)) notes[id] = r.note || '';
           this.notes = notes;
+        },
+        async testCheer() {
+          try {
+            await fetch('./api/selfcheck/cheer', { credentials: 'include', method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+            this.cheerTested = true;
+          } catch (e) { /* nothing to show */ }
+        },
+        async loadSelfCheck() {
+          try {
+            const r = await fetch('./api/selfcheck', { credentials: 'include' }).then((r) => r.json());
+            this.selfChecks = r.checks || [];
+          } catch (e) { /* the list below still works */ }
         },
         async load() {
           try {

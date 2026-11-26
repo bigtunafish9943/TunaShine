@@ -29,6 +29,7 @@
 
 #ifdef _WIN32
   #include "platform/windows/misc.h"
+  #include "platform/windows/user_helper.h"
   #include "platform/windows/virtual_display.h"
 #endif
 
@@ -152,6 +153,9 @@ int main(int argc, char *argv[]) {
   // The screen capture helper TunaStream starts in the user's session (WGC under the service)
   if (argc > 1 && std::string_view {argv[1]} == "--wgc-helper") {
     return platf::wgc_helper_main(argc, argv);
+  }
+  if (argc > 1 && std::string_view {argv[1]} == "--sound-helper") {
+    return platf::sound_helper_main(argc, argv);
   }
 
   setlocale(LC_ALL, "C");

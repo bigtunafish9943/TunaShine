@@ -65,6 +65,8 @@
 #include "uuid.h"
 
 #ifdef _WIN32
+  #include "platform/windows/cheer_overlay.h"
+  #include "platform/windows/self_check.h"
   #include "platform/windows/utils.h"
 #endif
 
@@ -1525,6 +1527,40 @@ namespace confighttp {
     auto out = watch::sharing();
     out["monitors"] = watch::monitors();
     out["soundApps"] = watch::sound_apps();
+    out["status"] = true;
+    send_response(response, out);
+  }
+
+  /**
+   * @brief GET /api/selfcheck: what the PC can check by itself before testing, for the
+   *        checklist page: {"checks": [{"id", "state", "detail"}]}. Only with the password.
+   */
+  void getSelfCheck(resp_https_t response, req_https_t request) {
+    if (!authenticate_owner(response, request)) {
+      return;
+    }
+    nlohmann::json out;
+    out["status"] = true;
+#ifdef _WIN32
+    out["checks"] = platf::self_check();
+#else
+    out["checks"] = nlohmann::json::array();
+#endif
+    send_response(response, out);
+  }
+
+  /**
+   * @brief POST /api/selfcheck/cheer: show a test cheer on this PC's main screen, to see that
+   *        cheers can appear there. Only with the password.
+   */
+  void postSelfCheckCheer(resp_https_t response, req_https_t request) {
+    if (!validateContentType(response, request, "application/json") || !authenticate_owner(response, request)) {
+      return;
+    }
+#ifdef _WIN32
+    platf::show_cheer({}, "\xF0\x9F\x91\x8B", "TunaStream test");
+#endif
+    nlohmann::json out;
     out["status"] = true;
     send_response(response, out);
   }
@@ -3976,6 +4012,8 @@ namespace confighttp {
     server.resource["^/api/watch/share$"]["POST"] = postWatchShare;
     server.resource["^/api/watch/viewers$"]["GET"] = getWatchViewers;
     server.resource["^/api/watch/now$"]["GET"] = getWatchNow;
+    server.resource["^/api/selfcheck$"]["GET"] = getSelfCheck;
+    server.resource["^/api/selfcheck/cheer$"]["POST"] = postSelfCheckCheer;
     server.resource["^/api/watch/viewers/remove$"]["POST"] = postWatchViewerRemove;
     server.resource["^/api/watch/quality$"]["POST"] = postWatchQuality;
     server.resource["^/api/watch/cheer$"]["POST"] = postWatchCheer;
