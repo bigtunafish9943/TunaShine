@@ -1360,8 +1360,8 @@
       },
       "sharewindow": {
         "title": "Compartir una ventana",
-        "how": "En la página Ver, en Compartir mi pantalla, elige la ventana de un juego de la lista y compártela. Cambia a otra ventana en el PC y luego cierra el juego.",
-        "expect": "La tableta muestra solo la ventana del juego y solo oye el juego, aunque estés en otra ventana. Al cerrarse el juego se deja de compartir; nunca se muestra el resto de la pantalla."
+        "how": "En la página Ver, en Compartir mi pantalla, elige la ventana de un juego de la lista y compártela. Haz la ventana más pequeña, cambia a otra ventana en el PC y luego cierra el juego.",
+        "expect": "La tableta muestra solo la ventana del juego, llenando la imagen sea cual sea su tamaño, y solo oye el juego, aunque estés en otra ventana. Al cerrarse el juego se deja de compartir; nunca se muestra el resto de la pantalla."
       },
       "signin": {
         "title": "Mantener la sesión iniciada",

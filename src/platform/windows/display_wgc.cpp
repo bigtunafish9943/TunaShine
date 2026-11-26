@@ -5,6 +5,7 @@
 // standard includes
 #include <algorithm>
 #include <atomic>
+#include <cmath>
 #include <condition_variable>
 #include <filesystem>
 #include <mutex>
@@ -13,6 +14,7 @@
 #include <thread>
 
 // platform includes
+#include <d3dcompiler.h>
 #include <dxgi1_2.h>
 #include <sddl.h>
 #include <UserEnv.h>
@@ -438,6 +440,108 @@ namespace {
     winrt::IDirect3DDevice uwp_device {nullptr};
     winrt::Windows::Graphics::DirectX::DirectXPixelFormat pixel_format {};
 
+    // Sizing the window to fill the picture, keeping its shape: a small game window isn't a
+    // postage stamp in the middle, and a big one isn't cut off
+    winrt::com_ptr<ID3D11VertexShader> vs;
+    winrt::com_ptr<ID3D11PixelShader> ps;
+    winrt::com_ptr<ID3D11SamplerState> sampler;
+    winrt::com_ptr<ID3D11Texture2D> picture;  ///< the window's picture, readable by the shader
+    winrt::com_ptr<ID3D11ShaderResourceView> picture_view;
+    D3D11_TEXTURE2D_DESC picture_desc {};
+    bool scaler_tried = false;
+    bool scaler_ok = false;
+
+    bool make_scaler() {
+      static constexpr char source[] = R"(
+Texture2D picture : register(t0);
+SamplerState smooth : register(s0);
+struct v2p { float4 pos : SV_Position; float2 uv : TEXCOORD0; };
+v2p vs_main(uint id : SV_VertexID) {
+  v2p o;
+  o.uv = float2((id << 1) & 2, id & 2);
+  o.pos = float4(o.uv * float2(2, -2) + float2(-1, 1), 0, 1);
+  return o;
+}
+float4 ps_main(v2p i) : SV_Target {
+  return float4(picture.Sample(smooth, i.uv).rgb, 1);
+}
+)";
+      winrt::com_ptr<ID3DBlob> vs_code;
+      winrt::com_ptr<ID3DBlob> ps_code;
+      winrt::com_ptr<ID3DBlob> errors;
+      if (FAILED(D3DCompile(source, sizeof(source) - 1, nullptr, nullptr, nullptr, "vs_main", "vs_4_0", D3DCOMPILE_OPTIMIZATION_LEVEL3, 0, vs_code.put(), errors.put())) ||
+          FAILED(D3DCompile(source, sizeof(source) - 1, nullptr, nullptr, nullptr, "ps_main", "ps_4_0", D3DCOMPILE_OPTIMIZATION_LEVEL3, 0, ps_code.put(), errors.put())) ||
+          FAILED(device->CreateVertexShader(vs_code->GetBufferPointer(), vs_code->GetBufferSize(), nullptr, vs.put())) ||
+          FAILED(device->CreatePixelShader(ps_code->GetBufferPointer(), ps_code->GetBufferSize(), nullptr, ps.put()))) {
+        return false;
+      }
+      D3D11_SAMPLER_DESC sd {};
+      sd.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+      sd.AddressU = sd.AddressV = sd.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+      sd.ComparisonFunc = D3D11_COMPARISON_NEVER;
+      sd.MaxLOD = D3D11_FLOAT32_MAX;
+      return SUCCEEDED(device->CreateSamplerState(&sd, sampler.put()));
+    }
+
+    /// Draws the window's w x h picture from src into the slot, as large as fits, on black
+    bool draw_scaled(int slot, ID3D11Texture2D *src, const D3D11_TEXTURE2D_DESC &desc, UINT w, UINT h) {
+      if (!scaler_tried) {
+        scaler_tried = true;
+        scaler_ok = make_scaler();
+      }
+      if (!scaler_ok || w == 0 || h == 0) {
+        return false;
+      }
+      if (!picture || picture_desc.Width != w || picture_desc.Height != h || picture_desc.Format != desc.Format) {
+        picture_view = nullptr;
+        picture = nullptr;
+        D3D11_TEXTURE2D_DESC t {};
+        t.Width = w;
+        t.Height = h;
+        t.MipLevels = 1;
+        t.ArraySize = 1;
+        t.SampleDesc.Count = 1;
+        t.Usage = D3D11_USAGE_DEFAULT;
+        t.Format = desc.Format;
+        t.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+        if (FAILED(device->CreateTexture2D(&t, nullptr, picture.put())) ||
+            FAILED(device->CreateShaderResourceView(picture.get(), nullptr, picture_view.put()))) {
+          picture = nullptr;
+          picture_view = nullptr;
+          return false;
+        }
+        picture_desc = t;
+      }
+      D3D11_BOX box {0, 0, 0, w, h, 1};
+      ctx->CopySubresourceRegion(picture.get(), 0, 0, 0, 0, src, 0, &box);
+
+      const float scale = (std::min)((float) ring_desc.Width / w, (float) ring_desc.Height / h);
+      const float dw = (std::min)((float) ring_desc.Width, std::round(w * scale));
+      const float dh = (std::min)((float) ring_desc.Height, std::round(h * scale));
+      const float black[4] = {0.0f, 0.0f, 0.0f, 1.0f};
+      ctx->ClearRenderTargetView(targets[slot].get(), black);
+      D3D11_VIEWPORT vp {std::floor((ring_desc.Width - dw) / 2), std::floor((ring_desc.Height - dh) / 2), dw, dh, 0.0f, 1.0f};
+      ctx->RSSetViewports(1, &vp);
+      ctx->RSSetState(nullptr);
+      ctx->OMSetBlendState(nullptr, nullptr, 0xffffffff);
+      ID3D11RenderTargetView *rtv = targets[slot].get();
+      ctx->OMSetRenderTargets(1, &rtv, nullptr);
+      ctx->IASetInputLayout(nullptr);
+      ctx->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+      ctx->VSSetShader(vs.get(), nullptr, 0);
+      ctx->PSSetShader(ps.get(), nullptr, 0);
+      ID3D11ShaderResourceView *srv = picture_view.get();
+      ctx->PSSetShaderResources(0, 1, &srv);
+      ID3D11SamplerState *smp = sampler.get();
+      ctx->PSSetSamplers(0, 1, &smp);
+      ctx->Draw(3, 0);
+      // Let go of the shared texture before handing it over
+      ID3D11ShaderResourceView *no_srv = nullptr;
+      ctx->PSSetShaderResources(0, 1, &no_srv);
+      ctx->OMSetRenderTargets(0, nullptr, nullptr);
+      return true;
+    }
+
     bool send(const msg_t &m) {
       DWORD written = 0;
       return WriteFile(frame_pipe, &m, sizeof(m), &written, nullptr) && written == sizeof(m);
@@ -543,13 +647,17 @@ namespace {
           continue;
         }
         if (window_mode) {
-          // The window in the middle, on black; anything bigger than the display is cut off
-          const float black[4] = {0.0f, 0.0f, 0.0f, 1.0f};
-          ctx->ClearRenderTargetView(targets[slot].get(), black);
-          const UINT w = (std::min)({(UINT) (std::max)(0, content.Width), desc.Width, ring_desc.Width});
-          const UINT h = (std::min)({(UINT) (std::max)(0, content.Height), desc.Height, ring_desc.Height});
-          D3D11_BOX box {0, 0, 0, w, h, 1};
-          ctx->CopySubresourceRegion(ring[slot].get(), 0, (ring_desc.Width - w) / 2, (ring_desc.Height - h) / 2, 0, src.get(), 0, &box);
+          const UINT cw = (std::min)((UINT) (std::max)(0, content.Width), desc.Width);
+          const UINT ch = (std::min)((UINT) (std::max)(0, content.Height), desc.Height);
+          if (!draw_scaled(slot, src.get(), desc, cw, ch)) {
+            // Couldn't size it: the window in the middle, on black; anything bigger than the display is cut off
+            const float black[4] = {0.0f, 0.0f, 0.0f, 1.0f};
+            ctx->ClearRenderTargetView(targets[slot].get(), black);
+            const UINT w = (std::min)(cw, ring_desc.Width);
+            const UINT h = (std::min)(ch, ring_desc.Height);
+            D3D11_BOX box {0, 0, 0, w, h, 1};
+            ctx->CopySubresourceRegion(ring[slot].get(), 0, (ring_desc.Width - w) / 2, (ring_desc.Height - h) / 2, 0, src.get(), 0, &box);
+          }
         } else {
           ctx->CopyResource(ring[slot].get(), src.get());
         }

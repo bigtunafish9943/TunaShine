@@ -1360,8 +1360,8 @@
       },
       "sharewindow": {
         "title": "Ein Fenster teilen",
-        "how": "Wähle auf der Seite „Zuschauen“ unter „Meinen Bildschirm teilen“ das Fenster eines Spiels aus der Liste und teile es. Wechsle am PC zu einem anderen Fenster und schließ dann das Spiel.",
-        "expect": "Das Tablet zeigt nur das Spielfenster und hört nur das Spiel, auch wenn du in einem anderen Fenster bist. Wird das Spiel geschlossen, endet das Teilen; der restliche Bildschirm wird nie gezeigt."
+        "how": "Wähle auf der Seite „Zuschauen“ unter „Meinen Bildschirm teilen“ das Fenster eines Spiels aus der Liste und teile es. Verkleinere das Fenster, wechsle am PC zu einem anderen Fenster und schließ dann das Spiel.",
+        "expect": "Das Tablet zeigt nur das Spielfenster, bildfüllend egal wie groß es ist, und hört nur das Spiel, auch wenn du in einem anderen Fenster bist. Wird das Spiel geschlossen, endet das Teilen; der restliche Bildschirm wird nie gezeigt."
       },
       "signin": {
         "title": "Angemeldet bleiben",
