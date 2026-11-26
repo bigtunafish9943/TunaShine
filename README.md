@@ -97,20 +97,22 @@ and every step was tightened:
   by themselves, and your own new windows (Windows' own included) are moved back to your screens.
   *Settings > Shared PC*.
 - **Watch in a browser.** *Watch* on the home page shows the game being streamed, with its sound, on any laptop
-  or phone on your network, view only and a moment behind the TV. *Share a watch link* gives someone else a link
-  that works once, within a day, and opens nothing but the picture. The device that opens it keeps watching
-  with its own key, which changes every day and stops working after a week unused. For someone who comes back often, a
-  *watch password* doesn't change: typed on the Watch page, it lets that device watch the same way. Signed in, the
-  Watch page lists who is watching, by name and device, with *Remove access* for each, and a *Sharper (1080p)*
-  picture for small text.
+  or phone on your network, view only and a moment behind the TV. *Share a watch link* asks who it's for and gives
+  them a link that works once, within a day. The device that opens it keeps watching with its own key, which
+  changes every day and stops working after a week unused. For someone who comes back often, a *watch password*
+  doesn't change: typed on the Watch page, it lets that device watch the same way. Either way, a viewer sees only
+  the picture and the game's name, nothing else about the PC. Signed in, the Watch page lists who is watching,
+  by name and device, with *Remove access* for each, and a *Sharper (1080p)* picture for small text. On a tablet,
+  *Add to Home Screen* opens Watch like an app.
 - **Share my screen.** On the Watch page, choose to share one of the PC's own screens for an hour or a few, so someone can
-  watch you play at the desk on a tablet or phone. The home page and the tray say while it's on, a TV's stream takes
-  over while it plays, and it turns itself off when the time is up. *Sound* can leave out your voice chat (Discord,
+  watch you play at the desk on a tablet or phone. The home page (with who is watching) and the tray say while
+  it's on, a TV's stream takes over while it plays, and it turns itself off when the time is up. *Sound* can leave out your voice chat (Discord,
   TeamSpeak, Teams and others) or music, so viewers hear just the game.
 - **Cheers.** Viewers can tap a reaction (👍 ❤️ 😂 🔥 👏 😮 GG). It pops up for a few seconds in the corner of
-  your shared screen, or on the TV while it streams, and the other viewers see it too. Can be turned off.
+  your shared screen, or on the TV while it streams, and the other viewers see it too. A TV watching sends them
+  with OK on the remote. Can be turned off.
 - **Watch on another TV.** In TunaReceive, press and hold the PC and choose *Watch* to see what another TV is
-  playing (or the shared PC screen), view only.
+  playing (or the shared PC screen), with sound, view only. No link or password: the TV is already paired.
 - **Do not disturb during streams** (on by default). Windows' notifications wait in the notification centre
   instead of popping up over the game.
 - **Privacy mode** (off unless turned on, with Shared PC off). The PC's own monitors go dark while a TV streams,
@@ -163,11 +165,16 @@ and every step was tightened:
   and says which channel is quietest.
 - **A test checklist** (*/checklist*, linked from Troubleshooting) of features to try on your own PC, TV and
   controllers, with how to tell each one works. Mark each *Works* or *Problem*; the marks are kept on the PC.
+  It opens with a *Self-check* of what the PC can tell by itself (service, someone signed in, Windows version,
+  capture method, a second encoder for Watch, the virtual display driver, RivaTuner), each saying what won't
+  work and why, and a button that shows a test cheer on the PC's screen.
 - **English, Spanish, French and German**, under *Settings > General > Language*.
 - **Backup and restore.** One file with your settings, apps, sounds and play history, and your pairings if you
   tick them. TunaReceive can keep its own backup on the PC and get it back on a new TV.
 - **Permissions for each device**, with one-click presets such as *Controller only*.
 - **Send files to the TV** from the home page; they arrive in TunaReceive's Downloads.
+- **Your PC's games on the TV's home screen** with [TunaHome](https://github.com/bigtunafish9943/TunaHome), a home
+  screen for Android TV: through TunaReceive it shows them as a row with their covers, most recently played first.
 - **Hardware encoding** on AMD, Intel and Nvidia GPUs, with a software fallback.
 - Clipboard sync, input-only mode, and commands that run when a device connects or disconnects.
 
