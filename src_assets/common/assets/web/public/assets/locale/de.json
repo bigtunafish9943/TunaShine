@@ -1211,6 +1211,10 @@
     "self_rtss_ok": "RivaTuner Statistics Server läuft: Bildratenbegrenzungen sind genau, auch 59,94.",
     "self_rtss_warn": "RivaTuner Statistics Server ist installiert, läuft aber nicht: Starte ihn für genaue Begrenzungen.",
     "self_rtss_info": "RivaTuner Statistics Server ist nicht installiert: Die NVIDIA-Begrenzung wird genutzt, auf ganze Zahlen gerundet.",
+    "self_wake_ok": "{detail} ist per Kabel verbunden und darf diesen PC wecken: Der Fernseher kann ihn aus dem Energiesparmodus holen.",
+    "self_wake_warn": "{detail} darf diesen PC nicht wecken, deshalb kann der Fernseher ihn nicht wecken. Im Geräte-Manager unter Eigenschaften > Energieverwaltung dieses Netzwerkadapters „Gerät kann den Computer aus dem Ruhezustand aktivieren“ und „Nur Magic Packet kann Computer aus dem Ruhezustand aktivieren“ anhaken. Eventuell muss Wake-on-LAN auch im BIOS eingeschaltet werden.",
+    "self_wake_info": "Dieser PC ist per WLAN verbunden ({detail}): Die meisten PCs lassen sich nicht über WLAN wecken. Nimm ein Netzwerkkabel, wenn der Fernseher ihn wecken soll.",
+    "self_fast_startup_info": "Der Schnellstart von Windows ist an: Der Fernseher kann diesen PC aus dem Energiesparmodus wecken, meist aber nicht, wenn er heruntergefahren ist. Dafür den Schnellstart ausschalten (Systemsteuerung > Energieoptionen > Auswählen, was beim Drücken von Netzschaltern geschehen soll).",
     "intro": "Dinge, die du an deinem eigenen PC, Fernseher und Controllern ausprobieren kannst. Markiere jeden Punkt, wenn du ihn ausprobiert hast; deine Markierungen werden auf diesem PC gespeichert, sodass du von jedem Browser aus weitermachen kannst.",
     "count_works": "funktionieren",
     "count_problem": "haben ein Problem",
@@ -1362,6 +1366,11 @@
         "title": "Ein Fenster teilen",
         "how": "Wähle auf der Seite „Zuschauen“ unter „Meinen Bildschirm teilen“ das Fenster eines Spiels aus der Liste und teile es. Verkleinere das Fenster, wechsle am PC zu einem anderen Fenster und schließ dann das Spiel.",
         "expect": "Das Tablet zeigt nur das Spielfenster, bildfüllend egal wie groß es ist, und hört nur das Spiel, auch wenn du in einem anderen Fenster bist. Wird das Spiel geschlossen, endet das Teilen; der restliche Bildschirm wird nie gezeigt."
+      },
+      "wakepc": {
+        "title": "Den PC vom Fernseher aus wecken",
+        "how": "Versetze den PC in den Energiesparmodus (Start > Ein/Aus > Energiesparmodus). Öffne auf dem Fernseher TunaReceive und wähle den PC. Schau vorher in den Selbsttest oben: Er sagt, ob der Netzwerkadapter dieses PCs ihn wecken darf.",
+        "expect": "Auf dem Fernseher erscheint „wird geweckt“, der PC wacht innerhalb von etwa 30 Sekunden auf und seine Spiele öffnen sich von selbst. Wacht er nicht auf, sagt der Fernseher, was der PC braucht."
       },
       "signin": {
         "title": "Angemeldet bleiben",

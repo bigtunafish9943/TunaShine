@@ -169,7 +169,8 @@ and every step was tightened:
 - **A test checklist** (*/checklist*, linked from Troubleshooting) of features to try on your own PC, TV and
   controllers, with how to tell each one works. Mark each *Works* or *Problem*; the marks are kept on the PC.
   It opens with a *Self-check* of what the PC can tell by itself (service, someone signed in, Windows version,
-  capture method, a second encoder for Watch, the virtual display driver, RivaTuner), each saying what won't
+  capture method, a second encoder for Watch, the virtual display driver, RivaTuner, whether the TV can wake the
+  PC: wired, its network adapter allowed to wake it, and Fast startup), each saying what won't
   work and why, and a button that shows a test cheer on the PC's screen.
 - **English, Spanish, French and German**, under *Settings > General > Language*.
 - **Backup and restore.** One file with your settings, apps, sounds and play history, and your pairings if you
