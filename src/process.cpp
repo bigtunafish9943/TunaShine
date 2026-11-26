@@ -11,7 +11,9 @@
 #include <algorithm>
 #include <atomic>
 #include <cctype>
+#include <chrono>
 #include <filesystem>
+#include <mutex>
 #include <set>
 #include <string>
 #include <thread>
@@ -42,6 +44,9 @@
 #include "system_tray.h"
 #include "utility.h"
 #include "video.h"
+#ifdef _WIN32
+  #include "platform/windows/app_windows.h"
+#endif
 #include "uuid.h"
 #include "watch.h"
 
@@ -216,6 +221,18 @@ namespace proc {
       // avoid zombie process
       proc.detach();
     }
+  }
+
+  namespace {
+    std::mutex continue_lock;
+    std::uint64_t continue_window = 0;
+    std::chrono::steady_clock::time_point continue_until;
+  }  // namespace
+
+  void continue_window_on_next_launch(std::uint64_t window_id) {
+    std::lock_guard lg {continue_lock};
+    continue_window = window_id;
+    continue_until = std::chrono::steady_clock::now() + std::chrono::minutes {2};
   }
 
   std::vector<config::server_cmd_t> server_commands() {
@@ -618,6 +635,33 @@ namespace proc {
       _window_herder = config::stream.shared_pc ? platf::keep_app_on_stream(this->display_name, steam_app, home) :
                                                   platf::herd_new_windows(this->display_name, steam_app);
     }
+
+#ifdef _WIN32
+    // Continue on the TV: the game that was being played at the PC comes onto the stream's screen
+    {
+      std::uint64_t window = 0;
+      {
+        std::lock_guard lg {continue_lock};
+        if (continue_window && std::chrono::steady_clock::now() < continue_until) {
+          window = continue_window;
+        }
+        continue_window = 0;
+      }
+      if (window && !this->display_name.empty()) {
+        std::thread([window, display = this->display_name]() {
+          // The new screen takes a moment to appear; try for a few seconds
+          for (int i = 0; i < 20; ++i) {
+            std::this_thread::sleep_for(std::chrono::milliseconds {500});
+            if (platf::move_window_to_display(window, display)) {
+              BOOST_LOG(info) << "Continue on the TV: the game moved onto the stream's screen"sv;
+              return;
+            }
+          }
+          BOOST_LOG(warning) << "Continue on the TV: couldn't move the game onto the stream's screen"sv;
+        }).detach();
+      }
+    }
+#endif
 
     // No notification pop-ups on the stream (Settings > Do not disturb during streams)
     if (config::stream.quiet_notifications) {

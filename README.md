@@ -91,6 +91,10 @@ and every step was tightened:
   bumpers, triggers, View, Menu and Guide), up to four, with rumble where the phone can vibrate. The link works for
   12 hours and only as a controller; a phone that's put away is unplugged after 20 seconds. Party games are the
   best fit, as a touch screen is slower than a real controller.
+- **Continue on the TV.** Playing at the desk and want the couch? TunaReceive sees the game in front at the PC
+  (one of your launchers' games, or anything full screen that isn't a browser or video player) and offers
+  *Continue on the TV*: a stream starts and the game's window moves onto the stream's screen, without
+  restarting it. Games in exclusive full screen may need switching to borderless or windowed first.
 - **Wake and sleep from the TV.** TunaReceive wakes the PC when you pick it (Wake-on-LAN), and *Put the PC to
   sleep* in its menu sends it back to sleep when you're done, unless another device is still streaming.
 - **Steam from the couch.** TunaReceive's quick menu has *PC commands*: open Steam Big Picture, leave it, restart
@@ -157,14 +161,20 @@ and every step was tightened:
   and other assistants: what's playing, the paired devices and the games, starting a game, ending a session,
   more play time, a message on the TV, the play recap, and the PC's and TVs' logs. It uses an access token, so
   an assistant can do only what the token allows; making a token shows the settings to paste in.
+- **Trophies.** Milestones for the couch: first stream and first 4K, hours played, a three-hour marathon, smooth
+  streaks, and some for fun: game night (three or more playing at once), a friend on a phone controller, night
+  owl, early bird, days in a row and different games played. They pop up on the TV after the stream that earned
+  them, and TunaReceive keeps them on a trophy shelf.
 - **Your last seven days.** The home page shows play time for each day, the most-played games and how smooth the
   streams were, with milestones as they're reached. The record stays on the PC.
 - **A reminder when a game runs slow.** When a game itself draws fewer than 59 frames a second, the home page
   says so and names the fix in the game's settings, and keeps a reminder until it runs at full rate.
-- **Your games, kept in sync** (off unless turned on, on the Apps page). Steam games you've played lately and games
-  newly installed from Epic, GOG, EA, Ubisoft, Amazon and the Microsoft Store are added by themselves, with
-  covers, and taken off again when they're uninstalled or, for Steam, not played for a while. Apps you added
-  yourself are never touched, and a synced game you delete stays deleted.
+- **Your games, kept in sync** (off unless turned on, on the Apps page). The games you've played lately are added
+  by themselves, with covers, from Steam, Epic, GOG, EA, Ubisoft, Amazon and the Microsoft Store and Xbox app.
+  Steam records when each game was played; for the other launchers, which don't, TunaStream reads when Windows last
+  ran the game (Windows' Prefetch records), and a game newly installed counts as played. Games are taken off again
+  when they're uninstalled or not played for a while. Covers for games from other stores come from Steam when the
+  game is on Steam too. Apps you added yourself are never touched, and a synced game you delete stays deleted.
 - **The game's frame rate matches the stream** (on by default). With RivaTuner Statistics Server installed the
   cap is exact, 59.94 included; otherwise NVIDIA's frame cap is used. V-Sync is turned off in games while
   streaming on NVIDIA cards, since the TV paces the picture. Both go back as they were when the stream ends.

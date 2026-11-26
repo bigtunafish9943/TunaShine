@@ -11,6 +11,7 @@
 #include <filesystem>
 #include <format>
 #include <string>
+#include <mutex>
 #include <thread>
 #include <utility>
 #include <string>
@@ -45,6 +46,10 @@
 #include "tv_messages.h"
 #include "platform/common.h"
 #include "process.h"
+#ifdef _WIN32
+  #include "platform/windows/app_windows.h"
+#endif
+#include "game_library.h"
 #include "rtsp.h"
 #include "stream.h"
 #include "system_tray.h"
@@ -1967,6 +1972,90 @@ namespace nvhttp {
   }
 
   /**
+   * Continue on the TV. GET /tuna/desk: the game being played at the PC right now, if any:
+   * {"playing", "name", "id"}. GET /tuna/desk/continue?id=: the device is about to start a stream
+   * to carry on with it; that window moves onto the stream's screen when it starts.
+   * Only for devices allowed to start games.
+   */
+  void tunaDesk(resp_https_t response, req_https_t request) {
+    print_req<TunaStreamHTTPS>(request);
+    auto named_cert_p = get_verified_cert(request);
+    nlohmann::json out;
+    out["playing"] = false;
+#ifdef _WIN32
+    if (!!(named_cert_p->perm & PERM::launch) && rtsp_stream::session_count() == 0) {
+      // The launchers' game folders, looked up at most every five minutes
+      static std::mutex games_lock;
+      static std::vector<game_library::game_t> games;
+      static std::chrono::steady_clock::time_point games_at;
+      std::vector<std::string> folders;
+      std::vector<std::pair<std::string, std::string>> named;  // folder, name
+      {
+        std::lock_guard lg {games_lock};
+        if (games.empty() || std::chrono::steady_clock::now() - games_at > 5min) {
+          games = game_library::find_installed_games();
+          games_at = std::chrono::steady_clock::now();
+        }
+        for (const auto &g : games) {
+          if (g.source != "program" && g.working_dir.size() > 3) {
+            folders.push_back(g.working_dir);
+            named.emplace_back(g.working_dir, g.name);
+          }
+        }
+      }
+      auto front = platf::front_window(folders);
+      if (!front.is_null()) {
+        std::string name;
+        auto path = front.value("path", std::string {});
+        std::transform(path.begin(), path.end(), path.begin(), [](unsigned char c) { return (char) std::tolower(c); });
+        std::size_t best = 0;
+        for (const auto &[folder, game] : named) {
+          auto f = folder;
+          std::transform(f.begin(), f.end(), f.begin(), [](unsigned char c) { return (char) std::tolower(c); });
+          if (f.size() > best && path.starts_with(f)) {
+            best = f.size();
+            name = game;
+          }
+        }
+        if (name.empty()) {
+          name = front.value("title", std::string {});
+        }
+        if (!name.empty()) {
+          out["playing"] = true;
+          out["name"] = name;
+          out["id"] = front.value("id", std::string {});
+        }
+      }
+    }
+#endif
+    SimpleWeb::CaseInsensitiveMultimap headers;
+    headers.emplace("Content-Type", "application/json");
+    response->write(SimpleWeb::StatusCode::success_ok, out.dump(), headers);
+    response->close_connection_after_response = true;
+  }
+
+  void tunaDeskContinue(resp_https_t response, req_https_t request) {
+    print_req<TunaStreamHTTPS>(request);
+    auto named_cert_p = get_verified_cert(request);
+    nlohmann::json out;
+    out["ok"] = false;
+    const auto args = request->parse_query_string();
+    if (auto it = args.find("id"); it != args.end() && !!(named_cert_p->perm & PERM::launch)) {
+      try {
+        proc::continue_window_on_next_launch(std::stoull(it->second));
+        out["ok"] = true;
+        BOOST_LOG(info) << named_cert_p->name << " continues the PC's game on the TV"sv;
+      } catch (const std::exception &) {
+        // Not a window id
+      }
+    }
+    SimpleWeb::CaseInsensitiveMultimap headers;
+    headers.emplace("Content-Type", "application/json");
+    response->write(SimpleWeb::StatusCode::success_ok, out.dump(), headers);
+    response->close_connection_after_response = true;
+  }
+
+  /**
    * GET /tuna/sleep: the TV is done for the night and puts the PC to sleep, the other half of
    * waking it. Only for devices allowed to start games, and not while another device streams.
    * Answers first, then sleeps a few seconds later.
@@ -2348,6 +2437,8 @@ namespace nvhttp {
     https_server.resource["^/tuna/watch$"]["GET"] = tunaWatch;
     https_server.resource["^/tuna/replay$"]["GET"] = tunaReplay;
     https_server.resource["^/tuna/sleep$"]["GET"] = tunaSleep;
+    https_server.resource["^/tuna/desk$"]["GET"] = tunaDesk;
+    https_server.resource["^/tuna/desk/continue$"]["GET"] = tunaDeskContinue;
     https_server.resource["^/tuna/settings$"]["POST"] = tunaSettings;
     https_server.resource["^/tuna/backup$"]["POST"] = tunaBackupSave;
     https_server.resource["^/tuna/backup$"]["GET"] = tunaBackupGet;

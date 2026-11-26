@@ -43,6 +43,12 @@ namespace input {
   std::vector<gamepad_status_t> gamepad_status();
 
   /**
+   * @brief The most controllers connected at once since the last call, and whether a phone joined
+   *        as one; both start again from what's connected now. For the play history.
+   */
+  std::pair<int, bool> take_peak_players();
+
+  /**
    * @brief The web page's Phone remote: the PC's mouse and keyboard from a phone, with or without
    *        a stream (a stuck Steam, a password to type, a pointer stuck in the middle).
    */

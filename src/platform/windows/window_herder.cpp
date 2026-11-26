@@ -39,6 +39,7 @@
 #include <tlhelp32.h>
 
 // local includes
+#include "app_windows.h"
 #include "misc.h"
 #include "src/config.h"
 #include "src/logging.h"
@@ -801,6 +802,23 @@ namespace platf {
       std::thread worker;
     };
   }  // namespace
+
+  bool move_window_to_display(std::uint64_t id, const std::string &display_name) {
+    auto hwnd = (HWND) (std::uintptr_t) id;
+    if (!id || !IsWindow(hwnd)) {
+      return false;
+    }
+    RECT target {};
+    if (!monitor_rect(from_utf8(display_name), target)) {
+      return false;
+    }
+    if (IsIconic(hwnd)) {
+      ShowWindow(hwnd, SW_RESTORE);
+    }
+    move_to(hwnd, target);
+    SetForegroundWindow(hwnd);
+    return true;
+  }
 
   std::unique_ptr<window_herder_t> herd_new_windows(const std::string &display_name, bool include_steam) {
     if (display_name.empty()) {

@@ -2565,6 +2565,7 @@ namespace stream {
         played.width = session.config.monitor.width;
         played.height = session.config.monitor.height;
         played.lost_video = (int) session.loss_events.load();
+        std::tie(played.players, played.phone_player) = input::take_peak_players();
         try {
           play_history::record(played);
         } catch (const std::exception &e) {

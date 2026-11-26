@@ -123,6 +123,54 @@ namespace play_history {
       reach("smooth_10", smooth_run >= 10);
       reach("smooth_hour", s.seconds >= 3600 && s.lost_video == 0);
       reach("full_rate_4k", s.width >= 3840 && s.target_fps >= 60 && s.avg_fps >= 59 && s.minutes >= 30);
+
+      // For fun: who, when and what
+      reach("game_night", s.players >= 3);
+      reach("phone_player", s.phone_player);
+      {
+        const auto local = [](std::int64_t t) {
+          const auto tt = (std::time_t) t;
+          std::tm out {};
+  #ifdef _WIN32
+          localtime_s(&out, &tt);
+  #else
+          localtime_r(&tt, &out);
+  #endif
+          return out;
+        };
+        const auto start = local(s.started);
+        const auto end = local(s.started + s.seconds);
+        reach("night_owl", end.tm_hour >= 1 && end.tm_hour < 5);
+        reach("early_bird", start.tm_hour >= 5 && start.tm_hour < 7);
+
+        // Days in a row with a game
+        char day[16];
+        std::strftime(day, sizeof day, "%Y-%m-%d", &end);
+        const std::string today {day};
+        const auto last = totals.value("lastDay", std::string {});
+        int streak = totals.value("streak", 0);
+        if (last != today) {
+          const auto yesterday = local(s.started + s.seconds - 86400);
+          char before[16];
+          std::strftime(before, sizeof before, "%Y-%m-%d", &yesterday);
+          streak = last == before ? streak + 1 : 1;
+          totals["lastDay"] = today;
+          totals["streak"] = streak;
+        }
+        reach("streak_3", streak >= 3);
+        reach("streak_7", streak >= 7);
+      }
+      {
+        auto &games = totals["games"];
+        if (!games.is_array()) {
+          games = nlohmann::json::array();
+        }
+        if (!s.app.empty() && std::find(games.begin(), games.end(), s.app) == games.end() && games.size() < 1000) {
+          games.push_back(s.app);
+        }
+        reach("variety_5", games.size() >= 5);
+        reach("variety_10", games.size() >= 10);
+      }
       save_json(totals_file(), totals);
     }
   }  // namespace
