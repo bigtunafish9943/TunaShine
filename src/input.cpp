@@ -9,6 +9,7 @@ extern "C" {
 }
 
 // standard includes
+#include <algorithm>
 #include <bitset>
 #include <chrono>
 #include <cmath>
@@ -17,6 +18,7 @@ extern "C" {
 #include <mutex>
 #include <thread>
 #include <unordered_map>
+#include <vector>
 
 // lib includes
 #include <boost/endian/buffers.hpp>
@@ -1725,6 +1727,81 @@ namespace input {
       platf_input.reset();
     }
   };
+
+  namespace remote {
+    void move(int dx, int dy) {
+      if (platf_input) {
+        platf::move_mouse(platf_input, std::clamp(dx, -500, 500), std::clamp(dy, -500, 500));
+      }
+    }
+
+    void click(int button) {
+      if (!platf_input || button < 1 || button > 3) {
+        return;
+      }
+      const int b = button == 1 ? BUTTON_LEFT : button == 2 ? BUTTON_MIDDLE : BUTTON_RIGHT;
+      platf::button_mouse(platf_input, b, false);
+      platf::button_mouse(platf_input, b, true);
+    }
+
+    void scroll(int amount) {
+      if (platf_input) {
+        platf::scroll(platf_input, std::clamp(amount, -1200, 1200));
+      }
+    }
+
+    void type(const std::string &utf8) {
+      if (!platf_input || utf8.empty()) {
+        return;
+      }
+      // A character at a time, as a keyboard would
+      std::string text = utf8.substr(0, 2000);
+      std::size_t i = 0;
+      while (i < text.size()) {
+        const auto lead = (unsigned char) text[i];
+        std::size_t len = lead < 0x80 ? 1 : (lead >> 5) == 0x6 ? 2 : (lead >> 4) == 0xE ? 3 : (lead >> 3) == 0x1E ? 4 : 1;
+        len = std::min(len, text.size() - i);
+        if (text[i] == '\n') {
+          platf::keyboard_update(platf_input, 0x0D, false, 0);
+          platf::keyboard_update(platf_input, 0x0D, true, 0);
+        } else {
+          platf::unicode(platf_input, text.data() + i, (int) len);
+        }
+        i += len;
+      }
+    }
+
+    bool key(const std::string &name) {
+      if (!platf_input) {
+        return false;
+      }
+      // Windows virtual-key codes
+      static const std::map<std::string, std::vector<std::uint16_t>> keys {
+        {"enter", {0x0D}},
+        {"backspace", {0x08}},
+        {"escape", {0x1B}},
+        {"tab", {0x09}},
+        {"up", {0x26}},
+        {"down", {0x28}},
+        {"left", {0x25}},
+        {"right", {0x27}},
+        {"win", {0x5B}},
+        {"alt_tab", {0x12, 0x09}},
+        {"alt_f4", {0x12, 0x73}},
+      };
+      auto it = keys.find(name);
+      if (it == keys.end()) {
+        return false;
+      }
+      for (auto code : it->second) {
+        platf::keyboard_update(platf_input, code, false, 0);
+      }
+      for (auto code = it->second.rbegin(); code != it->second.rend(); ++code) {
+        platf::keyboard_update(platf_input, *code, true, 0);
+      }
+      return true;
+    }
+  }  // namespace remote
 
   [[nodiscard]] std::unique_ptr<platf::deinit_t> init() {
     platf_input = platf::input();

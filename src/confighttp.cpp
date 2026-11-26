@@ -1637,6 +1637,72 @@ namespace confighttp {
   }
 
   /**
+   * @brief POST /api/remote: the Phone remote, the PC's mouse and keyboard from a phone.
+   *        {"action": "move", "dx", "dy"} | {"action": "click", "button": 1|2|3}
+   *        | {"action": "scroll", "amount"} | {"action": "type", "text"} | {"action": "key", "key"}.
+   *        Only with the password: an access token can't drive the PC.
+   */
+  void postRemote(resp_https_t response, req_https_t request) {
+    if (!validateContentType(response, request, "application/json") || !authenticate_owner(response, request)) {
+      return;
+    }
+    try {
+      std::stringstream ss;
+      ss << request->content.rdbuf();
+      auto input = nlohmann::json::parse(ss.str());
+      const auto action = input.value("action", std::string {});
+      if (action == "move") {
+        input::remote::move(input.value("dx", 0), input.value("dy", 0));
+      } else if (action == "click") {
+        const int button = input.value("button", 1);
+        if (button < 1 || button > 3) {
+          bad_request(response, request, "button is 1, 2 or 3");
+          return;
+        }
+        input::remote::click(button);
+      } else if (action == "scroll") {
+        input::remote::scroll(input.value("amount", 0));
+      } else if (action == "type") {
+        auto text = input.value("text", std::string {});
+        if (text.size() > 2000) {
+          bad_request(response, request, "Text is too long");
+          return;
+        }
+        input::remote::type(text);
+      } else if (action == "key") {
+        if (!input::remote::key(input.value("key", std::string {}))) {
+          bad_request(response, request, "Unknown key");
+          return;
+        }
+      } else {
+        bad_request(response, request, "Unknown action");
+        return;
+      }
+      nlohmann::json out;
+      out["status"] = true;
+      send_response(response, out);
+    } catch (std::exception &e) {
+      bad_request(response, request, e.what());
+    }
+  }
+
+  /**
+   * @brief The Phone remote page: GET /remote
+   */
+  void getRemotePage(resp_https_t response, req_https_t request) {
+    if (!authenticate(response, request, true)) {
+      return;
+    }
+    print_req(request);
+    std::string content = file_handler::read_file(WEB_DIR "remote.html");
+    SimpleWeb::CaseInsensitiveMultimap headers;
+    headers.emplace("Content-Type", "text/html; charset=utf-8");
+    headers.emplace("X-Frame-Options", "DENY");
+    headers.emplace("Content-Security-Policy", "frame-ancestors 'none';");
+    response->write(content, headers);
+  }
+
+  /**
    * @brief POST /api/watch/cheer {"cheer": "fire"}: a viewer's reaction, for the person playing.
    */
   void postWatchCheer(resp_https_t response, req_https_t request) {
@@ -4045,6 +4111,8 @@ namespace confighttp {
     server.resource["^/api/watch/quality$"]["POST"] = postWatchQuality;
     server.resource["^/api/watch/cheer$"]["POST"] = postWatchCheer;
     server.resource["^/api/watch/key$"]["POST"] = postWatchKey;
+    server.resource["^/api/remote$"]["POST"] = postRemote;
+    server.resource["^/remote/?$"]["GET"] = getRemotePage;
     server.resource["^/api/watch/cheers$"]["POST"] = postWatchCheersAllowed;
     server.resource["^/api/watch/invite$"]["POST"] = postWatchInvite;
     server.resource["^/api/watch/redeem$"]["POST"] = postWatchRedeem;

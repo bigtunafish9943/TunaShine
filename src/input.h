@@ -41,6 +41,21 @@ namespace input {
   /// Controllers currently connected by streaming devices, in the order they connected.
   std::vector<gamepad_status_t> gamepad_status();
 
+  /**
+   * @brief The web page's Phone remote: the PC's mouse and keyboard from a phone, with or without
+   *        a stream (a stuck Steam, a password to type, a pointer stuck in the middle).
+   */
+  namespace remote {
+    void move(int dx, int dy);
+    /// button: 1 left, 2 middle, 3 right
+    void click(int button);
+    void scroll(int amount);
+    /// Text as typed, any language
+    void type(const std::string &utf8);
+    /// One of: enter, backspace, escape, tab, up, down, left, right, win, alt_tab, alt_f4
+    bool key(const std::string &name);
+  }  // namespace remote
+
   struct touch_port_t: public platf::touch_port_t {
     int env_width, env_height;
 
