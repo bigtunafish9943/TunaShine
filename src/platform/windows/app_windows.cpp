@@ -4,6 +4,7 @@
  *        show one: which display it's on, and which program it belongs to (for its sound).
  */
 // standard includes
+#include <cctype>
 #include <filesystem>
 #include <string>
 
@@ -103,6 +104,78 @@ namespace platf {
       return {};
     }
     return to_utf8(info.szDevice);
+  }
+
+  nlohmann::json front_window(const std::vector<std::string> &game_folders) {
+    HWND w = GetForegroundWindow();
+    if (!w || !shareable(w)) {
+      return nullptr;
+    }
+    DWORD pid = 0;
+    GetWindowThreadProcessId(w, &pid);
+    if (!pid || pid == GetCurrentProcessId()) {
+      return nullptr;
+    }
+    std::wstring path;
+    if (HANDLE process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pid)) {
+      wchar_t buf[MAX_PATH * 2] {};
+      DWORD size = (DWORD) std::size(buf);
+      if (QueryFullProcessImageNameW(process, 0, buf, &size)) {
+        path.assign(buf, size);
+      }
+      CloseHandle(process);
+    }
+    if (path.empty()) {
+      return nullptr;
+    }
+    auto lower = [](std::string s) {
+      for (auto &c : s) {
+        c = (char) std::tolower((unsigned char) c);
+      }
+      return s;
+    };
+    const auto exe_path = lower(to_utf8(path));
+    bool in_game_folder = false;
+    for (const auto &folder : game_folders) {
+      auto f = lower(folder);
+      if (!f.empty() && f.back() != '\\') {
+        f.push_back('\\');
+      }
+      if (f.size() > 3 && exe_path.starts_with(f)) {
+        in_game_folder = true;
+        break;
+      }
+    }
+    // Full screen: covering the whole display it's on
+    RECT rect {};
+    GetWindowRect(w, &rect);
+    MONITORINFO monitor {};
+    monitor.cbSize = sizeof(monitor);
+    GetMonitorInfoW(MonitorFromWindow(w, MONITOR_DEFAULTTONEAREST), &monitor);
+    const bool full = rect.left <= monitor.rcMonitor.left && rect.top <= monitor.rcMonitor.top &&
+                      rect.right >= monitor.rcMonitor.right && rect.bottom >= monitor.rcMonitor.bottom;
+    // Browsers and the like go full screen too (a video): only games and known game folders count
+    static const char *not_games[] = {"chrome.exe", "msedge.exe", "firefox.exe", "brave.exe", "opera.exe", "vlc.exe",
+                                      "explorer.exe", "applicationframehost.exe", "mpc-hc64.exe", "potplayermini64.exe",
+                                      "steamwebhelper.exe", "steam.exe", "discord.exe", "spotify.exe"};
+    const auto exe = std::filesystem::path {exe_path}.filename().string();
+    for (auto n : not_games) {
+      if (exe == n) {
+        return nullptr;
+      }
+    }
+    if (!in_game_folder && !full) {
+      return nullptr;
+    }
+    std::wstring title(GetWindowTextLengthW(w) + 1, L'\0');
+    title.resize(GetWindowTextW(w, title.data(), (int) title.size()));
+    return {
+      {"id", std::to_string((std::uint64_t) (std::uintptr_t) w)},
+      {"title", to_utf8(title)},
+      {"path", to_utf8(path)},
+      {"fullScreen", full},
+      {"inGameFolder", in_game_folder},
+    };
   }
 
   std::string window_title(std::uint64_t id) {

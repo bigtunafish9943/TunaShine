@@ -91,6 +91,10 @@ and every step was tightened:
   bumpers, triggers, View, Menu and Guide), up to four, with rumble where the phone can vibrate. The link works for
   12 hours and only as a controller; a phone that's put away is unplugged after 20 seconds. Party games are the
   best fit, as a touch screen is slower than a real controller.
+- **Continue on the TV.** Playing at the desk and want the couch? TunaReceive sees the game in front at the PC
+  (one of your launchers' games, or anything full screen that isn't a browser or video player) and offers
+  *Continue on the TV*: a stream starts and the game's window moves onto the stream's screen, without
+  restarting it. Games in exclusive full screen may need switching to borderless or windowed first.
 - **Wake and sleep from the TV.** TunaReceive wakes the PC when you pick it (Wake-on-LAN), and *Put the PC to
   sleep* in its menu sends it back to sleep when you're done, unless another device is still streaming.
 - **Steam from the couch.** TunaReceive's quick menu has *PC commands*: open Steam Big Picture, leave it, restart

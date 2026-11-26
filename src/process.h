@@ -14,6 +14,7 @@
 
 // standard includes
 #include <atomic>
+#include <cstdint>
 #include <optional>
 #include <string_view>
 #include <unordered_map>
@@ -213,6 +214,12 @@ namespace proc {
 
   boost::filesystem::path
   find_working_directory(const std::string &cmd, const boost::process::v1::environment &env);
+
+  /**
+   * @brief Continue on the TV: the game window being played at the PC moves onto the stream's
+   *        screen when the next stream starts, within two minutes.
+   */
+  void continue_window_on_next_launch(std::uint64_t window_id);
 
   /// A built-in command handled by TunaStream itself rather than run as a program
   constexpr std::string_view POINTER_ASIDE = "tunastream:pointer-aside";
