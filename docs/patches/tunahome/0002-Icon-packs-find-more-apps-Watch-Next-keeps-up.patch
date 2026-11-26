@@ -1,0 +1,425 @@
+From 45226e02554c1dbf87a8e4d4c59537355f38c367 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Thu, 26 Nov 2026 03:25:42 +0000
+Subject: [PATCH] Icon packs find more apps; Watch Next keeps up with what you
+ watch
+
+Icon packs:
+- Every way of finding an app's drawing is tried in turn, and a drawing the pack lists but
+  can't load no longer stops the search; drawings are looked for in mipmap as well as
+  drawable, written plain or as @drawable/name.png, and loaded with the pack's own theme,
+  which some packs (Material You styles) need.
+- An app is also looked up by the app's own name as well as its TV screen's name, without
+  TV parts in its package name (com.example.tv), and through the same maker's other entries
+  when the drawing's name fits (com.hulu.livingroomplus through com.hulu.plus).
+- Choose from the icon pack now says what TunaHome picked by itself, with the app's package,
+  or that it found nothing, so a missing icon can be told apart from a wrong one.
+
+Watch Next:
+- The row follows the TV's list as it changes: apps save where you got to as you leave them,
+  often a few seconds after the home screen is back, which the row missed for five minutes.
+  It also looks once more 15 seconds after you come back.
+- An entry an app changes in place (the next game, the next episode, a new picture under the
+  same address) now shows the change, instead of counting as the same.
+- A change that came in while the last look was still fetching pictures is no longer dropped.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01MwG5QtPhwViJXoZm8p79Dg
+---
+ app/src/main/java/com/tunastream/home/Apps.kt |   9 +-
+ .../java/com/tunastream/home/HomeActivity.kt  |  60 +++++++-
+ .../java/com/tunastream/home/IconPacks.kt     | 128 ++++++++++++++++--
+ .../java/com/tunastream/home/PackPicker.kt    |  11 ++
+ .../java/com/tunastream/home/WatchNext.kt     |   8 +-
+ app/src/main/res/values/strings.xml           |   2 +
+ 6 files changed, 197 insertions(+), 21 deletions(-)
+
+diff --git a/app/src/main/java/com/tunastream/home/Apps.kt b/app/src/main/java/com/tunastream/home/Apps.kt
+index c5a63a4..88afa76 100644
+--- a/app/src/main/java/com/tunastream/home/Apps.kt
++++ b/app/src/main/java/com/tunastream/home/Apps.kt
+@@ -186,7 +186,14 @@ object Apps {
+                 }
+                 // A name the viewer gave it wins; the pack still looks it up by its own name
+                 val label = names[pkg] ?: ownLabel
+-                val fromPack = pack?.icon(pkg, activity.name, ownLabel)
++                // The pack also looks the app up by the app's name, which can differ from its
++                // TV screen's name ("Hulu" and "Hulu Live TV")
++                val appLabel = if (pack == null) "" else try {
++                    activity.applicationInfo?.loadLabel(pm)?.toString() ?: ""
++                } catch (e: Exception) {
++                    ""
++                }
++                val fromPack = pack?.icon(pkg, activity.name, ownLabel, appLabel)
+                 if (fromPack != null) {
+                     packHits++
+                 }
+diff --git a/app/src/main/java/com/tunastream/home/HomeActivity.kt b/app/src/main/java/com/tunastream/home/HomeActivity.kt
+index 65a44bb..550f9a6 100644
+--- a/app/src/main/java/com/tunastream/home/HomeActivity.kt
++++ b/app/src/main/java/com/tunastream/home/HomeActivity.kt
+@@ -57,6 +57,7 @@ class HomeActivity : BaseActivity() {
+     internal var watchNext: List<AppEntry> = emptyList()
+     internal var pcGames: List<AppEntry> = emptyList()
+     internal var loadingWatchNext = false
++    internal var watchNextAgain = false
+     internal var loaded = false
+     internal var loading = false
+     internal var loadAgain = false
+@@ -353,10 +354,48 @@ class HomeActivity : BaseActivity() {
+         }
+     }
+ 
++    // Apps write where you got to as you leave them, often a few seconds after the home screen
++    // is back: look again as soon as the TV's list changes, and once more shortly after coming back
++    private val watchNextSoon = Runnable { reloadWatchNext() }
++    private var watchNextObserver: android.database.ContentObserver? = null
++
++    private fun watchWatchNext(on: Boolean) {
++        if (Build.VERSION.SDK_INT < 26) {
++            return
++        }
++        watchNextObserver?.let {
++            try {
++                contentResolver.unregisterContentObserver(it)
++            } catch (e: Exception) {
++                // Already gone
++            }
++        }
++        watchNextObserver = null
++        weatherHandler.removeCallbacks(watchNextSoon)
++        if (!on || sections.none { it.row.kind == Rows.WATCH_NEXT }) {
++            return
++        }
++        val observer = object : android.database.ContentObserver(weatherHandler) {
++            override fun onChange(selfChange: Boolean) {
++                // A few changes usually come together: once, after they settle
++                weatherHandler.removeCallbacks(watchNextSoon)
++                weatherHandler.postDelayed(watchNextSoon, 1500L)
++            }
++        }
++        try {
++            contentResolver.registerContentObserver(android.media.tv.TvContract.WatchNextPrograms.CONTENT_URI, true, observer)
++            watchNextObserver = observer
++        } catch (e: Exception) {
++            // This TV doesn't say: the checks below still catch up
++        }
++        weatherHandler.postDelayed(watchNextSoon, 15_000L)
++    }
++
+     override fun onPause() {
+         weatherHandler.removeCallbacks(weatherTick)
+         weatherHandler.removeCallbacks(infoTick)
+         weatherHandler.removeCallbacks(watchNextTick)
++        watchWatchNext(false)
+         hotkeys.reset()
+         // Leaving mid-move: keep the app where it was put
+         sections.forEach { it.adapter.finishMove() }
+@@ -462,6 +501,7 @@ class HomeActivity : BaseActivity() {
+         // Back from watching something: its place in Watch Next has changed
+         weatherHandler.removeCallbacks(watchNextTick)
+         watchNextTick.run()
++        watchWatchNext(true)
+         showWeather()
+         weatherHandler.removeCallbacks(weatherTick)
+         weatherTick.run()
+@@ -660,7 +700,12 @@ class HomeActivity : BaseActivity() {
+     internal fun reloadWatchNext() {
+         val wantShows = sections.any { it.row.kind == Rows.WATCH_NEXT }
+         val wantGames = sections.any { it.row.kind == Rows.PC_GAMES }
+-        if (loadingWatchNext || (!wantShows && !wantGames)) {
++        if (!wantShows && !wantGames) {
++            return
++        }
++        if (loadingWatchNext) {
++            // Still fetching the last look: look again when it's done, so this change isn't missed
++            watchNextAgain = true
+             return
+         }
+         loadingWatchNext = true
+@@ -680,15 +725,24 @@ class HomeActivity : BaseActivity() {
+                 if (isDestroyed) {
+                     return@runOnUiThread
+                 }
++                if (watchNextAgain) {
++                    watchNextAgain = false
++                    weatherHandler.post { reloadWatchNext() }
++                }
+                 // Box art can arrive after the list (TunaReceive fetches it later): show it then too
+                 if (games.map { it.pkg to (it.banner != null) } != pcGames.map { it.pkg to (it.banner != null) }) {
+                     pcGames = games
+                     sections.filter { it.row.kind == Rows.PC_GAMES }.forEach { it.show(games) }
+                     applyGaps()
+                 }
+-                // Nothing new: leave the section alone, so it doesn't jump under the viewer
++                // Nothing new: leave the section alone, so it doesn't jump under the viewer. An
++                // entry the app changed in place (a new game, the next episode) counts as new.
++                fun picture(e: AppEntry) = (e.own as? android.graphics.drawable.BitmapDrawable)?.bitmap
+                 val same = found.size == watchNext.size && found.indices.all {
+-                    found[it].pkg == watchNext[it].pkg && found[it].progress == watchNext[it].progress
++                    val a = found[it]
++                    val b = watchNext[it]
++                    a.pkg == b.pkg && a.progress == b.progress && a.label == b.label &&
++                        a.preview == b.preview && picture(a) === picture(b)
+                 }
+                 if (same && found.isNotEmpty()) {
+                     return@runOnUiThread
+diff --git a/app/src/main/java/com/tunastream/home/IconPacks.kt b/app/src/main/java/com/tunastream/home/IconPacks.kt
+index f055200..11ad446 100644
+--- a/app/src/main/java/com/tunastream/home/IconPacks.kt
++++ b/app/src/main/java/com/tunastream/home/IconPacks.kt
+@@ -51,8 +51,21 @@ object IconPacks {
+         "com.apple.atve.androidtv.appletv" to "com.apple.atve.android.appletv",
+         "com.google.android.tvrecommendations" to "com.google.android.googlequicksearchbox",
+         "com.nvidia.tegrazone3" to "com.nvidia.geforcenow",
++        "com.espn.gtv" to "com.espn.score_center",
+     )
+ 
++    /** Parts TV builds add to a package name: "com.example.tv", "com.example.androidtv.app". */
++    private val TV_PARTS = setOf(
++        "tv", "androidtv", "atv", "ott", "livingroom", "firetv", "leanback", "gtv", "googletv", "tvapp", "bigscreen", "stb",
++    )
++
++    /** [pkg] without its TV parts, or null if it has none. */
++    private fun withoutTvParts(pkg: String): String? {
++        val parts = pkg.split('.')
++        val kept = parts.filterIndexed { i, part -> i < 2 || part.lowercase() !in TV_PARTS }
++        return if (kept.size == parts.size) null else kept.joinToString(".")
++    }
++
+     /** Words too common to stand for one app on their own. */
+     private val GENERIC = setOf(
+         "video", "videos", "music", "player", "plus", "live", "home", "settings", "games", "game",
+@@ -195,12 +208,25 @@ object IconPacks {
+         val names: List<String>
+             get() = byName.values.distinct().sorted()
+ 
++        /** Every package the pack lists, in order, for finding a maker's other apps. */
++        private val byPackageSorted by lazy { java.util.TreeMap(byPackage) }
++
+         private val res = try {
+             context.packageManager.getResourcesForApplication(pkg)
+         } catch (e: PackageManager.NameNotFoundException) {
+             null
+         }
+ 
++        // Some packs draw with their own theme's colours: without it those drawings don't load
++        private val theme: android.content.res.Resources.Theme? = res?.let { r ->
++            try {
++                val style = context.packageManager.getApplicationInfo(pkg, 0).theme
++                r.newTheme().apply { if (style != 0) applyStyle(style, true) }
++            } catch (e: Exception) {
++                null
++            }
++        }
++
+         init {
+             // Many packs carry their list twice (res/xml and assets), and one copy is often
+             // shorter or older: read both and keep everything from either
+@@ -308,21 +334,37 @@ object IconPacks {
+         }
+ 
+         /**
+-         * The pack's icon for an app: by its exact activity, then by its package, then by the
+-         * phone version of a TV app, then by a drawable named the same as the app.
++         * The pack's icon for an app: the one picked by hand, else the first that loads of: its
++         * exact activity, its package, the phone version of a TV app, its name, and the same
++         * maker's app of that name. A drawing the pack lists but can't load is skipped, so the
++         * next way still has a chance.
+          */
+-        fun icon(appPkg: String, cls: String, label: String): Drawable? {
++        fun icon(appPkg: String, cls: String, vararg labels: String): Drawable? {
+             res ?: return null
+-            val name = picked(context, pkg, appPkg) ?: match(appPkg, cls, label) ?: return null
+-            return drawable(name)
++            picked(context, pkg, appPkg)?.let { name -> drawable(name)?.let { return it } }
++            for (name in candidates(appPkg, cls, labels.toList())) {
++                drawable(name)?.let { return it }
++            }
++            return null
+         }
+ 
+-        /** The drawing that fits an app best, without asking: exact first, then by name. */
+-        fun match(appPkg: String, cls: String, label: String): String? {
+-            val phone = TV_TO_PHONE[appPkg]
+-            byComponent["$appPkg/$cls"]?.let { return it }
+-            byPackage[appPkg]?.let { return it }
+-            phone?.let { byPackage[it] }?.let { return it }
++        /** The drawing that fits an app best, without asking. */
++        fun match(appPkg: String, cls: String, vararg labels: String): String? =
++            candidates(appPkg, cls, labels.toList()).firstOrNull { idOf(it) != 0 }
++
++        private fun candidates(appPkg: String, cls: String, labels: List<String>): Sequence<String> = sequence {
++            byComponent["$appPkg/$cls"]?.let { yield(it) }
++            byPackage[appPkg]?.let { yield(it) }
++            TV_TO_PHONE[appPkg]?.let { phone -> byPackage[phone]?.let { yield(it) } }
++            withoutTvParts(appPkg)?.let { bare -> byPackage[bare]?.let { yield(it) } }
++            for (label in labels.filter { it.isNotBlank() }.distinct()) {
++                byLabel(label)?.let { yield(it) }
++            }
++            family(appPkg, labels)?.let { yield(it) }
++        }
++
++        /** A drawing named like the app. */
++        private fun byLabel(label: String): String? {
+             val plainLabel = plain(label)
+             if (plainLabel.length < 3) {
+                 return null
+@@ -332,7 +374,7 @@ object IconPacks {
+             val bare = withoutTvWords(plainLabel)
+             byName[bare]?.let { return it }
+             // Any run of the name's words: "Amazon Prime Video" finds "prime_video"
+-            val words = label.lowercase().split(' ', '-', ':', '.', '&', '+').map { plain(it) }.filter { it.isNotEmpty() }
++            val words = words(label)
+             for (length in words.size - 1 downTo 1) {
+                 for (start in 0..words.size - length) {
+                     val run = words.subList(start, start + length).joinToString("")
+@@ -350,6 +392,41 @@ object IconPacks {
+             return null
+         }
+ 
++        private fun words(label: String): List<String> =
++            label.lowercase().split(' ', '-', ':', '.', '&', '+', '|', '/', '(', ')').map { plain(it) }.filter { it.isNotEmpty() }
++
++        /**
++         * A TV app the pack doesn't list by name, found through the same maker's other entries:
++         * "com.hulu.livingroomplus" through "com.hulu.plus". Only a drawing that also looks like
++         * the app's name counts, so another app by the same maker isn't used by mistake.
++         */
++        private fun family(appPkg: String, labels: List<String>): String? {
++            val wanted = labels.flatMap { words(it) + plain(it) }.map { withoutTvWords(it) }
++                .filter { it.length >= 3 && it !in GENERIC }.toSet()
++            if (wanted.isEmpty()) {
++                return null
++            }
++            val parts = appPkg.split('.')
++            for (keep in parts.size - 1 downTo 2) {
++                val prefix = parts.take(keep).joinToString(".")
++                val names = (byPackageSorted.subMap("$prefix.", "$prefix.\uffff").values + listOfNotNull(byPackage[prefix])).toSet()
++                if (names.isEmpty()) {
++                    continue
++                }
++                val fitting = names.filter { name ->
++                    val drawn = withoutTvWords(plain(name))
++                    wanted.any { w -> drawn == w || drawn.startsWith(w) || (drawn.length >= 4 && w.startsWith(drawn)) }
++                }
++                if (fitting.size == 1) {
++                    return fitting[0]
++                }
++                if (fitting.size > 1) {
++                    return null
++                }
++            }
++            return null
++        }
++
+         /** Drawings whose names are closest to [text], best first, for the chooser. */
+         fun suggest(text: String, limit: Int = 60): List<String> {
+             val wanted = withoutTvWords(plain(text))
+@@ -370,15 +447,36 @@ object IconPacks {
+ 
+         fun drawable(name: String): Drawable? {
+             val res = res ?: return null
+-            val id = res.getIdentifier(name, "drawable", pkg)
++            val id = idOf(name)
+             if (id == 0) {
+                 return null
+             }
+             return try {
+-                res.getDrawable(id, null)
++                res.getDrawable(id, theme)
+             } catch (e: Exception) {
+-                null
++                try {
++                    res.getDrawable(id, null)
++                } catch (e2: Exception) {
++                    null
++                }
++            }
++        }
++
++        /** The drawing's resource: in drawable or mipmap, written plain or as "@drawable/name.png". */
++        private fun idOf(name: String): Int {
++            val res = res ?: return 0
++            val clean = name.trim().removePrefix("@").removePrefix("drawable/").removePrefix("mipmap/")
++                .removeSuffix(".png").removeSuffix(".webp").removeSuffix(".xml")
++            if (clean.isEmpty()) {
++                return 0
++            }
++            for (type in arrayOf("drawable", "mipmap")) {
++                val id = res.getIdentifier(clean, type, pkg)
++                if (id != 0) {
++                    return id
++                }
+             }
++            return 0
+         }
+     }
+ }
+diff --git a/app/src/main/java/com/tunastream/home/PackPicker.kt b/app/src/main/java/com/tunastream/home/PackPicker.kt
+index 078aca6..cff1606 100644
+--- a/app/src/main/java/com/tunastream/home/PackPicker.kt
++++ b/app/src/main/java/com/tunastream/home/PackPicker.kt
+@@ -45,6 +45,17 @@ object PackPicker {
+         layout.orientation = LinearLayout.VERTICAL
+         layout.setPadding(pad, pad / 2, pad, 0)
+ 
++        // What TunaHome found by itself, so a wrong or missing icon can be told apart from a
++        // drawing that wouldn't load
++        val found = loaded.match(app.appPkg, app.launch.component?.className ?: "", app.label)
++        layout.addView(TextView(activity).apply {
++            text = if (found != null) activity.getString(R.string.pick_found, found.replace('_', ' '), app.appPkg)
++            else activity.getString(R.string.pick_not_found, app.appPkg)
++            textSize = 13f
++            setTextColor(activity.themeColor(R.attr.tsTextSecondary))
++            setPadding(0, 0, 0, pad / 2)
++        })
++
+         val box = EditText(activity)
+         box.setSingleLine()
+         box.hint = activity.getString(R.string.pick_search)
+diff --git a/app/src/main/java/com/tunastream/home/WatchNext.kt b/app/src/main/java/com/tunastream/home/WatchNext.kt
+index 9ddddb5..2a0ed53 100644
+--- a/app/src/main/java/com/tunastream/home/WatchNext.kt
++++ b/app/src/main/java/com/tunastream/home/WatchNext.kt
+@@ -78,10 +78,14 @@ object WatchNext {
+                 val picture = text("poster_art_uri") ?: text("thumbnail_uri")
+                 val duration = number("duration_millis")
+                 val position = number("last_playback_position_millis")
++                val engaged = number("last_engagement_time_utc_millis")
+                 val progress = if (duration > 0 && position > 0) (position.toFloat() / duration).coerceIn(0f, 1f) else -1f
++                // Apps often keep one entry and change it (the next game, the next episode)
++                // without changing its picture's address: fetch the picture again when it changed
++                val pictureKey = picture?.let { "$it#$engaged" }
+                 val poster = picture?.let {
+                     try {
+-                        val bitmap = posters.get(it) ?: Pictures.decode(context, Uri.parse(it), 640, 360)?.also { b -> posters.put(it, b) }
++                        val bitmap = posters.get(pictureKey!!) ?: Pictures.decode(context, Uri.parse(it), 640, 360)?.also { b -> posters.put(pictureKey, b) }
+                         bitmap?.let { b -> BitmapDrawable(context.resources, b) }
+                     } catch (e: Throwable) {
+                         null
+@@ -94,7 +98,7 @@ object WatchNext {
+                 }
+                 val id = number("_id")
+                 found.add(
+-                    number("last_engagement_time_utc_millis") to AppEntry(
++                    engaged to AppEntry(
+                         pkg = "watchnext:$id",
+                         label = label,
+                         launch = launch,
+diff --git a/app/src/main/res/values/strings.xml b/app/src/main/res/values/strings.xml
+index 2487f20..6fafbf0 100644
+--- a/app/src/main/res/values/strings.xml
++++ b/app/src/main/res/values/strings.xml
+@@ -364,6 +364,8 @@
+     <string name="pick_loading">Opening the icon pack…</string>
+     <string name="pick_no_pack">Choose an icon pack first, in TunaHome settings, Icons.</string>
+     <string name="pick_reset">Let TunaHome choose</string>
++    <string name="pick_found">Chosen by itself: %1$s (for %2$s)</string>
++    <string name="pick_not_found">The pack has no drawing TunaHome could match to %1$s: choose one below.</string>
+     <string name="set_card_size">Card size</string>
+     <string name="set_card_shape">Card shape</string>
+     <string name="shape_auto">Automatic: wide for TV pictures, square for icons</string>
+-- 
+2.43.0
+
