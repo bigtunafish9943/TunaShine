@@ -157,6 +157,10 @@ and every step was tightened:
   and other assistants: what's playing, the paired devices and the games, starting a game, ending a session,
   more play time, a message on the TV, the play recap, and the PC's and TVs' logs. It uses an access token, so
   an assistant can do only what the token allows; making a token shows the settings to paste in.
+- **Trophies.** Milestones for the couch: first stream and first 4K, hours played, a three-hour marathon, smooth
+  streaks, and some for fun: game night (three or more playing at once), a friend on a phone controller, night
+  owl, early bird, days in a row and different games played. They pop up on the TV after the stream that earned
+  them, and TunaReceive keeps them on a trophy shelf.
 - **Your last seven days.** The home page shows play time for each day, the most-played games and how smooth the
   streams were, with milestones as they're reached. The record stays on the PC.
 - **A reminder when a game runs slow.** When a game itself draws fewer than 59 frames a second, the home page

@@ -123,9 +123,21 @@ namespace input {
   static std::mutex gamepad_status_lock;
   static std::map<int, gamepad_status_t> gamepad_status_map;
 
+  static int peak_players = 0;
+  static bool phone_joined = false;
+
   static void record_gamepad(int id, const std::string &device, int controller) {
     std::lock_guard lg {gamepad_status_lock};
     gamepad_status_map[id] = gamepad_status_t {device, controller, platf::gamepad_type_name(id)};
+    peak_players = std::max(peak_players, (int) gamepad_status_map.size());
+  }
+
+  std::pair<int, bool> take_peak_players() {
+    std::lock_guard lg {gamepad_status_lock};
+    const std::pair<int, bool> out {std::max(peak_players, (int) gamepad_status_map.size()), phone_joined};
+    peak_players = (int) gamepad_status_map.size();
+    phone_joined = false;
+    return out;
   }
 
   static void record_gamepad_battery(int id, std::uint8_t state, std::uint8_t percent) {
@@ -1905,6 +1917,10 @@ namespace input {
         }
         pad.id = id;
         record_gamepad(id, name.empty() ? std::string {"Phone"} : name, number - 1);
+        {
+          std::lock_guard status_lg {gamepad_status_lock};
+          phone_joined = true;
+        }
         BOOST_LOG(info) << "Phone controller "sv << number << " plugged in for "sv << name;
         it = pads.emplace(key, std::move(pad)).first;
         start_reaper_locked();

@@ -27,6 +27,8 @@ namespace play_history {
     double slow_game_fps = 0;  ///< Its frame rate over those minutes
     int width = 0;  ///< Picture size the device asked for
     int height = 0;
+    int players = 0;  ///< Most controllers playing at once
+    bool phone_player = false;  ///< Someone joined with a phone as a controller
   };
 
   /// Add a finished stream. Streams shorter than a minute are left out.
