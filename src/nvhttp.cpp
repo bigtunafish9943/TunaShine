@@ -11,6 +11,7 @@
 #include <filesystem>
 #include <format>
 #include <string>
+#include <thread>
 #include <utility>
 #include <string>
 
@@ -1966,6 +1967,38 @@ namespace nvhttp {
   }
 
   /**
+   * GET /tuna/sleep: the TV is done for the night and puts the PC to sleep, the other half of
+   * waking it. Only for devices allowed to start games, and not while another device streams.
+   * Answers first, then sleeps a few seconds later.
+   */
+  void tunaSleep(resp_https_t response, req_https_t request) {
+    print_req<TunaStreamHTTPS>(request);
+    auto named_cert_p = get_verified_cert(request);
+    nlohmann::json out;
+    auto refuse = [&](const char *reason) {
+      out["sleeping"] = false;
+      out["reason"] = reason;
+    };
+    const auto own = rtsp_stream::find_session(named_cert_p->uuid) ? 1 : 0;
+    if (!(named_cert_p->perm & PERM::launch)) {
+      refuse("not allowed");
+    } else if (rtsp_stream::session_count() > own) {
+      refuse("someone else is streaming");
+    } else {
+      out["sleeping"] = true;
+      BOOST_LOG(info) << named_cert_p->name << " put the PC to sleep"sv;
+      std::thread([] {
+        std::this_thread::sleep_for(3s);
+        platf::sleep_pc();
+      }).detach();
+    }
+    SimpleWeb::CaseInsensitiveMultimap headers;
+    headers.emplace("Content-Type", "application/json");
+    response->write(SimpleWeb::StatusCode::success_ok, out.dump(), headers);
+    response->close_connection_after_response = true;
+  }
+
+  /**
    * TunaReceive's backups, kept on this PC.
    * POST /tuna/backup keeps the body (TunaReceive's backup JSON);
    * GET /tuna/backups lists them; GET /tuna/backup?name= returns one.
@@ -2314,6 +2347,7 @@ namespace nvhttp {
     https_server.resource["^/tuna/log$"]["POST"] = tunaLog;
     https_server.resource["^/tuna/watch$"]["GET"] = tunaWatch;
     https_server.resource["^/tuna/replay$"]["GET"] = tunaReplay;
+    https_server.resource["^/tuna/sleep$"]["GET"] = tunaSleep;
     https_server.resource["^/tuna/settings$"]["POST"] = tunaSettings;
     https_server.resource["^/tuna/backup$"]["POST"] = tunaBackupSave;
     https_server.resource["^/tuna/backup$"]["GET"] = tunaBackupGet;

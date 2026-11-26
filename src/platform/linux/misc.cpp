@@ -343,6 +343,10 @@ std::string get_local_ip_for_gateway() {
    * @brief Open a url in the default web browser.
    * @param url The url to open.
    */
+  bool sleep_pc() {
+    return false;
+  }
+
   void open_url(const std::string &url) {
     // set working dir to user home directory
     auto working_dir = boost::filesystem::path(std::getenv("HOME"));

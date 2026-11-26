@@ -742,6 +742,12 @@ namespace platf {
   void open_url(const std::string &url);
 
   /**
+   * @brief Put the PC to sleep (as Start > Power > Sleep does), for a TV that's done for the night.
+   * @return False when this system can't, or won't.
+   */
+  bool sleep_pc();
+
+  /**
    * @brief Attempt to gracefully terminate a process group.
    * @param native_handle The native handle of the process group.
    * @return `true` if termination was successfully requested.

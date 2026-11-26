@@ -1331,6 +1331,35 @@ namespace platf {
     return create_boost_child_from_results(ret, cmd, ec, process_info);
   }
 
+  bool sleep_pc() {
+    // Sleeping needs the shutdown privilege switched on for this process first
+    HANDLE token = nullptr;
+    if (OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &token)) {
+      TOKEN_PRIVILEGES privileges {};
+      if (LookupPrivilegeValueW(nullptr, SE_SHUTDOWN_NAME, &privileges.Privileges[0].Luid)) {
+        privileges.PrivilegeCount = 1;
+        privileges.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
+        AdjustTokenPrivileges(token, FALSE, &privileges, 0, nullptr, nullptr);
+      }
+      CloseHandle(token);
+    }
+    // Loaded when needed, so TunaStream doesn't depend on powrprof.dll to start
+    auto powrprof = LoadLibraryExW(L"powrprof.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
+    if (!powrprof) {
+      BOOST_LOG(warning) << "Couldn't load powrprof.dll to sleep: "sv << GetLastError();
+      return false;
+    }
+    using suspend_fn = BOOLEAN(WINAPI *)(BOOLEAN, BOOLEAN, BOOLEAN);
+    auto suspend = reinterpret_cast<suspend_fn>(GetProcAddress(powrprof, "SetSuspendState"));
+    // Sleep, not hibernate; wake events (the network adapter's magic packet) stay allowed
+    const bool ok = suspend && suspend(FALSE, FALSE, FALSE);
+    if (!ok) {
+      BOOST_LOG(warning) << "Windows didn't go to sleep: "sv << GetLastError();
+    }
+    FreeLibrary(powrprof);
+    return ok;
+  }
+
   /**
    * @brief Open a url in the default web browser.
    * @param url The url to open.
