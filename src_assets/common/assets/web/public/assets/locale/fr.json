@@ -1358,6 +1358,11 @@
         "how": "Partagez votre écran avec un vocal Discord en cours, réglez Son sur Tout sauf Discord et écoutez sur la tablette.",
         "expect": "La tablette entend le jeu mais pas le vocal. En revenant à Tout, le vocal revient après quelques secondes."
       },
+      "sharewindow": {
+        "title": "Partager une fenêtre",
+        "how": "Sur la page Regarder, sous Partager mon écran, choisissez la fenêtre d'un jeu dans la liste et partagez-la. Passez à une autre fenêtre sur le PC, puis fermez le jeu.",
+        "expect": "La tablette ne montre que la fenêtre du jeu et n'entend que le jeu, même quand vous êtes dans une autre fenêtre. Quand le jeu se ferme, le partage s'arrête ; le reste de l'écran n'est jamais montré."
+      },
       "signin": {
         "title": "Rester connecté",
         "how": "Déconnectez-vous puis reconnectez-vous avec Rester connecté activé. Fermez le navigateur et rouvrez le tableau de bord. Recommencez en le désactivant.",
@@ -1403,6 +1408,7 @@
     "sound_on": "Son activé",
     "sound_off": "Son coupé",
     "fullscreen": "Plein écran",
+    "exit_fullscreen": "Quitter le plein écran",
     "note": "Regarder uniquement : rien ici ne contrôle le jeu.",
     "no_sound_here": "Regarder uniquement. Ce navigateur ne peut pas lire le son ; essayez Chrome ou Edge.",
     "share": "Partager un lien pour regarder",
@@ -1423,6 +1429,10 @@
     "screen_failed": "Le partage n'a pas pu être modifié.",
     "need_link": "Cet appareil ne peut pas encore regarder. Ouvrez un nouveau lien pour regarder envoyé par la personne qui partage, ou connectez-vous.",
     "sign_in": "Se connecter",
+    "share_screens": "Un écran entier",
+    "share_windows": "Une seule fenêtre, avec son son",
+    "window_shared": "seulement {title}, avec son son",
+    "window_desc": "Les spectateurs ne voient que cette fenêtre, même si vous passez à autre chose, et n'entendent que son programme. Si elle se ferme, le partage s'arrête.",
     "share_for": "Pour qui ?",
     "share_make": "Copier le lien",
     "share_cancel": "Annuler",

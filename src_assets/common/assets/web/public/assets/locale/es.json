@@ -1358,6 +1358,11 @@
         "how": "Comparte tu pantalla con un chat de voz de Discord, pon Sonido en Todo menos Discord y escucha en la tableta.",
         "expect": "La tableta oye el juego pero no el chat de voz. Al volver a Todo, el chat de voz vuelve en unos segundos."
       },
+      "sharewindow": {
+        "title": "Compartir una ventana",
+        "how": "En la página Ver, en Compartir mi pantalla, elige la ventana de un juego de la lista y compártela. Cambia a otra ventana en el PC y luego cierra el juego.",
+        "expect": "La tableta muestra solo la ventana del juego y solo oye el juego, aunque estés en otra ventana. Al cerrarse el juego se deja de compartir; nunca se muestra el resto de la pantalla."
+      },
       "signin": {
         "title": "Mantener la sesión iniciada",
         "how": "Cierra sesión y vuelve a entrar con Mantener la sesión iniciada activado. Cierra el navegador y abre el panel otra vez. Repite con la opción desactivada.",
@@ -1403,6 +1408,7 @@
     "sound_on": "Sonido activado",
     "sound_off": "Sonido desactivado",
     "fullscreen": "Pantalla completa",
+    "exit_fullscreen": "Salir de pantalla completa",
     "note": "Solo para ver: nada de aquí controla el juego.",
     "no_sound_here": "Solo para ver. Este navegador no puede reproducir el sonido; prueba Chrome o Edge.",
     "share": "Compartir un enlace para ver",
@@ -1423,6 +1429,10 @@
     "screen_failed": "No se pudo cambiar el uso compartido.",
     "need_link": "Este dispositivo aún no puede ver. Abre un nuevo enlace para ver de quien comparte, o inicia sesión.",
     "sign_in": "Iniciar sesión",
+    "share_screens": "Una pantalla entera",
+    "share_windows": "Solo una ventana, con su sonido",
+    "window_shared": "solo {title}, con su sonido",
+    "window_desc": "Quienes miran solo ven esta ventana, aunque cambies a otra cosa, y solo oyen su programa. Si se cierra, se deja de compartir.",
     "share_for": "¿Para quién?",
     "share_make": "Copiar enlace",
     "share_cancel": "Cancelar",

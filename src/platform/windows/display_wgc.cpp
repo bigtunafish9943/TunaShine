@@ -255,7 +255,7 @@ namespace platf::dxgi {
     if (display_base_t::init(config, display_name)) {
       return -1;
     }
-    if (platf::is_running_as_system()) {
+    if (platf::is_running_as_system() || platf::window_capture()) {
       remote = make_wgc_remote(this, config);
       if (!remote) {
         return -1;
@@ -397,6 +397,7 @@ namespace platf::dxgi::wgc_ipc {
 
   enum : int {
     EXIT_DISPLAY_CHANGED = 9,  ///< the display changed size: capture it again
+    EXIT_WINDOW_CLOSED = 10,  ///< the window being captured closed
   };
 
   struct msg_t {
@@ -423,10 +424,19 @@ namespace {
     winrt::com_ptr<ID3D11Texture2D> ring[SLOTS];
     winrt::com_ptr<IDXGIKeyedMutex> mutexes[SLOTS];
     HANDLE handles[SLOTS] {};
+    winrt::com_ptr<ID3D11RenderTargetView> targets[SLOTS];
     D3D11_TEXTURE2D_DESC ring_desc {};
     int next_slot = 0;
     std::mutex lock;
     winrt::Windows::Graphics::SizeInt32 size {};
+
+    // One window instead of a whole display: frames go in the middle of display-sized textures,
+    // and the capture follows the window's size
+    bool window_mode = false;
+    UINT ring_width = 0;
+    UINT ring_height = 0;
+    winrt::IDirect3DDevice uwp_device {nullptr};
+    winrt::Windows::Graphics::DirectX::DirectXPixelFormat pixel_format {};
 
     bool send(const msg_t &m) {
       DWORD written = 0;
@@ -439,6 +449,7 @@ namespace {
 
     bool make_ring(const D3D11_TEXTURE2D_DESC &src) {
       for (int i = 0; i < SLOTS; ++i) {
+        targets[i] = nullptr;
         mutexes[i] = nullptr;
         ring[i] = nullptr;
         if (handles[i]) {
@@ -447,8 +458,8 @@ namespace {
         }
       }
       D3D11_TEXTURE2D_DESC t {};
-      t.Width = src.Width;
-      t.Height = src.Height;
+      t.Width = window_mode ? ring_width : src.Width;
+      t.Height = window_mode ? ring_height : src.Height;
       t.MipLevels = 1;
       t.ArraySize = 1;
       t.SampleDesc.Count = 1;
@@ -468,6 +479,9 @@ namespace {
           return false;
         }
         if (FAILED(ring[i]->QueryInterface(__uuidof(IDXGIKeyedMutex), mutexes[i].put_void()))) {
+          return false;
+        }
+        if (window_mode && FAILED(device->CreateRenderTargetView(ring[i].get(), nullptr, targets[i].put()))) {
           return false;
         }
         winrt::com_ptr<IDXGIResource1> resource;
@@ -495,7 +509,17 @@ namespace {
       std::lock_guard lg {lock};
       auto content = frame.ContentSize();
       if (content.Width != size.Width || content.Height != size.Height) {
-        quit(EXIT_DISPLAY_CHANGED);
+        if (!window_mode) {
+          quit(EXIT_DISPLAY_CHANGED);
+        }
+        // The window changed size: the capture follows, from the next frame
+        size = content;
+        try {
+          sender.Recreate(uwp_device, pixel_format, 2, size);
+        } catch (winrt::hresult_error &) {
+          quit(EXIT_WINDOW_CLOSED);
+        }
+        return;
       }
 
       winrt::com_ptr<ID3D11Texture2D> src;
@@ -505,7 +529,8 @@ namespace {
       }
       D3D11_TEXTURE2D_DESC desc;
       src->GetDesc(&desc);
-      if (!ring[0] || desc.Width != ring_desc.Width || desc.Height != ring_desc.Height || desc.Format != ring_desc.Format) {
+      const bool size_differs = window_mode ? false : (desc.Width != ring_desc.Width || desc.Height != ring_desc.Height);
+      if (!ring[0] || size_differs || desc.Format != ring_desc.Format) {
         if (!make_ring(desc)) {
           quit(8);
         }
@@ -517,7 +542,17 @@ namespace {
         if (mutexes[slot]->AcquireSync(0, 0) != S_OK) {
           continue;
         }
-        ctx->CopyResource(ring[slot].get(), src.get());
+        if (window_mode) {
+          // The window in the middle, on black; anything bigger than the display is cut off
+          const float black[4] = {0.0f, 0.0f, 0.0f, 1.0f};
+          ctx->ClearRenderTargetView(targets[slot].get(), black);
+          const UINT w = (std::min)({(UINT) (std::max)(0, content.Width), desc.Width, ring_desc.Width});
+          const UINT h = (std::min)({(UINT) (std::max)(0, content.Height), desc.Height, ring_desc.Height});
+          D3D11_BOX box {0, 0, 0, w, h, 1};
+          ctx->CopySubresourceRegion(ring[slot].get(), 0, (ring_desc.Width - w) / 2, (ring_desc.Height - h) / 2, 0, src.get(), 0, &box);
+        } else {
+          ctx->CopyResource(ring[slot].get(), src.get());
+        }
         mutexes[slot]->ReleaseSync(0);
         next_slot = (slot + 1) % SLOTS;
 
@@ -558,8 +593,20 @@ namespace platf {
   int wgc_helper_main(int argc, char *argv[]) {
     using namespace platf::dxgi::wgc_ipc;
     // tunastream.exe --wgc-helper <pipe> <luid low> <luid high> <display> <hdr> <fps>
+    //                [window <hwnd> <display width> <display height>]
     if (argc < 8) {
       return 2;
+    }
+    HWND window = nullptr;
+    UINT window_ring_w = 0;
+    UINT window_ring_h = 0;
+    if (argc >= 12 && std::string {argv[8]} == "window") {
+      window = (HWND) (std::uintptr_t) std::strtoull(argv[9], nullptr, 10);
+      window_ring_w = (UINT) std::strtoul(argv[10], nullptr, 10);
+      window_ring_h = (UINT) std::strtoul(argv[11], nullptr, 10);
+      if (!IsWindow(window) || window_ring_w == 0 || window_ring_h == 0) {
+        return EXIT_WINDOW_CLOSED;
+      }
     }
     const std::string pipe = argv[2];
     LUID luid;
@@ -621,7 +668,7 @@ namespace platf {
       }
       return TRUE;
     }, (LPARAM) &find);
-    if (!find.found) {
+    if (!find.found && !window) {
       return 5;
     }
 
@@ -640,11 +687,26 @@ namespace platf {
       }
       auto uwp_device = inspectable.as<winrt::IDirect3DDevice>();
       auto interop = winrt::get_activation_factory<winrt::GraphicsCaptureItem, IGraphicsCaptureItemInterop>();
-      if (!interop || FAILED(interop->CreateForMonitor(find.found, winrt::guid_of<winrt::IGraphicsCaptureItem>(), winrt::put_abi(item)))) {
+      if (!interop) {
+        return 6;
+      }
+      if (window) {
+        if (FAILED(interop->CreateForWindow(window, winrt::guid_of<winrt::IGraphicsCaptureItem>(), winrt::put_abi(item)))) {
+          return EXIT_WINDOW_CLOSED;
+        }
+        helper.window_mode = true;
+        helper.ring_width = window_ring_w;
+        helper.ring_height = window_ring_h;
+        item.Closed([&helper](auto &&, auto &&) {
+          helper.quit(EXIT_WINDOW_CLOSED);
+        });
+      } else if (FAILED(interop->CreateForMonitor(find.found, winrt::guid_of<winrt::IGraphicsCaptureItem>(), winrt::put_abi(item)))) {
         return 6;
       }
       helper.size = item.Size();
       auto format = hdr ? winrt::Windows::Graphics::DirectX::DirectXPixelFormat::R16G16B16A16Float : winrt::Windows::Graphics::DirectX::DirectXPixelFormat::B8G8R8A8UIntNormalized;
+      helper.uwp_device = uwp_device;
+      helper.pixel_format = format;
       pool = winrt::Direct3D11CaptureFramePool::CreateFreeThreaded(uwp_device, format, 2, helper.size);
       session = pool.CreateCaptureSession(item);
       pool.FrameArrived([&helper](winrt::Direct3D11CaptureFramePool const &sender, winrt::IInspectable const &) {
@@ -697,6 +759,20 @@ namespace platf {
   }
 }  // namespace platf
 
+namespace platf {
+  namespace {
+    std::atomic<std::uint64_t> window_target {0};
+  }
+
+  void set_window_capture(std::uint64_t hwnd) {
+    window_target = hwnd;
+  }
+
+  std::uint64_t window_capture() {
+    return window_target.load();
+  }
+}  // namespace platf
+
 namespace platf::dxgi {
   namespace {
     // After the helper fails, DDX is used for a while before WGC is tried again
@@ -726,6 +802,8 @@ namespace platf::dxgi {
           return "couldn't share frames";
         case wgc_ipc::EXIT_DISPLAY_CHANGED:
           return "the display changed";
+        case wgc_ipc::EXIT_WINDOW_CLOSED:
+          return "the window closed";
         case STILL_ACTIVE:
           return "stopped answering";
         default:
@@ -776,6 +854,7 @@ namespace platf::dxgi {
 
     int start(display_base_t *d, const ::video::config_t &config) {
       display = d;
+      window = window_capture();
       DXGI_ADAPTER_DESC1 adapter_desc;
       DXGI_OUTPUT_DESC output_desc;
       if (FAILED(d->adapter->GetDesc1(&adapter_desc)) || FAILED(d->output->GetDesc(&output_desc))) {
@@ -822,6 +901,10 @@ namespace platf::dxgi {
       std::wstring cmd = L"\"" + exe + L"\" --wgc-helper " + from_utf8(pipe) + L" " +
                          std::to_wstring(adapter_desc.AdapterLuid.LowPart) + L" " + std::to_wstring(adapter_desc.AdapterLuid.HighPart) +
                          L" \"" + output_desc.DeviceName + L"\" " + (config.dynamicRange ? L"1" : L"0") + L" " + std::to_wstring(config.framerate);
+      if (window) {
+        // Only this window, in the middle of a picture the size of its display
+        cmd += L" window " + std::to_wstring(window) + L" " + std::to_wstring(d->width_before_rotation) + L" " + std::to_wstring(d->height_before_rotation);
+      }
       STARTUPINFOW si {};
       si.cb = sizeof(si);
       wchar_t desktop[] = L"winsta0\\default";
@@ -873,7 +956,8 @@ namespace platf::dxgi {
       release_frame();
 
       const auto now = std::chrono::steady_clock::now();
-      if (now >= next_desktop_check) {
+      // A window keeps its own picture whatever desktop shows; never switch to the whole screen
+      if (!window && now >= next_desktop_check) {
         next_desktop_check = now + 250ms;
         if (secure_desktop_active()) {
           BOOST_LOG(info) << "WGC: the secure desktop is showing, switching to DDX until it closes"sv;
@@ -895,7 +979,9 @@ namespace platf::dxgi {
           display_change_window = now_ms;
           display_changes = 0;
         }
-        if (code == wgc_ipc::EXIT_DISPLAY_CHANGED && ++display_changes <= 3) {
+        if (window) {
+          BOOST_LOG(info) << "WGC: the shared window's capture stopped ("sv << helper_exit_reason(code) << ')';
+        } else if (code == wgc_ipc::EXIT_DISPLAY_CHANGED && ++display_changes <= 3) {
           BOOST_LOG(info) << "WGC: the display changed, capturing it again"sv;
         } else {
           BOOST_LOG(warning) << "WGC: the capture helper "sv << helper_exit_reason(code) << ", using DDX for now"sv;
@@ -964,6 +1050,7 @@ namespace platf::dxgi {
 
   private:
     display_base_t *display = nullptr;
+    std::uint64_t window = 0;  ///< one window instead of the whole display
     HANDLE process = nullptr;
     HANDLE frame_pipe = INVALID_HANDLE_VALUE;
     HANDLE ctrl_pipe = INVALID_HANDLE_VALUE;
@@ -1085,6 +1172,11 @@ namespace platf::dxgi {
   };
 
   std::shared_ptr<wgc_remote_t> make_wgc_remote(display_base_t *display, const ::video::config_t &config) {
+    if (window_capture()) {
+      // Sharing one window: always through the helper, never the whole screen instead
+      auto remote = std::make_shared<wgc_remote_t>();
+      return remote->start(display, config) ? nullptr : remote;
+    }
     if (steady_ms() < wgc_retry_after.load()) {
       return nullptr;
     }

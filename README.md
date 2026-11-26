@@ -107,7 +107,9 @@ and every step was tightened:
 - **Share my screen.** On the Watch page, choose to share one of the PC's own screens for an hour or a few, so someone can
   watch you play at the desk on a tablet or phone. The home page (with who is watching) and the tray say while
   it's on, a TV's stream takes over while it plays, and it turns itself off when the time is up. *Sound* can leave out your voice chat (Discord,
-  TeamSpeak, Teams and others) or music, so viewers hear just the game.
+  TeamSpeak, Teams and others) or music, so viewers hear just the game. Or share **just one window**, such as the
+  game's, with only its sound: viewers keep seeing the game while you switch to something else, and the rest of
+  the screen is never shown.
 - **Cheers.** Viewers can tap a reaction (👍 ❤️ 😂 🔥 👏 😮 GG). It pops up for a few seconds in the corner of
   your shared screen, or on the TV while it streams, and the other viewers see it too. A TV watching sends them
   with OK on the remote. Can be turned off.

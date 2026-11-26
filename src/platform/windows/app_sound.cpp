@@ -139,7 +139,7 @@ namespace platf {
     return 0;
   }
 
-  bool sound_without(std::uint32_t pid, const std::function<void(const float *, std::size_t)> &sink, const std::atomic_bool &stop) {
+  bool sound_without(std::uint32_t pid, const std::function<void(const float *, std::size_t)> &sink, const std::atomic_bool &stop, bool only) {
     auto mmdevapi = LoadLibraryW(L"mmdevapi.dll");
     auto activate = mmdevapi ? (activate_fn) GetProcAddress(mmdevapi, "ActivateAudioInterfaceAsync") : nullptr;
     if (!activate) {
@@ -151,7 +151,7 @@ namespace platf {
     tuna_activation_params_t params {};
     params.type = TUNA_ACTIVATION_TYPE_PROCESS_LOOPBACK;
     params.loopback.target_process_id = pid;
-    params.loopback.mode = TUNA_LOOPBACK_EXCLUDE_TREE;
+    params.loopback.mode = only ? TUNA_LOOPBACK_INCLUDE_TREE : TUNA_LOOPBACK_EXCLUDE_TREE;
     PROPVARIANT pv {};
     pv.vt = VT_BLOB;
     pv.blob.cbSize = sizeof(params);
@@ -218,7 +218,7 @@ namespace platf {
       return false;
     }
     started = true;
-    BOOST_LOG(info) << "Game sound only: leaving out the sound of process "sv << pid;
+    BOOST_LOG(info) << (only ? "Game sound only: just the sound of process "sv : "Game sound only: leaving out the sound of process "sv) << pid;
 
     std::vector<float> silence;
     while (!stop.load()) {

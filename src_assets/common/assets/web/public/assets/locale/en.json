@@ -1358,6 +1358,11 @@
         "how": "Share your screen with Discord voice chat going, set Sound to Everything except Discord, and listen on the tablet.",
         "expect": "The tablet hears the game but not the voice chat. Switching back to Everything brings the voice chat back after a few seconds."
       },
+      "sharewindow": {
+        "title": "Share one window",
+        "how": "On the Watch page, under Share my screen, pick a game's window from the list and share it. Switch to another window on the PC, then close the game.",
+        "expect": "The tablet shows only the game's window and hears only the game, even while you're in another window. When the game closes, sharing stops; the rest of the screen is never shown."
+      },
       "signin": {
         "title": "Keep me signed in",
         "how": "Sign out, then sign in with Keep me signed in turned on. Close the browser and open the dashboard again. Repeat with it turned off.",
@@ -1403,6 +1408,7 @@
     "sound_on": "Sound on",
     "sound_off": "Sound off",
     "fullscreen": "Full screen",
+    "exit_fullscreen": "Exit full screen",
     "note": "Watch only: nothing here controls the game.",
     "no_sound_here": "Watch only. This browser can't play the sound; try Chrome or Edge.",
     "share": "Share a watch link",
@@ -1423,6 +1429,10 @@
     "screen_failed": "Sharing couldn't be changed.",
     "need_link": "This device can't watch yet. Open a new watch link from the person who shares, or sign in.",
     "sign_in": "Sign in",
+    "share_screens": "A whole screen",
+    "share_windows": "Just one window, with its sound",
+    "window_shared": "just {title}, with its sound",
+    "window_desc": "Viewers see only this window, even when you switch to something else, and hear only its program. If it closes, sharing stops.",
     "share_for": "Who is it for?",
     "share_make": "Copy link",
     "share_cancel": "Cancel",

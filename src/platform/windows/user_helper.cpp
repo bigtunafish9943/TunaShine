@@ -144,7 +144,7 @@ namespace platf {
   }
 
   int sound_helper_main(int argc, char *argv[]) {
-    // tunastream.exe --sound-helper <pipe> <pid>
+    // tunastream.exe --sound-helper <pipe> <pid> [only]
     if (argc < 4) {
       return 2;
     }
@@ -167,7 +167,7 @@ namespace platf {
       if (!WriteFile(pipe, samples, bytes, &written, nullptr) || written != bytes) {
         stop = true;  // TunaStream stopped listening
       }
-    }, stop);
+    }, stop, argc >= 5 && std::string {argv[4]} == "only");
     CloseHandle(pipe);
     return ok ? 0 : 4;
   }

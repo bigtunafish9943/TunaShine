@@ -1358,6 +1358,11 @@
         "how": "Teile deinen Bildschirm mit laufendem Discord-Sprachchat, stell „Ton“ auf „Alles außer Discord“ und hör auf dem Tablet zu.",
         "expect": "Das Tablet hört das Spiel, aber nicht den Sprachchat. Zurück auf „Alles“ ist der Sprachchat nach ein paar Sekunden wieder da."
       },
+      "sharewindow": {
+        "title": "Ein Fenster teilen",
+        "how": "Wähle auf der Seite „Zuschauen“ unter „Meinen Bildschirm teilen“ das Fenster eines Spiels aus der Liste und teile es. Wechsle am PC zu einem anderen Fenster und schließ dann das Spiel.",
+        "expect": "Das Tablet zeigt nur das Spielfenster und hört nur das Spiel, auch wenn du in einem anderen Fenster bist. Wird das Spiel geschlossen, endet das Teilen; der restliche Bildschirm wird nie gezeigt."
+      },
       "signin": {
         "title": "Angemeldet bleiben",
         "how": "Melde dich ab und mit eingeschaltetem „Angemeldet bleiben“ wieder an. Schließ den Browser und öffne das Dashboard erneut. Wiederhole es ausgeschaltet.",
@@ -1403,6 +1408,7 @@
     "sound_on": "Ton an",
     "sound_off": "Ton aus",
     "fullscreen": "Vollbild",
+    "exit_fullscreen": "Vollbild beenden",
     "note": "Nur zuschauen: Nichts hier steuert das Spiel.",
     "no_sound_here": "Nur zuschauen. Dieser Browser kann den Ton nicht abspielen; versuche Chrome oder Edge.",
     "share": "Zuschau-Link teilen",
@@ -1423,6 +1429,10 @@
     "screen_failed": "Das Teilen konnte nicht geändert werden.",
     "need_link": "Dieses Gerät kann noch nicht zuschauen. Öffne einen neuen Zuschau-Link von der Person, die teilt, oder melde dich an.",
     "sign_in": "Anmelden",
+    "share_screens": "Ein ganzer Bildschirm",
+    "share_windows": "Nur ein Fenster, mit seinem Ton",
+    "window_shared": "nur {title}, mit seinem Ton",
+    "window_desc": "Zuschauer sehen nur dieses Fenster, auch wenn du zu etwas anderem wechselst, und hören nur sein Programm. Wird es geschlossen, endet das Teilen.",
     "share_for": "Für wen?",
     "share_make": "Link kopieren",
     "share_cancel": "Abbrechen",

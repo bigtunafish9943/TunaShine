@@ -53,6 +53,7 @@
 
 #ifdef _WIN32
   #include "platform/windows/app_sound.h"
+  #include "platform/windows/app_windows.h"
   #include "platform/windows/cheer_overlay.h"
   #include "platform/windows/misc.h"
   #include "platform/windows/user_helper.h"
@@ -73,8 +74,9 @@ namespace watch {
     constexpr quality_t STANDARD {1280, 720, 6000};
     constexpr quality_t SHARPER {1920, 1080, 12000};
     constexpr std::size_t MAX_VIEWERS = 4;
-    // A viewer this far behind is skipped ahead to the next key frame
-    constexpr std::size_t MAX_QUEUED = 90;
+    // A viewer this far behind (about two seconds of picture and sound) is skipped ahead to a
+    // fresh key frame, asked for straight away
+    constexpr std::size_t MAX_QUEUED = 300;
     constexpr auto LINGER = 15s;
 
     char channel_marker;
@@ -85,6 +87,9 @@ namespace watch {
     std::atomic<std::int64_t> desktop_blocked_until {0};
     // The screen to share (\\.\DISPLAYn); empty for the main one. With state_lock.
     std::string shared_monitor;
+    // Share my screen with just one window (a game's) and its sound, not a whole screen; 0 when
+    // not. Not kept across restarts: a window's id lasts only as long as the window. With state_lock.
+    std::uint64_t shared_window = 0;
     // 1080p instead of 720p. With state_lock.
     bool sharper = false;
     // Viewers may send cheers. With state_lock.
@@ -195,10 +200,13 @@ namespace watch {
       std::thread pump_thread;
       std::atomic_bool stopping {false};
       bool desktop = false;  ///< showing the PC's own screen (Share my screen), not a device's stream
+      std::uint64_t window = 0;  ///< just this window of it (and its sound)
     };
 
     std::shared_ptr<run_t> running;
     std::atomic<std::int64_t> last_viewer_left {0};
+    // A viewer needs a key frame (it fell behind, or its decoder started over): the encoder makes one
+    std::atomic_bool key_wanted {false};
 
     void deliver(const std::string &msg, bool video, bool key) {
       std::lock_guard lg {state_lock};
@@ -212,9 +220,10 @@ namespace watch {
             continue;
           }
           if (v->queue.size() >= MAX_QUEUED) {
-            // Too far behind: drop what's queued and pick up again at the next key frame
+            // Too far behind: drop what's queued and pick up again at a key frame, made now
             v->queue.clear();
             v->waiting_for_key = true;
+            key_wanted = true;
             if (!key) {
               continue;
             }
@@ -260,6 +269,9 @@ namespace watch {
         deliver(message('V', key, ts, payload), true, key);
         if (key) {
           last_key = now_us();
+        } else if (key_wanted.exchange(false)) {
+          idr->raise(true);
+          last_key = now_us();
         } else if (now_us() - last_key > 10'000'000) {
           // A key frame now and then, so a viewer that fell behind doesn't wait long
           idr->raise(true);
@@ -293,6 +305,15 @@ namespace watch {
       if (run->pump_thread.joinable()) {
         run->pump_thread.join();
       }
+#ifdef _WIN32
+      if (run->window) {
+        // The next capture shows whole displays again, unless a newer watch already shares a window
+        std::lock_guard lg {state_lock};
+        if (!(running && running->window)) {
+          platf::set_window_capture(0);
+        }
+      }
+#endif
       if (run->desktop && !proc::proc.running()) {
         // The capture remembers the screen it used; nobody is streaming, so forget it
         proc::proc.display_name.clear();
@@ -314,7 +335,7 @@ namespace watch {
 
 #ifdef _WIN32
     /// The PC's sound minus one program's, as Opus for viewers, until stopping. false if it can't.
-    bool sound_without_encoded(std::uint32_t pid, const std::atomic_bool &stopping) {
+    bool sound_without_encoded(std::uint32_t pid, bool only, const std::atomic_bool &stopping) {
       int err = 0;
       OpusEncoder *enc = opus_encoder_create(48000, 2, OPUS_APPLICATION_AUDIO, &err);
       if (!enc || err != OPUS_OK) {
@@ -339,7 +360,7 @@ namespace watch {
       bool started = false;
       if (platf::is_running_as_system()) {
         // Windows does this for the signed-in user, like any app: a helper running as them does it
-        if (auto helper = platf::start_user_helper("sound", std::to_wstring(pid))) {
+        if (auto helper = platf::start_user_helper("sound", std::to_wstring(pid) + (only ? L" only" : L""))) {
           started = true;
           BOOST_LOG(info) << "Game sound only: through the helper in the user's session"sv;
           std::vector<char> raw(48000 * 8 / 50);  // 20 ms
@@ -360,7 +381,7 @@ namespace watch {
           }
         }
       } else {
-        started = platf::sound_without(pid, encode, stopping);
+        started = platf::sound_without(pid, encode, stopping, only);
       }
       opus_encoder_destroy(enc);
       return started;
@@ -391,7 +412,20 @@ namespace watch {
       run->mail = std::make_shared<safe::mail_raw_t>();
       run->desktop = desktop;
 #ifdef _WIN32
-      if (desktop && !proc::proc.running()) {
+      if (desktop && shared_window) {
+        if (!platf::window_exists(shared_window)) {
+          shared_window = 0;
+          sharing_until = 0;
+          error = "The shared window closed. Share my screen again to pick another.";
+          return false;
+        }
+        // Only this window: its display, captured by the helper with nothing else on it
+        run->window = shared_window;
+        platf::set_window_capture(shared_window);
+        if (!proc::proc.running()) {
+          proc::proc.display_name = platf::window_display(shared_window);
+        }
+      } else if (desktop && !proc::proc.running()) {
         // The screen chosen to share, if it's still there, or else the PC's main screen
         std::string chosen;
         for (const auto &m : monitors()) {
@@ -434,10 +468,15 @@ namespace watch {
         video::capture(mail, config, channel());
       }};
 
-      // Share my screen without a voice chat's sound: the PC's sound minus that program's
+      // Share my screen without a voice chat's sound: the PC's sound minus that program's.
+      // With one window: only that window's program's sound.
       std::uint32_t leave_out_pid = 0;
+      bool only = false;
 #ifdef _WIN32
-      if (desktop && !leave_out.empty()) {
+      if (run->window) {
+        leave_out_pid = platf::window_process(run->window);
+        only = leave_out_pid != 0;
+      } else if (desktop && !leave_out.empty()) {
         for (const auto &app : sound_apps_list()) {
           if (app.key == leave_out) {
             leave_out_pid = platf::find_program(app.exes);
@@ -446,9 +485,9 @@ namespace watch {
       }
 #endif
       auto stopping = &run->stopping;
-      run->audio_thread = std::thread {[mail, audio_config, leave_out_pid, stopping]() {
+      run->audio_thread = std::thread {[mail, audio_config, leave_out_pid, only, stopping]() {
 #ifdef _WIN32
-        if (leave_out_pid && sound_without_encoded(leave_out_pid, *stopping)) {
+        if (leave_out_pid && sound_without_encoded(leave_out_pid, only, *stopping)) {
           return;
         }
 #endif
@@ -486,6 +525,15 @@ namespace watch {
             end_viewers("Screen sharing stopped.");
             done = take_locked();
           }
+#ifdef _WIN32
+          else if (mine->window && !platf::window_exists(mine->window)) {
+            // The game closed: nothing more to show (and never the rest of the screen instead)
+            shared_window = 0;
+            sharing_until = 0;
+            end_viewers("The shared window closed.");
+            done = take_locked();
+          }
+#endif
         }
         if (done) {
           finish(std::move(done));
@@ -577,6 +625,10 @@ namespace watch {
   int viewers() {
     std::lock_guard lg {state_lock};
     return (int) viewer_list.size();
+  }
+
+  void request_key_frame() {
+    key_wanted = true;
   }
 
   nlohmann::json watching_now() {
@@ -770,6 +822,16 @@ namespace watch {
     finish(std::move(done));
   }
 
+  nlohmann::json windows() {
+#ifdef _WIN32
+    // Windows are shared through the capture helper, which needs TunaStream running as a service
+    if (platf::is_running_as_system()) {
+      return platf::shareable_windows();
+    }
+#endif
+    return nlohmann::json::array();
+  }
+
   nlohmann::json monitors() {
     nlohmann::json out = nlohmann::json::array();
 #ifdef _WIN32
@@ -814,21 +876,24 @@ namespace watch {
     return out;
   }
 
-  void share_screen(bool on, int minutes, const std::string &monitor) {
+  void share_screen(bool on, int minutes, const std::string &monitor, std::uint64_t window) {
     if (on) {
       minutes = std::clamp(minutes, 1, 24 * 60);
-      // A different screen than viewers see now: they switch over
+      // A different screen or window than viewers see now: they switch over
       std::shared_ptr<run_t> done;
       {
         std::lock_guard lg {state_lock};
         load_settings_locked();
-        if (shared_monitor != monitor) {
+        bool changed = shared_window != window;
+        shared_window = window;
+        if (!window && shared_monitor != monitor) {
           shared_monitor = monitor;
           save_settings_locked();
-          if (running && running->desktop) {
-            end_viewers("Switching screens.");
-            done = take_locked();
-          }
+          changed = true;
+        }
+        if (changed && running && running->desktop) {
+          end_viewers(window ? "Switching to a window." : "Switching screens.");
+          done = take_locked();
         }
       }
       finish(std::move(done));
@@ -840,6 +905,10 @@ namespace watch {
     } else {
       const bool was_on = sharing_now();
       sharing_until = 0;
+      {
+        std::lock_guard lg {state_lock};
+        shared_window = 0;
+      }
       BOOST_LOG(info) << "Share my screen: off"sv;
 #if defined TUNASTREAM_TRAY && TUNASTREAM_TRAY >= 1
       if (was_on) {
@@ -868,6 +937,10 @@ namespace watch {
     out["showingScreen"] = running && running->desktop;
     out["viewers"] = (int) viewer_list.size();
     out["monitor"] = shared_monitor;
+    out["window"] = shared_window ? std::to_string(shared_window) : std::string {};
+#ifdef _WIN32
+    out["windowTitle"] = shared_window ? platf::window_title(shared_window) : std::string {};
+#endif
     return out;
   }
 }  // namespace watch

@@ -6,6 +6,7 @@
 
 // standard includes
 #include <chrono>
+#include <cstdint>
 #include <string_view>
 
 // platform includes
@@ -42,4 +43,8 @@ namespace platf {
 
   /// "tunastream.exe --wgc-helper ...": the screen capture helper started in the user's session.
   int wgc_helper_main(int argc, char *argv[]);
+
+  /// Share my screen with one window: captures show only this window (0: whole displays again).
+  void set_window_capture(std::uint64_t hwnd);
+  std::uint64_t window_capture();
 }  // namespace platf

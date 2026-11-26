@@ -68,11 +68,48 @@
       width: 100%;
       height: 100%;
       display: block;
+      /* Full screen on a screen that isn't 16:9: the whole picture, with black bars */
+      object-fit: contain;
     }
 
+    /* Separate rules: a browser that doesn't know one of these selectors would skip a shared rule */
     .watch-stage:fullscreen {
       border-radius: 0;
       border: 0;
+      aspect-ratio: auto;
+      width: 100%;
+      height: 100%;
+    }
+
+    .watch-stage:-webkit-full-screen {
+      border-radius: 0;
+      border: 0;
+      aspect-ratio: auto;
+      width: 100%;
+      height: 100%;
+    }
+
+    .watch-stage.is-full {
+      border-radius: 0;
+      border: 0;
+      aspect-ratio: auto;
+      width: 100%;
+    }
+
+    /* Where the browser can't make the picture full screen (iPhone): fill the window instead */
+    .watch-stage.is-full {
+      position: fixed;
+      inset: 0;
+      z-index: 2000;
+      height: 100dvh;
+    }
+
+    .watch-exit-full {
+      position: absolute;
+      top: 0.75rem;
+      right: 0.75rem;
+      z-index: 5;
+      opacity: 0.75;
     }
 
     .watch-password {
@@ -187,7 +224,10 @@
       <span class="watch-title" v-else>{{ $t('watch.title') }}</span>
     </div>
 
-    <div class="watch-stage" ref="stage">
+    <div class="watch-stage" ref="stage" :class="{ 'is-full': pseudoFull }" @dblclick="fullscreen">
+      <button type="button" class="btn btn-sm btn-dark watch-exit-full" v-if="isFull" @click.stop="fullscreen" :aria-label="$t('watch.exit_fullscreen')">
+        <i class="fas fa-compress" aria-hidden="true"></i> {{ $t('watch.exit_fullscreen') }}
+      </button>
       <canvas ref="canvas" width="1280" height="720" :aria-label="$t('watch.picture')" role="img"></canvas>
       <span class="watch-live" v-if="state === 'playing'">{{ $t('watch.live') }}</span>
       <div class="watch-cheers" aria-live="polite">
@@ -243,17 +283,23 @@
       <h2 class="h6" id="share-title"><i class="fas fa-tower-broadcast" aria-hidden="true"></i> {{ $t('watch.screen_title') }}</h2>
       <template v-if="sharing.on">
         <p class="mb-2">{{ $t('watch.screen_on', { minutes: sharing.minutesLeft }) }}
-          <span v-if="monitors.length > 1 && sharedMonitor">({{ monitorLabel(sharedMonitor) }})</span></p>
+          <span v-if="sharing.window">({{ $t('watch.window_shared', { title: sharing.windowTitle || '' }) }})</span>
+          <span v-else-if="monitors.length > 1 && sharedMonitor">({{ monitorLabel(sharedMonitor) }})</span></p>
         <button type="button" class="btn btn-sm btn-danger" @click="setSharing(false)" :disabled="sharingBusy">{{ $t('watch.screen_stop') }}</button>
       </template>
       <template v-else>
         <p class="mb-2">{{ $t('watch.screen_desc') }}</p>
         <div class="d-flex flex-wrap gap-2 align-items-center">
           <label class="visually-hidden" for="share-minutes">{{ $t('watch.screen_for') }}</label>
-          <template v-if="monitors.length > 1">
+          <template v-if="monitors.length > 1 || windows.length">
             <label class="visually-hidden" for="share-monitor">{{ $t('watch.screen_which') }}</label>
-            <select id="share-monitor" class="form-select form-select-sm w-auto" v-model="shareMonitor">
-              <option v-for="m in monitors" :key="m.id" :value="m.id">{{ monitorLabel(m) }}</option>
+            <select id="share-monitor" class="form-select form-select-sm w-auto" style="max-width: 24rem" v-model="shareTarget" @focus="loadMonitors">
+              <optgroup :label="$t('watch.share_screens')">
+                <option v-for="m in monitors" :key="m.id" :value="'m:' + m.id">{{ monitorLabel(m) }}</option>
+              </optgroup>
+              <optgroup :label="$t('watch.share_windows')" v-if="windows.length">
+                <option v-for="w in windows" :key="w.id" :value="'w:' + w.id">{{ w.title }}{{ w.exe ? ' (' + w.exe + ')' : '' }}</option>
+              </optgroup>
             </select>
           </template>
           <select id="share-minutes" class="form-select form-select-sm w-auto" v-model.number="shareMinutes">
@@ -263,8 +309,9 @@
           </select>
           <button type="button" class="btn btn-sm btn-primary" @click="setSharing(true)" :disabled="sharingBusy">{{ $t('watch.screen_start') }}</button>
         </div>
+        <p class="small text-muted mt-1 mb-0" v-if="shareTarget.startsWith('w:')">{{ $t('watch.window_desc') }}</p>
       </template>
-      <div class="d-flex flex-wrap gap-2 align-items-center mt-2" v-if="soundApps.length">
+      <div class="d-flex flex-wrap gap-2 align-items-center mt-2" v-if="soundApps.length && !shareTarget.startsWith('w:') && !(sharing.on && sharing.window)">
         <label for="share-sound" class="mb-0">{{ $t('watch.sound_label') }}</label>
         <select id="share-sound" class="form-select form-select-sm w-auto" v-model="leaveOut" @change="setLeaveOut">
           <option value="">{{ $t('watch.sound_everything') }}</option>
@@ -368,6 +415,9 @@
           cheerStatus: '',
           cheersAllowed: true,
           standalone: window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true,
+          isFull: false,
+          pseudoFull: false,
+          connectGen: 0,
           sharper: false,
           newPasswordName: '',
           newPassword: '',
@@ -378,6 +428,8 @@
           shareMinutes: 120,
           showingScreen: false,
           monitors: [],
+          windows: [],
+          shareTarget: '',
           soundApps: [],
           leaveOut: '',
           shareMonitor: '',
@@ -406,6 +458,15 @@
         this.stopped = false
       },
       async mounted() {
+        this.onFullChange = () => {
+          this.isFull = !!(document.fullscreenElement || document.webkitFullscreenElement) || this.pseudoFull
+        }
+        document.addEventListener('fullscreenchange', this.onFullChange)
+        document.addEventListener('webkitfullscreenchange', this.onFullChange)
+        this.onEscape = (e) => {
+          if (e.key === 'Escape' && this.pseudoFull) this.fullscreen()
+        }
+        document.addEventListener('keydown', this.onEscape)
         this.ctx2d = this.$refs.canvas.getContext('2d')
         if (typeof window.VideoDecoder === 'undefined') {
           this.state = 'unsupported'
@@ -419,6 +480,11 @@
         this.viewerTimer = setInterval(() => this.loadViewers(), 5000)
       },
       beforeUnmount() {
+        clearTimeout(this.retryTimer)
+        if (this.abort) this.abort.abort()
+        document.removeEventListener('fullscreenchange', this.onFullChange)
+        document.removeEventListener('webkitfullscreenchange', this.onFullChange)
+        document.removeEventListener('keydown', this.onEscape)
         this.stopped = true
         clearInterval(this.appTimer)
         clearInterval(this.keyTimer)
@@ -640,6 +706,7 @@
             const r = await fetch('./api/watch/share', { credentials: 'include' }).then((r) => r.ok ? r.json() : null)
             if (!r) return
             this.monitors = r.monitors || []
+            this.windows = r.windows || []
             this.soundApps = r.soundApps || []
             const left = this.soundApps.find((a) => a.leftOut)
             this.leaveOut = left ? left.key : ''
@@ -648,6 +715,9 @@
               const main = this.monitors.find((m) => m.main)
               this.shareMonitor = r.monitor || (main ? main.id : '')
             }
+            // What's picked: a screen (m:) or a window (w:); a window that closed falls back to the screen
+            const picked = this.shareTarget.startsWith('w:') && this.windows.some((w) => 'w:' + w.id === this.shareTarget)
+            if (!picked) this.shareTarget = 'm:' + this.shareMonitor
           } catch (e) { /* only the main screen then */ }
         },
         async setLeaveOut() {
@@ -664,7 +734,9 @@
           try {
             const r = await fetch('./api/watch/share', {
               credentials: 'include', method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ on, minutes: this.shareMinutes, monitor: this.shareMonitor }),
+              body: JSON.stringify(Object.assign({ on, minutes: this.shareMinutes },
+                this.shareTarget.startsWith('w:') ? { window: this.shareTarget.slice(2), monitor: this.shareMonitor }
+                  : { monitor: this.shareTarget.startsWith('m:') ? this.shareTarget.slice(2) : this.shareMonitor })),
             }).then((r) => r.json())
             if (r.status === false) throw new Error(r.error || '')
             this.sharing = r
@@ -677,34 +749,59 @@
           }
           this.sharingBusy = false
         },
-        retryLater(ms) {
-          if (!this.stopped) setTimeout(() => this.connect(), ms)
+        // One connection at a time: a new connect() ends the one before it, and only the newest
+        // tries again. (Two at once fed one decoder twice: a broken picture and every cheer twice.)
+        retryLater(ms, gen) {
+          if (this.stopped || gen !== this.connectGen) return
+          clearTimeout(this.retryTimer)
+          this.retryTimer = setTimeout(() => {
+            this.retryTimer = null
+            if (gen === this.connectGen) this.connect()
+          }, ms)
+        },
+        // The decoder needs a key frame to start again from: ask the PC for one now, not in ten seconds
+        askForKey() {
+          const now = Date.now()
+          if (now - (this.lastKeyAsk || 0) < 1000) return
+          this.lastKeyAsk = now
+          fetch('./api/watch/key', { credentials: 'include', method: 'POST', headers: this.authHeaders() }).catch(() => {})
         },
         async connect() {
+          const gen = ++this.connectGen
+          clearTimeout(this.retryTimer)
+          this.retryTimer = null
+          if (this.abort) this.abort.abort()
+          const abort = new AbortController()
+          this.abort = abort
           if (this.state !== 'playing') this.state = 'connecting'
           let response
           try {
-            response = await fetch('./api/watch/stream', { credentials: 'include', cache: 'no-store', headers: this.authHeaders() })
+            response = await fetch('./api/watch/stream', { credentials: 'include', cache: 'no-store', headers: this.authHeaders(), signal: abort.signal })
           } catch (e) {
+            if (gen !== this.connectGen) return
             this.state = 'error'
             this.message = this.$t('watch.error')
-            return this.retryLater(5000)
+            return this.retryLater(5000, gen)
+          }
+          if (gen !== this.connectGen) {
+            try { response.body && response.body.cancel() } catch (e) { /* gone */ }
+            return
           }
           if (response.status === 409) {
             const j = await response.json().catch(() => ({}))
             this.state = 'waiting'
             this.message = j.error || ''
-            return this.retryLater(5000)
+            return this.retryLater(5000, gen)
           }
           if (response.status === 401) {
             this.state = 'locked'
             this.message = this.linkProblem || ''
-            return this.retryLater(30000)
+            return this.retryLater(30000, gen)
           }
           if (!response.ok || !response.body) {
             this.state = 'error'
             this.message = ''
-            return this.retryLater(5000)
+            return this.retryLater(5000, gen)
           }
           this.needKey = true
           const reader = response.body.getReader()
@@ -713,7 +810,7 @@
           try {
             while (true) {
               const { value, done } = await reader.read()
-              if (done) break
+              if (done || gen !== this.connectGen) break
               const joined = new Uint8Array(buffer.length + value.length)
               joined.set(buffer)
               joined.set(value, buffer.length)
@@ -739,12 +836,16 @@
           } catch (e) {
             // The connection dropped: try again below
           }
+          if (gen !== this.connectGen) {
+            try { reader.cancel() } catch (e) { /* gone */ }
+            return
+          }
           if (ended) {
             this.state = 'ended'
-            return this.retryLater(5000)
+            return this.retryLater(5000, gen)
           }
           // TunaStream closes long responses after a few minutes: carry straight on
-          this.retryLater(200)
+          this.retryLater(200, gen)
         },
         makeDecoder(codec) {
           if (this.decoder && this.decoder.state !== 'closed') {
@@ -765,6 +866,7 @@
             error: () => {
               this.needKey = true
               this.decoder = null
+              this.askForKey()
             },
           })
           this.decoder.configure({ codec, optimizeForLatency: true })
@@ -778,16 +880,21 @@
             }
             this.needKey = false
           }
-          if (this.needKey || !this.decoder || this.decoder.state !== 'configured') return
-          // Falling behind (a slow phone): skip to the next key frame rather than lag
-          if (!key && this.decoder.decodeQueueSize > 6) {
+          if (this.needKey || !this.decoder || this.decoder.state !== 'configured') {
+            if (this.needKey) this.askForKey()
+            return
+          }
+          // Falling well behind (a slow phone): skip to a fresh key frame rather than lag
+          if (!key && this.decoder.decodeQueueSize > 30) {
             this.needKey = true
+            this.askForKey()
             return
           }
           try {
             this.decoder.decode(new EncodedVideoChunk({ type: key ? 'key' : 'delta', timestamp, data }))
           } catch (e) {
             this.needKey = true
+            this.askForKey()
           }
         },
         startAudio() {
@@ -805,8 +912,9 @@
                   buffer.copyToChannel(plane, ch)
                 }
                 const now = context.currentTime
-                // Keep the sound close to the picture: never more than a quarter second queued
-                if (audio.next < now + 0.03 || audio.next > now + 0.25) audio.next = now + 0.06
+                // A little sound queued rides out Wi-Fi's uneven delivery without gaps or clicks;
+                // more than half a second behind, catch up
+                if (audio.next < now + 0.02 || audio.next > now + 0.5) audio.next = now + 0.15
                 const source = context.createBufferSource()
                 source.buffer = buffer
                 source.connect(context.destination)
@@ -815,13 +923,22 @@
               } catch (e) { /* a packet that couldn't be played */ }
               data.close()
             },
-            error: () => { /* the next packet starts over */ },
+            // A decoder that hit an error is closed for good: make a new one
+            error: () => { audio.broken = true },
           })
           audio.decoder.configure({ codec: 'opus', sampleRate: 48000, numberOfChannels: 2 })
           this.audio = audio
         },
         onAudio(data, timestamp) {
-          if (!this.soundOn || !this.audio || this.audio.decoder.state !== 'configured') return
+          if (!this.soundOn || !this.audio) return
+          if (this.audio.broken || this.audio.decoder.state === 'closed') {
+            const context = this.audio.context
+            try { context.close() } catch (e) { /* closed */ }
+            this.audio = null
+            this.startAudio()
+            this.audio.context.resume()
+          }
+          if (this.audio.decoder.state !== 'configured') return
           try {
             this.audio.decoder.decode(new EncodedAudioChunk({ type: 'key', timestamp, data }))
           } catch (e) { /* skip it */ }
@@ -839,9 +956,40 @@
         },
         fullscreen() {
           const el = this.$refs.stage
-          if (document.fullscreenElement) document.exitFullscreen()
-          else if (el.requestFullscreen) el.requestFullscreen()
-          else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen()
+          const doc = document
+          // Leaving full screen
+          if (this.pseudoFull) {
+            this.pseudoFull = false
+            this.isFull = false
+            return
+          }
+          if (doc.fullscreenElement || doc.webkitFullscreenElement) {
+            const exit = doc.exitFullscreen || doc.webkitExitFullscreen
+            if (exit) {
+              try { const p = exit.call(doc); if (p && p.catch) p.catch(() => {}) } catch (e) { /* already out */ }
+            }
+            return
+          }
+          // Going full screen: the browser's own where it can, otherwise fill the window
+          const fillWindow = () => {
+            this.pseudoFull = true
+            this.isFull = true
+          }
+          const request = el.requestFullscreen || el.webkitRequestFullscreen || el.webkitRequestFullScreen
+          if (!request) {
+            fillWindow()
+          } else {
+            try {
+              const p = request.call(el)
+              if (p && p.catch) p.catch(fillWindow)
+            } catch (e) {
+              fillWindow()
+            }
+          }
+          // Phones: sideways suits the picture (allowed only in full screen, and not everywhere)
+          try {
+            if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(() => {})
+          } catch (e) { /* not available */ }
         },
       },
     })

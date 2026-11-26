@@ -16,9 +16,9 @@ namespace platf {
   std::uint32_t find_program(const std::vector<std::string> &exe_names);
 
   /**
-   * @brief Capture everything the PC plays except this process and what it started, as 48 kHz
-   *        stereo float, until stop is set.
+   * @brief Capture everything the PC plays except this process and what it started (or, with
+   *        only, just that process and what it started), as 48 kHz stereo float, until stop is set.
    * @return false if it couldn't start (older Windows, or Windows refused): use the usual sound.
    */
-  bool sound_without(std::uint32_t pid, const std::function<void(const float *samples, std::size_t frames)> &sink, const std::atomic_bool &stop);
+  bool sound_without(std::uint32_t pid, const std::function<void(const float *samples, std::size_t frames)> &sink, const std::atomic_bool &stop, bool only = false);
 }  // namespace platf

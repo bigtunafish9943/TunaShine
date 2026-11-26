@@ -64,6 +64,7 @@ set(PLATFORM_TARGET_FILES
         "${CMAKE_SOURCE_DIR}/src/platform/windows/cheer_overlay.cpp"
         "${CMAKE_SOURCE_DIR}/src/platform/windows/user_helper.cpp"
         "${CMAKE_SOURCE_DIR}/src/platform/windows/self_check.cpp"
+        "${CMAKE_SOURCE_DIR}/src/platform/windows/app_windows.cpp"
         "${CMAKE_SOURCE_DIR}/src/platform/windows/virtual_display.h"
         "${CMAKE_SOURCE_DIR}/src/platform/windows/virtual_display.cpp"
         "${CMAKE_SOURCE_DIR}/src/platform/windows/window_herder.cpp"
