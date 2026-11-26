@@ -1358,6 +1358,11 @@
         "how": "Share your screen with Discord voice chat going, set Sound to Everything except Discord, and listen on the tablet.",
         "expect": "The tablet hears the game but not the voice chat. Switching back to Everything brings the voice chat back after a few seconds."
       },
+      "sharewindow": {
+        "title": "Share one window",
+        "how": "On the Watch page, under Share my screen, pick a game's window from the list and share it. Switch to another window on the PC, then close the game.",
+        "expect": "The tablet shows only the game's window and hears only the game, even while you're in another window. When the game closes, sharing stops; the rest of the screen is never shown."
+      },
       "signin": {
         "title": "Keep me signed in",
         "how": "Sign out, then sign in with Keep me signed in turned on. Close the browser and open the dashboard again. Repeat with it turned off.",

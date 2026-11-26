@@ -1358,6 +1358,11 @@
         "how": "Teile deinen Bildschirm mit laufendem Discord-Sprachchat, stell „Ton“ auf „Alles außer Discord“ und hör auf dem Tablet zu.",
         "expect": "Das Tablet hört das Spiel, aber nicht den Sprachchat. Zurück auf „Alles“ ist der Sprachchat nach ein paar Sekunden wieder da."
       },
+      "sharewindow": {
+        "title": "Ein Fenster teilen",
+        "how": "Wähle auf der Seite „Zuschauen“ unter „Meinen Bildschirm teilen“ das Fenster eines Spiels aus der Liste und teile es. Wechsle am PC zu einem anderen Fenster und schließ dann das Spiel.",
+        "expect": "Das Tablet zeigt nur das Spielfenster und hört nur das Spiel, auch wenn du in einem anderen Fenster bist. Wird das Spiel geschlossen, endet das Teilen; der restliche Bildschirm wird nie gezeigt."
+      },
       "signin": {
         "title": "Angemeldet bleiben",
         "how": "Melde dich ab und mit eingeschaltetem „Angemeldet bleiben“ wieder an. Schließ den Browser und öffne das Dashboard erneut. Wiederhole es ausgeschaltet.",
