@@ -906,7 +906,8 @@ namespace config {
   }
 
   bool to_bool(std::string &boolean) {
-    std::for_each(std::begin(boolean), std::end(boolean), [](char ch) {
+    // Lower-cased in place (for_each changed nothing, so "True" or "ON" read as off). Sunshine #5989
+    std::transform(std::begin(boolean), std::end(boolean), std::begin(boolean), [](unsigned char ch) {
       return (char) std::tolower(ch);
     });
 

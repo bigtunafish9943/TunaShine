@@ -165,6 +165,11 @@ namespace net {
 
     // Maximum of 128 clients, which should be enough for anyone
     auto host = host_t {enet_host_create(af == IPV4 ? AF_INET : AF_INET6, &addr, 128, 0, 0, 0)};
+    if (!host) {
+      // Say so instead of crashing on the next line (Sunshine #6164)
+      BOOST_LOG(error) << "Couldn't open the stream's control port ["sv << any_addr << "]:"sv << port;
+      return host;
+    }
 
     // Enable opportunistic QoS tagging (automatically disables if the network appears to drop tagged packets)
     enet_socket_set_option(host->socket, ENET_SOCKOPT_QOS, 1);

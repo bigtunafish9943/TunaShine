@@ -631,6 +631,10 @@ namespace proc {
         if (!(_app.cmd.empty() && ec == std::errc::permission_denied)) {
           return -1;
         }
+        // Allowed (Desktop before anyone signs in): there's no command to wait for, and waiting
+        // on one that never started failed the launch anyway. Sunshine #6030
+        ec.clear();
+        continue;
       }
 
       child.wait();
