@@ -227,8 +227,8 @@ namespace {
 
   void run() {
     CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
-    // Show on the desktop the user sees
-    if (auto desk = OpenInputDesktop(0, FALSE, GENERIC_ALL)) {
+    // Show on the user's desktop (not the lock or UAC screen, even if one is up right now)
+    if (auto desk = OpenDesktopW(L"Default", 0, FALSE, GENERIC_ALL)) {
       SetThreadDesktop(desk);
     }
     painter = new painter_t;

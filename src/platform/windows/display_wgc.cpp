@@ -898,7 +898,7 @@ namespace platf::dxgi {
         if (code == wgc_ipc::EXIT_DISPLAY_CHANGED && ++display_changes <= 3) {
           BOOST_LOG(info) << "WGC: the display changed, capturing it again"sv;
         } else {
-          BOOST_LOG(warning) << "WGC: the capture helper "sv << helper_exit_reason(code) << ", using DDX for a minute"sv;
+          BOOST_LOG(warning) << "WGC: the capture helper "sv << helper_exit_reason(code) << ", using DDX for now"sv;
           wgc_retry_after = steady_ms() + 60000;
         }
         return capture_e::reinit;
