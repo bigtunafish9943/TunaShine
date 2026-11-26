@@ -151,7 +151,7 @@
     "sync_title": "Garder mes jeux synchronisés",
     "sync_days": "Récent signifie les derniers",
     "sync_now": "Synchroniser",
-    "sync_desc": "Ajoute les jeux Steam joués récemment et les jeux nouvellement installés via Epic, GOG, EA, Ubisoft, Amazon ou le Microsoft Store (ces lanceurs n'enregistrent pas le temps de jeu), avec leurs jaquettes. Ils sont retirés à leur désinstallation, ou pour Steam s'ils ne sont pas joués pendant cette durée. Les apps ajoutées par vous ne sont jamais touchées, et un jeu synchronisé que vous supprimez reste supprimé. Rien ne change pendant un stream.",
+    "sync_desc": "Ajoute les jeux joués récemment depuis Steam, Epic, GOG, EA, Ubisoft, Amazon et le Microsoft Store, avec leurs jaquettes. Steam indique quand chaque jeu a été joué ; pour les autres, TunaStream demande à Windows quand le jeu a été lancé. Les jeux sont retirés une fois désinstallés ou pas joués depuis ce délai. Les applis ajoutées à la main ne sont jamais touchées, et un jeu synchronisé supprimé le reste. Rien ne change pendant une diffusion.",
     "sync_last": "Dernière synchronisation {when} : {added} ajoutés, {removed} retirés.",
     "sync_added_list": "Ajoutés : {names}.",
     "sync_excluded": "{n} jeux synchronisés que vous avez supprimés restent hors de la liste.",

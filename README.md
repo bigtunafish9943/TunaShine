@@ -161,10 +161,12 @@ and every step was tightened:
   streams were, with milestones as they're reached. The record stays on the PC.
 - **A reminder when a game runs slow.** When a game itself draws fewer than 59 frames a second, the home page
   says so and names the fix in the game's settings, and keeps a reminder until it runs at full rate.
-- **Your games, kept in sync** (off unless turned on, on the Apps page). Steam games you've played lately and games
-  newly installed from Epic, GOG, EA, Ubisoft, Amazon and the Microsoft Store are added by themselves, with
-  covers, and taken off again when they're uninstalled or, for Steam, not played for a while. Apps you added
-  yourself are never touched, and a synced game you delete stays deleted.
+- **Your games, kept in sync** (off unless turned on, on the Apps page). The games you've played lately are added
+  by themselves, with covers, from Steam, Epic, GOG, EA, Ubisoft, Amazon and the Microsoft Store and Xbox app.
+  Steam records when each game was played; for the other launchers, which don't, TunaStream reads when Windows last
+  ran the game (Windows' Prefetch records), and a game newly installed counts as played. Games are taken off again
+  when they're uninstalled or not played for a while. Covers for games from other stores come from Steam when the
+  game is on Steam too. Apps you added yourself are never touched, and a synced game you delete stays deleted.
 - **The game's frame rate matches the stream** (on by default). With RivaTuner Statistics Server installed the
   cap is exact, 59.94 included; otherwise NVIDIA's frame cap is used. V-Sync is turned off in games while
   streaming on NVIDIA cards, since the TV paces the picture. Both go back as they were when the stream ends.

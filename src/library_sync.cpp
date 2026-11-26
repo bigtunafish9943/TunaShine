@@ -16,6 +16,7 @@
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <map>
@@ -168,6 +169,95 @@ namespace library_sync {
       return out;
     }
 
+    /**
+     * When each program last ran, by name, from Windows' Prefetch folder: Windows keeps a small
+     * file per program there (NAME.EXE-1A2B3C4D.pf) and rewrites it each time the program
+     * starts. Other launchers (Epic, GOG, EA, Ubisoft, Amazon, Xbox) keep no play times we can
+     * read, so this is how their games' last play is known. Empty where Prefetch is off.
+     */
+    std::map<std::string, std::int64_t> prefetch_last_run() {
+      std::map<std::string, std::int64_t> out;
+      std::error_code ec;
+#ifdef _WIN32
+      const char *windir = std::getenv("SystemRoot");
+      const fs::path folder = fs::path {windir ? windir : "C:\\Windows"} / "Prefetch";
+      for (const auto &entry : fs::directory_iterator {folder, ec}) {
+        const auto name = entry.path().filename().string();
+        const auto dash = name.rfind('-');
+        if (dash == std::string::npos || lower(entry.path().extension().string()) != ".pf") {
+          continue;
+        }
+        const auto when = fs::last_write_time(entry.path(), ec);
+        if (ec) {
+          continue;
+        }
+        // The file's time, as the system clock tells it
+        const auto as_system = std::chrono::system_clock::now() +
+                               std::chrono::duration_cast<std::chrono::system_clock::duration>(when - fs::file_time_type::clock::now());
+        const auto seconds = std::chrono::duration_cast<std::chrono::seconds>(as_system.time_since_epoch()).count();
+        auto &best = out[lower(name.substr(0, dash))];
+        best = std::max(best, (std::int64_t) seconds);
+      }
+#endif
+      return out;
+    }
+
+    /// Programs in a game's folder that aren't the game: setups, crash reporters, redistributables
+    bool not_the_game(const std::string &exe) {
+      for (const auto *word : {"unins", "setup", "crash", "redist", "vcredist", "dxsetup", "directx", "dotnet", "report", "helper", "updater", "launcherpatcher", "easyanticheat", "eac", "battleye", "ue4prereq", "prereq", "install"}) {
+        if (exe.find(word) != std::string::npos) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    /// When [g] was last played as far as Windows knows: the newest run of any program in its folder
+    std::int64_t game_last_run(const game_library::game_t &g, const std::map<std::string, std::int64_t> &runs) {
+      if (runs.empty()) {
+        return 0;
+      }
+      std::set<std::string> exes;
+      auto add = [&](const fs::path &p) {
+        auto name = lower(p.filename().string());
+        if (name.size() > 4 && name.ends_with(".exe") && !not_the_game(name)) {
+          exes.insert(name);
+        }
+      };
+      if (!g.cmd.empty()) {
+        std::string cmd = g.cmd;
+        std::erase(cmd, '"');
+        if (const auto end = lower(cmd).find(".exe"); end != std::string::npos) {
+          add(fs::path {cmd.substr(0, end + 4)});
+        }
+      }
+      std::error_code ec;
+      if (!g.working_dir.empty() && fs::is_directory(g.working_dir, ec)) {
+        // The game's folder and one level down (Binaries\Win64 and the like), within reason
+        int looked = 0;
+        for (auto it = fs::recursive_directory_iterator {g.working_dir, fs::directory_options::skip_permission_denied, ec};
+             it != fs::recursive_directory_iterator {} && looked < 4000; it.increment(ec), ++looked) {
+          if (ec) {
+            break;
+          }
+          if (it.depth() > 3) {
+            it.disable_recursion_pending();
+            continue;
+          }
+          if (it->is_regular_file(ec)) {
+            add(it->path());
+          }
+        }
+      }
+      std::int64_t best = 0;
+      for (const auto &exe : exes) {
+        if (auto r = runs.find(exe); r != runs.end()) {
+          best = std::max(best, r->second);
+        }
+      }
+      return best;
+    }
+
     nlohmann::json last_result = nlohmann::json::object();
 
     void sync_once(bool forced) {
@@ -195,6 +285,13 @@ namespace library_sync {
         return;
       }
       const auto played = steam_last_played();
+      const auto runs = prefetch_last_run();
+      std::map<std::string, std::int64_t> other_played;
+      for (const auto &[key, g] : installed) {
+        if (g.source != "steam") {
+          other_played[key] = game_last_run(g, runs);
+        }
+      }
 
       // New installs are noticed from the second sync on: what's here on the first is old
       for (auto &[key, g] : installed) {
@@ -229,7 +326,17 @@ namespace library_sync {
           auto p = played.find(g.id);
           return p != played.end() ? p->second : 0;
         }
-        return state["seen"].value(key, (std::int64_t) 0);
+        // Other launchers: when Windows last ran the game, or when it was newly installed
+        auto p = other_played.find(key);
+        return std::max(p != other_played.end() ? p->second : 0, state["seen"].value(key, (std::int64_t) 0));
+      };
+      // Whether we know when this game was last played (Steam always; others when Windows ran it)
+      auto known = [&](const std::string &key, const game_library::game_t &g) {
+        if (g.source == "steam") {
+          return true;
+        }
+        auto p = other_played.find(key);
+        return p != other_played.end() && p->second > 0;
       };
 
       // Remove: uninstalled, or (Steam) not played for the whole window
@@ -242,7 +349,7 @@ namespace library_sync {
         const auto key = it->value("tuna-sync", "");
         auto g = installed.find(key);
         const bool gone = g == installed.end();
-        const bool stale = !gone && g->second.source == "steam" && recent(key, g->second) < now - window;
+        const bool stale = !gone && known(key, g->second) && recent(key, g->second) < now - window;
         if (gone || stale) {
           removed.push_back(it->value("name", ""));
           names.erase(lower(it->value("name", "")));

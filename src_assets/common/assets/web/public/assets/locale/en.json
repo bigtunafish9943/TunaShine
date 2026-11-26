@@ -151,7 +151,7 @@
     "sync_title": "Keep my games in sync",
     "sync_days": "Recent means the last",
     "sync_now": "Sync now",
-    "sync_desc": "Adds Steam games you've played recently and games newly installed through Epic, GOG, EA, Ubisoft, Amazon or the Microsoft Store (those launchers don't record play times), with their covers. They're removed again when uninstalled, or for Steam when not played for that long. Apps you added yourself are never touched, and a synced game you delete stays deleted. Nothing changes while someone is streaming.",
+    "sync_desc": "Adds the games you've played lately, from Steam, Epic, GOG, EA, Ubisoft, Amazon and the Microsoft Store, with their covers. Steam says when each game was last played; for the others TunaStream asks Windows when the game last ran. Games are removed again when uninstalled or not played for that long. Apps you added yourself are never touched, and a synced game you delete stays deleted. Nothing changes while someone is streaming.",
     "sync_last": "Last synced {when}: {added} added, {removed} removed.",
     "sync_added_list": "Added: {names}.",
     "sync_excluded": "{n} synced games you deleted stay off the list.",
