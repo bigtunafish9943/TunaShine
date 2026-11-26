@@ -620,6 +620,14 @@
             }
             this.showingScreen = !!(s && s.sharingScreen && s.sharingScreen.showingScreen)
             if (!this.token) this.sharing = (s && s.sharingScreen) || null
+            // Came from the home page's Share my screen: bring that part into view once it shows
+            if (this.sharing && location.hash === '#share-title' && !this.scrolledToShare) {
+              this.scrolledToShare = true
+              this.$nextTick(() => {
+                const el = document.getElementById('share-title')
+                if (el) el.scrollIntoView({ block: 'center' })
+              })
+            }
           } catch (e) { /* keep the last name */ }
         },
         monitorLabel(m) {

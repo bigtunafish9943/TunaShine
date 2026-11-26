@@ -39,6 +39,9 @@
         <a v-if="currentAppName || (sharing && sharing.on)" class="btn btn-sm btn-outline-primary me-2" href="./watch">
           <i class="fas fa-eye" aria-hidden="true"></i> {{ $t('index.watch') }}
         </a>
+        <a v-else class="btn btn-sm btn-outline-secondary me-2" href="./watch#share-title">
+          <i class="fas fa-tower-broadcast" aria-hidden="true"></i> {{ $t('index.share_screen') }}
+        </a>
         <button v-if="currentAppName" type="button" class="btn btn-sm btn-danger me-2" :disabled="ending" @click="endSession">
           {{ $t('index.end_session') }}
         </button>
