@@ -312,7 +312,7 @@ namespace confighttp {
           }
         }
       } else if (method == "POST") {
-        if (path == "/api/watch/cheer") {
+        if (path == "/api/watch/cheer" || path == "/api/watch/key") {
           return "watch";
         }
         if (path == "/api/watch/redeem") {
@@ -1620,6 +1620,19 @@ namespace confighttp {
     } catch (std::exception &e) {
       bad_request(response, request, e.what());
     }
+  }
+
+  /**
+   * @brief POST /api/watch/key: a viewer's decoder needs a key frame to start again from.
+   */
+  void postWatchKey(resp_https_t response, req_https_t request) {
+    if (!authenticate(response, request)) {
+      return;
+    }
+    watch::request_key_frame();
+    nlohmann::json out;
+    out["status"] = true;
+    send_response(response, out);
   }
 
   /**
@@ -4017,6 +4030,7 @@ namespace confighttp {
     server.resource["^/api/watch/viewers/remove$"]["POST"] = postWatchViewerRemove;
     server.resource["^/api/watch/quality$"]["POST"] = postWatchQuality;
     server.resource["^/api/watch/cheer$"]["POST"] = postWatchCheer;
+    server.resource["^/api/watch/key$"]["POST"] = postWatchKey;
     server.resource["^/api/watch/cheers$"]["POST"] = postWatchCheersAllowed;
     server.resource["^/api/watch/invite$"]["POST"] = postWatchInvite;
     server.resource["^/api/watch/redeem$"]["POST"] = postWatchRedeem;

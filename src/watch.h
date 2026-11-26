@@ -51,6 +51,9 @@ namespace watch {
   /// How many browsers are watching now.
   int viewers();
 
+  /// A viewer's decoder needs a key frame to start again from: the encoder makes one now.
+  void request_key_frame();
+
   /// A device is starting a stream: stop showing the PC's own screen, so viewers follow the stream.
   void stop_desktop();
 

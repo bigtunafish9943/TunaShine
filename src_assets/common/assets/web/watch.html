@@ -410,6 +410,7 @@
           standalone: window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true,
           isFull: false,
           pseudoFull: false,
+          connectGen: 0,
           sharper: false,
           newPasswordName: '',
           newPassword: '',
@@ -470,6 +471,8 @@
         this.viewerTimer = setInterval(() => this.loadViewers(), 5000)
       },
       beforeUnmount() {
+        clearTimeout(this.retryTimer)
+        if (this.abort) this.abort.abort()
         document.removeEventListener('fullscreenchange', this.onFullChange)
         document.removeEventListener('webkitfullscreenchange', this.onFullChange)
         document.removeEventListener('keydown', this.onEscape)
@@ -731,34 +734,59 @@
           }
           this.sharingBusy = false
         },
-        retryLater(ms) {
-          if (!this.stopped) setTimeout(() => this.connect(), ms)
+        // One connection at a time: a new connect() ends the one before it, and only the newest
+        // tries again. (Two at once fed one decoder twice: a broken picture and every cheer twice.)
+        retryLater(ms, gen) {
+          if (this.stopped || gen !== this.connectGen) return
+          clearTimeout(this.retryTimer)
+          this.retryTimer = setTimeout(() => {
+            this.retryTimer = null
+            if (gen === this.connectGen) this.connect()
+          }, ms)
+        },
+        // The decoder needs a key frame to start again from: ask the PC for one now, not in ten seconds
+        askForKey() {
+          const now = Date.now()
+          if (now - (this.lastKeyAsk || 0) < 1000) return
+          this.lastKeyAsk = now
+          fetch('./api/watch/key', { credentials: 'include', method: 'POST', headers: this.authHeaders() }).catch(() => {})
         },
         async connect() {
+          const gen = ++this.connectGen
+          clearTimeout(this.retryTimer)
+          this.retryTimer = null
+          if (this.abort) this.abort.abort()
+          const abort = new AbortController()
+          this.abort = abort
           if (this.state !== 'playing') this.state = 'connecting'
           let response
           try {
-            response = await fetch('./api/watch/stream', { credentials: 'include', cache: 'no-store', headers: this.authHeaders() })
+            response = await fetch('./api/watch/stream', { credentials: 'include', cache: 'no-store', headers: this.authHeaders(), signal: abort.signal })
           } catch (e) {
+            if (gen !== this.connectGen) return
             this.state = 'error'
             this.message = this.$t('watch.error')
-            return this.retryLater(5000)
+            return this.retryLater(5000, gen)
+          }
+          if (gen !== this.connectGen) {
+            try { response.body && response.body.cancel() } catch (e) { /* gone */ }
+            return
           }
           if (response.status === 409) {
             const j = await response.json().catch(() => ({}))
             this.state = 'waiting'
             this.message = j.error || ''
-            return this.retryLater(5000)
+            return this.retryLater(5000, gen)
           }
           if (response.status === 401) {
             this.state = 'locked'
             this.message = this.linkProblem || ''
-            return this.retryLater(30000)
+            return this.retryLater(30000, gen)
           }
           if (!response.ok || !response.body) {
             this.state = 'error'
             this.message = ''
-            return this.retryLater(5000)
+            return this.retryLater(5000, gen)
           }
           this.needKey = true
           const reader = response.body.getReader()
@@ -767,7 +795,7 @@
           try {
             while (true) {
               const { value, done } = await reader.read()
-              if (done) break
+              if (done || gen !== this.connectGen) break
               const joined = new Uint8Array(buffer.length + value.length)
               joined.set(buffer)
               joined.set(value, buffer.length)
@@ -793,12 +821,16 @@
           } catch (e) {
             // The connection dropped: try again below
           }
+          if (gen !== this.connectGen) {
+            try { reader.cancel() } catch (e) { /* gone */ }
+            return
+          }
           if (ended) {
             this.state = 'ended'
-            return this.retryLater(5000)
+            return this.retryLater(5000, gen)
           }
           // TunaStream closes long responses after a few minutes: carry straight on
-          this.retryLater(200)
+          this.retryLater(200, gen)
         },
         makeDecoder(codec) {
           if (this.decoder && this.decoder.state !== 'closed') {
@@ -819,6 +851,7 @@
             error: () => {
               this.needKey = true
               this.decoder = null
+              this.askForKey()
             },
           })
           this.decoder.configure({ codec, optimizeForLatency: true })
@@ -832,16 +865,21 @@
             }
             this.needKey = false
           }
-          if (this.needKey || !this.decoder || this.decoder.state !== 'configured') return
-          // Falling behind (a slow phone): skip to the next key frame rather than lag
-          if (!key && this.decoder.decodeQueueSize > 6) {
+          if (this.needKey || !this.decoder || this.decoder.state !== 'configured') {
+            if (this.needKey) this.askForKey()
+            return
+          }
+          // Falling well behind (a slow phone): skip to a fresh key frame rather than lag
+          if (!key && this.decoder.decodeQueueSize > 30) {
             this.needKey = true
+            this.askForKey()
             return
           }
           try {
             this.decoder.decode(new EncodedVideoChunk({ type: key ? 'key' : 'delta', timestamp, data }))
           } catch (e) {
             this.needKey = true
+            this.askForKey()
           }
         },
         startAudio() {

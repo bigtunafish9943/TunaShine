@@ -73,8 +73,9 @@ namespace watch {
     constexpr quality_t STANDARD {1280, 720, 6000};
     constexpr quality_t SHARPER {1920, 1080, 12000};
     constexpr std::size_t MAX_VIEWERS = 4;
-    // A viewer this far behind is skipped ahead to the next key frame
-    constexpr std::size_t MAX_QUEUED = 90;
+    // A viewer this far behind (about two seconds of picture and sound) is skipped ahead to a
+    // fresh key frame, asked for straight away
+    constexpr std::size_t MAX_QUEUED = 300;
     constexpr auto LINGER = 15s;
 
     char channel_marker;
@@ -199,6 +200,8 @@ namespace watch {
 
     std::shared_ptr<run_t> running;
     std::atomic<std::int64_t> last_viewer_left {0};
+    // A viewer needs a key frame (it fell behind, or its decoder started over): the encoder makes one
+    std::atomic_bool key_wanted {false};
 
     void deliver(const std::string &msg, bool video, bool key) {
       std::lock_guard lg {state_lock};
@@ -212,9 +215,10 @@ namespace watch {
             continue;
           }
           if (v->queue.size() >= MAX_QUEUED) {
-            // Too far behind: drop what's queued and pick up again at the next key frame
+            // Too far behind: drop what's queued and pick up again at a key frame, made now
             v->queue.clear();
             v->waiting_for_key = true;
+            key_wanted = true;
             if (!key) {
               continue;
             }
@@ -259,6 +263,9 @@ namespace watch {
         const auto ts = packet->frame_timestamp ? std::chrono::duration_cast<std::chrono::microseconds>(packet->frame_timestamp->time_since_epoch()).count() : now_us();
         deliver(message('V', key, ts, payload), true, key);
         if (key) {
+          last_key = now_us();
+        } else if (key_wanted.exchange(false)) {
+          idr->raise(true);
           last_key = now_us();
         } else if (now_us() - last_key > 10'000'000) {
           // A key frame now and then, so a viewer that fell behind doesn't wait long
@@ -577,6 +584,10 @@ namespace watch {
   int viewers() {
     std::lock_guard lg {state_lock};
     return (int) viewer_list.size();
+  }
+
+  void request_key_frame() {
+    key_wanted = true;
   }
 
   nlohmann::json watching_now() {
