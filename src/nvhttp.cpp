@@ -764,6 +764,13 @@ namespace nvhttp {
         sess.client.cert = util::from_hex_vec(get_arg(args, "clientcert"), true);
 
         BOOST_LOG(debug) << sess.client.cert;
+        // A new attempt from the same client means the last one was abandoned (the TV went
+        // back, the app restarted, it timed out). Start over: keeping the old session made
+        // every retry fail as "out of order" until TunaStream restarted. (Sunshine #5915)
+        if (auto old = map_id_sess.find(sess.client.uniqueID); old != std::end(map_id_sess)) {
+          BOOST_LOG(info) << "Pairing: starting over, replacing an unfinished attempt"sv;
+          map_id_sess.erase(old);
+        }
         auto ptr = map_id_sess.emplace(sess.client.uniqueID, std::move(sess)).first;
 
         ptr->second.async_insert_pin.salt = std::move(get_arg(args, "salt"));
