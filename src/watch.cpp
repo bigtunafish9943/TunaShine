@@ -3,11 +3,13 @@
  * @brief Watching a stream in a web browser.
  *
  * While a device streams, a browser can watch the same screen. A second encoder joins the shared
- * screen capture and encodes it small (1280x720 H.264, which every browser can decode), and a
- * second sound capture encodes stereo Opus. Both go to each viewer as a stream of short messages
- * over one long HTTP response; the page decodes them with WebCodecs.
+ * screen capture and encodes it small (1280x720 H.264, or 1920x1080 when Sharper is chosen; every
+ * browser can decode it), and a second sound capture encodes stereo Opus. Both go to each viewer as
+ * a stream of short messages over one long HTTP response; the page decodes them with WebCodecs,
+ * and TunaReceive's Watch with MediaCodec.
  *
- * Message: 1 byte type ('I' info JSON, 'V' video access unit, 'A' Opus packet, 'E' ended),
+ * Message: 1 byte type ('I' info JSON, 'V' video access unit, 'A' Opus packet, 'C' a cheer as
+ * JSON {name, emoji}, 'E' ended, with the reason as text),
  * 1 byte flags (1 = key frame), 8 bytes timestamp in microseconds, 4 bytes length, then the
  * payload. Numbers are little-endian.
  *
