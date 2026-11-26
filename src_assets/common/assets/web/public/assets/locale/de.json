@@ -1403,6 +1403,7 @@
     "sound_on": "Ton an",
     "sound_off": "Ton aus",
     "fullscreen": "Vollbild",
+    "exit_fullscreen": "Vollbild beenden",
     "note": "Nur zuschauen: Nichts hier steuert das Spiel.",
     "no_sound_here": "Nur zuschauen. Dieser Browser kann den Ton nicht abspielen; versuche Chrome oder Edge.",
     "share": "Zuschau-Link teilen",

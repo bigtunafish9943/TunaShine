@@ -1403,6 +1403,7 @@
     "sound_on": "Sound on",
     "sound_off": "Sound off",
     "fullscreen": "Full screen",
+    "exit_fullscreen": "Exit full screen",
     "note": "Watch only: nothing here controls the game.",
     "no_sound_here": "Watch only. This browser can't play the sound; try Chrome or Edge.",
     "share": "Share a watch link",

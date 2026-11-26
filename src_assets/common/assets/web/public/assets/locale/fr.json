@@ -1403,6 +1403,7 @@
     "sound_on": "Son activé",
     "sound_off": "Son coupé",
     "fullscreen": "Plein écran",
+    "exit_fullscreen": "Quitter le plein écran",
     "note": "Regarder uniquement : rien ici ne contrôle le jeu.",
     "no_sound_here": "Regarder uniquement. Ce navigateur ne peut pas lire le son ; essayez Chrome ou Edge.",
     "share": "Partager un lien pour regarder",

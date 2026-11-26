@@ -68,11 +68,48 @@
       width: 100%;
       height: 100%;
       display: block;
+      /* Full screen on a screen that isn't 16:9: the whole picture, with black bars */
+      object-fit: contain;
     }
 
+    /* Separate rules: a browser that doesn't know one of these selectors would skip a shared rule */
     .watch-stage:fullscreen {
       border-radius: 0;
       border: 0;
+      aspect-ratio: auto;
+      width: 100%;
+      height: 100%;
+    }
+
+    .watch-stage:-webkit-full-screen {
+      border-radius: 0;
+      border: 0;
+      aspect-ratio: auto;
+      width: 100%;
+      height: 100%;
+    }
+
+    .watch-stage.is-full {
+      border-radius: 0;
+      border: 0;
+      aspect-ratio: auto;
+      width: 100%;
+    }
+
+    /* Where the browser can't make the picture full screen (iPhone): fill the window instead */
+    .watch-stage.is-full {
+      position: fixed;
+      inset: 0;
+      z-index: 2000;
+      height: 100dvh;
+    }
+
+    .watch-exit-full {
+      position: absolute;
+      top: 0.75rem;
+      right: 0.75rem;
+      z-index: 5;
+      opacity: 0.75;
     }
 
     .watch-password {
@@ -187,7 +224,10 @@
       <span class="watch-title" v-else>{{ $t('watch.title') }}</span>
     </div>
 
-    <div class="watch-stage" ref="stage">
+    <div class="watch-stage" ref="stage" :class="{ 'is-full': pseudoFull }" @dblclick="fullscreen">
+      <button type="button" class="btn btn-sm btn-dark watch-exit-full" v-if="isFull" @click.stop="fullscreen" :aria-label="$t('watch.exit_fullscreen')">
+        <i class="fas fa-compress" aria-hidden="true"></i> {{ $t('watch.exit_fullscreen') }}
+      </button>
       <canvas ref="canvas" width="1280" height="720" :aria-label="$t('watch.picture')" role="img"></canvas>
       <span class="watch-live" v-if="state === 'playing'">{{ $t('watch.live') }}</span>
       <div class="watch-cheers" aria-live="polite">
@@ -368,6 +408,8 @@
           cheerStatus: '',
           cheersAllowed: true,
           standalone: window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true,
+          isFull: false,
+          pseudoFull: false,
           sharper: false,
           newPasswordName: '',
           newPassword: '',
@@ -406,6 +448,15 @@
         this.stopped = false
       },
       async mounted() {
+        this.onFullChange = () => {
+          this.isFull = !!(document.fullscreenElement || document.webkitFullscreenElement) || this.pseudoFull
+        }
+        document.addEventListener('fullscreenchange', this.onFullChange)
+        document.addEventListener('webkitfullscreenchange', this.onFullChange)
+        this.onEscape = (e) => {
+          if (e.key === 'Escape' && this.pseudoFull) this.fullscreen()
+        }
+        document.addEventListener('keydown', this.onEscape)
         this.ctx2d = this.$refs.canvas.getContext('2d')
         if (typeof window.VideoDecoder === 'undefined') {
           this.state = 'unsupported'
@@ -419,6 +470,9 @@
         this.viewerTimer = setInterval(() => this.loadViewers(), 5000)
       },
       beforeUnmount() {
+        document.removeEventListener('fullscreenchange', this.onFullChange)
+        document.removeEventListener('webkitfullscreenchange', this.onFullChange)
+        document.removeEventListener('keydown', this.onEscape)
         this.stopped = true
         clearInterval(this.appTimer)
         clearInterval(this.keyTimer)
@@ -839,9 +893,40 @@
         },
         fullscreen() {
           const el = this.$refs.stage
-          if (document.fullscreenElement) document.exitFullscreen()
-          else if (el.requestFullscreen) el.requestFullscreen()
-          else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen()
+          const doc = document
+          // Leaving full screen
+          if (this.pseudoFull) {
+            this.pseudoFull = false
+            this.isFull = false
+            return
+          }
+          if (doc.fullscreenElement || doc.webkitFullscreenElement) {
+            const exit = doc.exitFullscreen || doc.webkitExitFullscreen
+            if (exit) {
+              try { const p = exit.call(doc); if (p && p.catch) p.catch(() => {}) } catch (e) { /* already out */ }
+            }
+            return
+          }
+          // Going full screen: the browser's own where it can, otherwise fill the window
+          const fillWindow = () => {
+            this.pseudoFull = true
+            this.isFull = true
+          }
+          const request = el.requestFullscreen || el.webkitRequestFullscreen || el.webkitRequestFullScreen
+          if (!request) {
+            fillWindow()
+          } else {
+            try {
+              const p = request.call(el)
+              if (p && p.catch) p.catch(fillWindow)
+            } catch (e) {
+              fillWindow()
+            }
+          }
+          // Phones: sideways suits the picture (allowed only in full screen, and not everywhere)
+          try {
+            if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(() => {})
+          } catch (e) { /* not available */ }
         },
       },
     })

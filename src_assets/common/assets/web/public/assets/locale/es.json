@@ -1403,6 +1403,7 @@
     "sound_on": "Sonido activado",
     "sound_off": "Sonido desactivado",
     "fullscreen": "Pantalla completa",
+    "exit_fullscreen": "Salir de pantalla completa",
     "note": "Solo para ver: nada de aquí controla el juego.",
     "no_sound_here": "Solo para ver. Este navegador no puede reproducir el sonido; prueba Chrome o Edge.",
     "share": "Compartir un enlace para ver",
