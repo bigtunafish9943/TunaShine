@@ -218,7 +218,7 @@ namespace confighttp {
     std::vector<token_t> tokens;
     bool loaded = false;
 
-    const std::vector<std::string> SCOPES {"status", "watch", "messages", "sessions", "launch", "logs"};
+    const std::vector<std::string> SCOPES {"status", "watch", "messages", "sessions", "launch", "logs", "play"};
 
     std::filesystem::path file() {
       return platf::appdata() / "api_tokens.json";
@@ -300,6 +300,9 @@ namespace confighttp {
         if (path == "/api/watch/now") {
           return "watch";
         }
+        if (path == "/pad" || path == "/pad/") {
+          return "play";
+        }
         if (path == "/api/tokens/self") {
           return "any";  // what a token may do, for agents (tunastream.exe --mcp)
         }
@@ -329,6 +332,9 @@ namespace confighttp {
         }
         if (path == "/api/apps/launch") {
           return "launch";
+        }
+        if (path == "/api/pad" || path == "/api/pad/leave") {
+          return "play";
         }
       }
       return {};
@@ -1684,6 +1690,134 @@ namespace confighttp {
     } catch (std::exception &e) {
       bad_request(response, request, e.what());
     }
+  }
+
+  /**
+   * @brief POST /api/pad {"pad": "<the phone's own id>", "name", "buttons", "lt", "rt", "lx", "ly",
+   *        "rx", "ry"}: a phone controller's state. Answers {"rumble": 0..1, "player": n}.
+   *        With the password, or a player link (scope "play").
+   */
+  void postPad(resp_https_t response, req_https_t request) {
+    if (!validateContentType(response, request, "application/json") || !authenticate(response, request)) {
+      return;
+    }
+    try {
+      std::stringstream ss;
+      ss << request->content.rdbuf();
+      auto body = nlohmann::json::parse(ss.str());
+      const auto pad = body.value("pad", std::string {});
+      if (pad.size() < 8 || pad.size() > 64) {
+        bad_request(response, request, "pad is the phone's own id");
+        return;
+      }
+      auto name = body.value("name", std::string {});
+      if (name.size() > 30) {
+        name.resize(30);
+      }
+      auto axis = [&](const char *k) {
+        return (std::int16_t) std::clamp(body.value(k, 0), -32768, 32767);
+      };
+      auto trigger = [&](const char *k) {
+        return (std::uint8_t) std::clamp(body.value(k, 0), 0, 255);
+      };
+      input::phone_pads::state_t state;
+      state.buttons = body.value("buttons", 0u) & 0xFFFFu;
+      state.lt = trigger("lt");
+      state.rt = trigger("rt");
+      state.lsX = axis("lx");
+      state.lsY = axis("ly");
+      state.rsX = axis("rx");
+      state.rsY = axis("ry");
+      float rumble = 0;
+      int player = 0;
+      const auto why = input::phone_pads::update(pad, name, state, rumble, player);
+      if (!why.empty()) {
+        bad_request(response, request, why.c_str());
+        return;
+      }
+      nlohmann::json out;
+      out["status"] = true;
+      out["rumble"] = rumble;
+      out["player"] = player;
+      send_response(response, out);
+    } catch (std::exception &e) {
+      bad_request(response, request, e.what());
+    }
+  }
+
+  /**
+   * @brief POST /api/pad/leave {"pad"}: the phone closed its controller page.
+   */
+  void postPadLeave(resp_https_t response, req_https_t request) {
+    if (!validateContentType(response, request, "application/json") || !authenticate(response, request)) {
+      return;
+    }
+    try {
+      std::stringstream ss;
+      ss << request->content.rdbuf();
+      auto body = nlohmann::json::parse(ss.str());
+      input::phone_pads::leave(body.value("pad", std::string {}));
+      nlohmann::json out;
+      out["status"] = true;
+      send_response(response, out);
+    } catch (std::exception &e) {
+      bad_request(response, request, e.what());
+    }
+  }
+
+  /**
+   * @brief POST /api/pad/invite: a player link to share, for friends to join with their phones as
+   *        controllers. It works on any number of phones for 12 hours, and only for that.
+   */
+  void postPadInvite(resp_https_t response, req_https_t request) {
+    if (!authenticate_owner(response, request)) {
+      return;
+    }
+    api_tokens::token_t t;
+    t.name = "Player link";
+    t.scopes = {"play"};
+    const std::string token = "tsp_" + crypto::rand_alphabet(40);
+    t.id = crypto::rand_alphabet(12);
+    t.hash = api_tokens::hash_of(token);
+    t.created = api_tokens::now_s();
+    t.expires = t.created + 12 * 3600;
+    {
+      std::lock_guard lg {api_tokens::lock};
+      api_tokens::prepare();
+      std::erase_if(api_tokens::tokens, [&](const api_tokens::token_t &x) {
+        return x.expires && x.expires < t.created;
+      });
+      if (api_tokens::tokens.size() >= 50) {
+        bad_request(response, request, "There are 50 tokens and links already. Remove some under Change Password > Access tokens first.");
+        return;
+      }
+      api_tokens::tokens.push_back(t);
+      api_tokens::save();
+    }
+    BOOST_LOG(info) << "Player link made"sv;
+    nlohmann::json out;
+    out["status"] = true;
+    out["token"] = token;
+    out["expires"] = t.expires;
+    send_response(response, out);
+  }
+
+  /**
+   * @brief The phone controller page: GET /pad (with the password, or ?token= from a player link)
+   */
+  void getPadPage(resp_https_t response, req_https_t request) {
+    if (!authenticate(response, request, true)) {
+      return;
+    }
+    print_req(request);
+    std::string content = file_handler::read_file(WEB_DIR "pad.html");
+    SimpleWeb::CaseInsensitiveMultimap headers;
+    headers.emplace("Content-Type", "text/html; charset=utf-8");
+    headers.emplace("X-Frame-Options", "DENY");
+    headers.emplace("Content-Security-Policy", "frame-ancestors 'none';");
+    // The player link stays out of other sites' logs
+    headers.emplace("Referrer-Policy", "no-referrer");
+    response->write(content, headers);
   }
 
   /**
@@ -4112,6 +4246,10 @@ namespace confighttp {
     server.resource["^/api/watch/cheer$"]["POST"] = postWatchCheer;
     server.resource["^/api/watch/key$"]["POST"] = postWatchKey;
     server.resource["^/api/remote$"]["POST"] = postRemote;
+    server.resource["^/api/pad$"]["POST"] = postPad;
+    server.resource["^/api/pad/leave$"]["POST"] = postPadLeave;
+    server.resource["^/api/pad/invite$"]["POST"] = postPadInvite;
+    server.resource["^/pad/?$"]["GET"] = getPadPage;
     server.resource["^/remote/?$"]["GET"] = getRemotePage;
     server.resource["^/api/watch/cheers$"]["POST"] = postWatchCheersAllowed;
     server.resource["^/api/watch/invite$"]["POST"] = postWatchInvite;

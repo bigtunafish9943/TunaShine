@@ -206,6 +206,19 @@
       color: var(--bs-emphasis-color);
     }
 
+    .live-qr {
+      width: min(15rem, 70vw);
+      background: #fff;
+      border-radius: 0.75rem;
+      padding: 0.5rem;
+    }
+
+    .live-qr svg {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
     .live-card h3 {
       font-size: 0.9rem;
       font-weight: 700;
@@ -668,12 +681,29 @@
 
       <a class="btn btn-primary w-100 mt-2" href="./">{{ $t('live.open_home') }}</a>
     </template>
+
+    <!-- Phones as controllers, for friends on the couch -->
+    <section class="live-card mt-3" v-if="loaded">
+      <h2><i class="fas fa-gamepad me-1" aria-hidden="true"></i>{{ $t('live.pads_title') }}</h2>
+      <p class="live-note">{{ $t('live.pads_intro') }}</p>
+      <div class="live-buttons">
+        <a class="btn btn-outline-secondary" href="./pad">{{ $t('live.pads_this_phone') }}</a>
+        <button type="button" class="btn btn-primary" :disabled="padInviting" @click="padInvite">{{ $t('live.pads_invite') }}</button>
+      </div>
+      <div v-if="padLink" class="mt-3 text-center">
+        <div class="live-qr mx-auto" v-html="padQr"></div>
+        <p class="live-note mt-2">{{ $t('live.pads_invite_note') }}</p>
+        <button type="button" class="btn btn-sm btn-outline-secondary" @click="copyPadLink">{{ padCopied ? $t('live.pads_copied') : $t('live.pads_copy') }}</button>
+      </div>
+      <p class="live-status" role="status" v-if="padError">{{ padError }}</p>
+    </section>
   </main>
 
   <script type="module">
     import { createApp } from 'vue'
     import { initApp } from './init'
     import { loadAutoTheme } from './theme'
+    import QRCode from 'qrcode'
 
     // Light or dark as the phone is set, in the PC's colour theme (there's no navigation bar here to do it)
     loadAutoTheme()
@@ -701,6 +731,11 @@
           pcVersion: '',
           otherHosts: [],
           vdisplayProblem: false,
+          padLink: '',
+          padQr: '',
+          padInviting: false,
+          padCopied: false,
+          padError: '',
           ticks: 0,
         };
       },
@@ -948,6 +983,28 @@
             this.status = this.$t('index.message_failed');
           }
           this.sending = false;
+        },
+        async padInvite() {
+          this.padInviting = true
+          this.padError = ''
+          try {
+            const r = await fetch('./api/pad/invite', { credentials: 'include', method: 'POST' }).then((r) => r.json())
+            if (!r.status) throw new Error(r.error || '')
+            this.padLink = location.origin + location.pathname.replace(/live\/?$/, '') + 'pad?token=' + encodeURIComponent(r.token)
+            this.padQr = await QRCode.toString(this.padLink, { type: 'svg', margin: 1, errorCorrectionLevel: 'M' })
+            this.padCopied = false
+          } catch (e) {
+            this.padError = e.message || this.$t('index.message_failed')
+          }
+          this.padInviting = false
+        },
+        async copyPadLink() {
+          try {
+            await navigator.clipboard.writeText(this.padLink)
+            this.padCopied = true
+          } catch (e) {
+            window.prompt(this.$t('live.pads_copy'), this.padLink)
+          }
         },
         async endSession() {
           if (!confirm(this.$t('live.end_confirm'))) return;

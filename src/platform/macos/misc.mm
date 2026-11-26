@@ -200,6 +200,10 @@ namespace platf {
    * @brief Open a url in the default web browser.
    * @param url The url to open.
    */
+  bool sleep_pc() {
+    return false;
+  }
+
   void open_url(const std::string &url) {
     boost::filesystem::path working_dir;
     std::string cmd = R"(open ")" + url + R"(")";

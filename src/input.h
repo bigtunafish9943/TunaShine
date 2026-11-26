@@ -5,6 +5,7 @@
 #pragma once
 
 // standard includes
+#include <cstdint>
 #include <functional>
 
 // local includes
@@ -57,6 +58,30 @@ namespace input {
     /// The pointer to the bottom-right corner, out of the game's way
     void pointer_aside();
   }  // namespace remote
+
+  /**
+   * @brief Phone controllers: a phone's browser as an Xbox controller on the PC, so friends can
+   *        join a game with their phones. Each phone is one controller, up to four; one that
+   *        stops answering for 20 seconds is unplugged.
+   */
+  namespace phone_pads {
+    struct state_t {
+      std::uint32_t buttons = 0;
+      std::uint8_t lt = 0, rt = 0;
+      std::int16_t lsX = 0, lsY = 0, rsX = 0, rsY = 0;
+    };
+
+    /**
+     * @brief The phone [key]'s controller now looks like [state]; plugged in on first use.
+     * @param rumble Set to how hard the game wants it to rumble, 0 to 1.
+     * @param player Set to its player number among the phones, from 1.
+     * @return Why it couldn't, or empty.
+     */
+    std::string update(const std::string &key, const std::string &name, const state_t &state, float &rumble, int &player);
+
+    /// The phone left its page: its controller is unplugged.
+    void leave(const std::string &key);
+  }  // namespace phone_pads
 
   struct touch_port_t: public platf::touch_port_t {
     int env_width, env_height;

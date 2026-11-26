@@ -71,6 +71,7 @@ export default defineConfig({
                 index: resolve(assetsSrcPath, 'index.html'),
                 live: resolve(assetsSrcPath, 'live.html'),
                 remote: resolve(assetsSrcPath, 'remote.html'),
+                pad: resolve(assetsSrcPath, 'pad.html'),
                 checklist: resolve(assetsSrcPath, 'checklist.html'),
                 watch: resolve(assetsSrcPath, 'watch.html'),
                 password: resolve(assetsSrcPath, 'password.html'),

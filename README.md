@@ -86,6 +86,13 @@ and every step was tightened:
   time left, the message and sound buttons and End session. While nobody plays: the last seven days, play time
   today, each TV and how it's set up, this PC, milestones and captures. Add it to your home screen to open it
   like an app; *Full page* opens everything else.
+- **Phones as controllers.** Friends on the couch can join with their phones: on the Live page, *Invite players*
+  shows a QR code, and each phone that scans it becomes an Xbox controller on the PC (two sticks, D-pad, A B X Y,
+  bumpers, triggers, View, Menu and Guide), up to four, with rumble where the phone can vibrate. The link works for
+  12 hours and only as a controller; a phone that's put away is unplugged after 20 seconds. Party games are the
+  best fit, as a touch screen is slower than a real controller.
+- **Wake and sleep from the TV.** TunaReceive wakes the PC when you pick it (Wake-on-LAN), and *Put the PC to
+  sleep* in its menu sends it back to sleep when you're done, unless another device is still streaming.
 - **Steam from the couch.** TunaReceive's quick menu has *PC commands*: open Steam Big Picture, leave it, restart
   Steam when Big Picture hangs, and move the pointer out of the way, next to any commands set up under
   *Settings > General > Server Commands*. The Steam ones appear when Steam is installed.
