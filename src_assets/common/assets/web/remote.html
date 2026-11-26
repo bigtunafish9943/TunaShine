@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="auto">
+
+<head>
+  <%- header %>
+  <link rel="apple-touch-icon" href="./images/tunastream-app-180.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="TunaStream">
+  <meta name="theme-color" content="#041431">
+  <style>
+    body {
+      padding-left: 0 !important;
+      background-color: var(--bs-body-bg);
+      overscroll-behavior: none;
+    }
+
+    .remote {
+      max-width: 34rem;
+      margin: 0 auto;
+      padding: 1rem 1rem 2rem;
+    }
+
+    .remote-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.75rem;
+    }
+
+    .remote-brand {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 700;
+      color: var(--bs-emphasis-color);
+      text-decoration: none;
+    }
+
+    .remote-brand img {
+      width: 28px;
+      height: 28px;
+    }
+
+    /* The touchpad: the one big thing on the page */
+    .remote-pad {
+      position: relative;
+      height: min(52vh, 26rem);
+      border-radius: 1.1rem;
+      background-color: var(--ts-surface);
+      border: 1px solid var(--ts-surface-border);
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      color: var(--bs-secondary-color);
+      padding: 1.5rem;
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+
+    .remote-pad.remote-active {
+      border-color: var(--ts-accent);
+    }
+
+    .remote-buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+
+    .remote-buttons .btn {
+      padding: 0.9rem 0;
+      border-radius: 0.8rem;
+    }
+
+    .remote-section {
+      margin-top: 1.25rem;
+    }
+
+    .remote-section h2 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--bs-emphasis-color);
+      margin-bottom: 0.5rem;
+    }
+
+    .remote-type {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .remote-keys {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.4rem;
+    }
+
+    .remote-keys .btn {
+      padding: 0.65rem 0;
+      font-size: 0.9rem;
+    }
+
+    .remote-status {
+      min-height: 1.4rem;
+      margin-top: 0.75rem;
+      color: var(--bs-secondary-color);
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+
+<body id="app" v-cloak>
+  <main class="remote">
+    <div class="remote-top">
+      <a class="remote-brand" href="./live">
+        <img src="./images/logo-tunastream-45.png" alt="">
+        {{ $t('live.remote_title') }}
+      </a>
+      <a class="btn btn-sm btn-outline-secondary" href="./live">{{ $t('live.remote_back') }}</a>
+    </div>
+
+    <div class="remote-pad" ref="pad" :class="{ 'remote-active': touching }"
+      @pointerdown="down" @pointermove="move" @pointerup="up" @pointercancel="cancel" @contextmenu.prevent>
+      <span v-if="!used">{{ $t('live.remote_pad_hint') }}</span>
+    </div>
+    <div class="remote-buttons">
+      <button type="button" class="btn btn-outline-secondary" @click="click(1)">{{ $t('live.remote_left') }}</button>
+      <button type="button" class="btn btn-outline-secondary" @click="click(3)">{{ $t('live.remote_right') }}</button>
+    </div>
+
+    <section class="remote-section">
+      <h2>{{ $t('live.remote_type_title') }}</h2>
+      <form class="remote-type" @submit.prevent="type">
+        <input class="form-control" v-model="text" :placeholder="$t('live.remote_type_placeholder')" autocomplete="off"
+          autocapitalize="off" spellcheck="false" maxlength="2000">
+        <button type="submit" class="btn btn-primary" :disabled="!text">{{ $t('live.remote_type_send') }}</button>
+      </form>
+    </section>
+
+    <section class="remote-section">
+      <h2>{{ $t('live.remote_keys_title') }}</h2>
+      <div class="remote-keys">
+        <button type="button" class="btn btn-outline-secondary" v-for="k in keys" :key="k.key" @click="key(k.key)"
+          :aria-label="$t(k.label)">
+          <i :class="k.icon" aria-hidden="true" v-if="k.icon"></i><span v-else>{{ $t(k.label) }}</span>
+        </button>
+      </div>
+    </section>
+
+    <p class="remote-status" role="status">{{ status }}</p>
+  </main>
+
+  <script type="module">
+    import { createApp } from 'vue'
+    import { initApp } from './init'
+    import { loadAutoTheme } from './theme'
+
+    loadAutoTheme()
+
+    const TAP_MS = 220
+    const TAP_MOVE = 10
+    const SPEED = 1.6
+
+    const app = createApp({
+      inject: ['i18n'],
+      data() {
+        return {
+          text: '',
+          status: '',
+          used: false,
+          touching: false,
+          keys: [
+            { key: 'escape', label: 'live.remote_k_escape' },
+            { key: 'tab', label: 'live.remote_k_tab' },
+            { key: 'enter', label: 'live.remote_k_enter' },
+            { key: 'backspace', label: 'live.remote_k_backspace', icon: 'fas fa-delete-left' },
+            { key: 'left', label: 'live.remote_k_left', icon: 'fas fa-arrow-left' },
+            { key: 'up', label: 'live.remote_k_up', icon: 'fas fa-arrow-up' },
+            { key: 'down', label: 'live.remote_k_down', icon: 'fas fa-arrow-down' },
+            { key: 'right', label: 'live.remote_k_right', icon: 'fas fa-arrow-right' },
+            { key: 'win', label: 'live.remote_k_win', icon: 'fab fa-windows' },
+            { key: 'alt_tab', label: 'live.remote_k_alt_tab' },
+            { key: 'alt_f4', label: 'live.remote_k_alt_f4' },
+          ],
+        }
+      },
+      created() {
+        // Fingers on the pad, by pointer id
+        this.pointers = new Map()
+        // Movement not yet sent: sent as one when the last request comes back, so a slow
+        // connection gets fewer, bigger moves instead of a growing queue
+        this.pendingX = 0
+        this.pendingY = 0
+        this.pendingScroll = 0
+        this.inFlight = false
+        this.gesture = null
+      },
+      methods: {
+        async post(body) {
+          try {
+            const r = await fetch('./api/remote', {
+              credentials: 'include',
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(body),
+            })
+            if (r.status === 401) {
+              this.status = this.$t('live.remote_signin')
+              return false
+            }
+            const j = await r.json()
+            if (!j.status) {
+              this.status = j.error || this.$t('live.remote_failed')
+              return false
+            }
+            if (this.status) this.status = ''
+            return true
+          } catch (e) {
+            this.status = this.$t('live.remote_failed')
+            return false
+          }
+        },
+        async flush() {
+          if (this.inFlight) return
+          const dx = Math.trunc(this.pendingX)
+          const dy = Math.trunc(this.pendingY)
+          const sc = Math.trunc(this.pendingScroll)
+          if (!dx && !dy && !sc) return
+          this.pendingX -= dx
+          this.pendingY -= dy
+          this.pendingScroll -= sc
+          this.inFlight = true
+          if (dx || dy) await this.post({ action: 'move', dx, dy })
+          if (sc) await this.post({ action: 'scroll', amount: sc })
+          this.inFlight = false
+          this.flush()
+        },
+        down(e) {
+          this.$refs.pad.setPointerCapture(e.pointerId)
+          this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
+          this.touching = true
+          this.used = true
+          if (!this.gesture || this.pointers.size === 1) {
+            this.gesture = { start: performance.now(), moved: 0, fingers: 1, x: e.clientX, y: e.clientY }
+          }
+          this.gesture.fingers = Math.max(this.gesture.fingers, this.pointers.size)
+        },
+        move(e) {
+          const p = this.pointers.get(e.pointerId)
+          if (!p) return
+          const dx = e.clientX - p.x
+          const dy = e.clientY - p.y
+          p.x = e.clientX
+          p.y = e.clientY
+          if (this.gesture) this.gesture.moved += Math.abs(dx) + Math.abs(dy)
+          if (this.pointers.size >= 2) {
+            // Two fingers: scroll, the fingers' average, about one wheel notch per 30 pixels
+            this.pendingScroll += (-dy / this.pointers.size) * 4
+          } else {
+            // Faster swipes go further, like a laptop's touchpad
+            const speed = Math.hypot(dx, dy)
+            const gain = SPEED * (speed > 12 ? 1.8 : speed > 5 ? 1.3 : 1)
+            this.pendingX += dx * gain
+            this.pendingY += dy * gain
+          }
+          this.flush()
+        },
+        up(e) {
+          this.pointers.delete(e.pointerId)
+          if (this.pointers.size) return
+          this.touching = false
+          const g = this.gesture
+          this.gesture = null
+          if (g && performance.now() - g.start < TAP_MS && g.moved < TAP_MOVE * g.fingers) {
+            // A tap clicks; a two-finger tap right-clicks
+            this.click(g.fingers >= 2 ? 3 : 1)
+          }
+        },
+        cancel(e) {
+          this.pointers.delete(e.pointerId)
+          if (!this.pointers.size) {
+            this.touching = false
+            this.gesture = null
+          }
+        },
+        async click(button) {
+          if (navigator.vibrate) navigator.vibrate(12)
+          await this.post({ action: 'click', button })
+        },
+        async type() {
+          const text = this.text
+          if (!text) return
+          if (await this.post({ action: 'type', text })) {
+            this.text = ''
+            this.status = this.$t('live.remote_typed')
+          }
+        },
+        async key(key) {
+          if (navigator.vibrate) navigator.vibrate(12)
+          await this.post({ action: 'key', key })
+        },
+      },
+    })
+
+    initApp(app)
+  </script>
+</body>
+
+</html>

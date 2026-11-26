@@ -15,6 +15,7 @@
 // standard includes
 #include <atomic>
 #include <optional>
+#include <string_view>
 #include <unordered_map>
 
 // lib includes
@@ -212,6 +213,16 @@ namespace proc {
 
   boost::filesystem::path
   find_working_directory(const std::string &cmd, const boost::process::v1::environment &env);
+
+  /// A built-in command handled by TunaStream itself rather than run as a program
+  constexpr std::string_view POINTER_ASIDE = "tunastream:pointer-aside";
+
+  /**
+   * @brief The commands a TV may run from its menu: the ones set in Settings, then TunaStream's
+   *        own for Steam (when Steam is installed) and for moving the pointer out of the way.
+   *        Settings' commands keep their places, so a TV's list stays in step.
+   */
+  std::vector<config::server_cmd_t> server_commands();
 
   /**
    * @brief Calculate a stable id based on name and image data

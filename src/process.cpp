@@ -37,6 +37,7 @@
 #include "platform/common.h"
 #include "process.h"
 #include "box_art.h"
+#include "game_library.h"
 #include "httpcommon.h"
 #include "system_tray.h"
 #include "utility.h"
@@ -215,6 +216,23 @@ namespace proc {
       // avoid zombie process
       proc.detach();
     }
+  }
+
+  std::vector<config::server_cmd_t> server_commands() {
+    std::vector<config::server_cmd_t> list = config::tunastream.server_cmds;
+#ifdef _WIN32
+    std::error_code ec;
+    const auto steam = game_library::steam_dir();
+    if (!steam.empty() && std::filesystem::exists(steam, ec)) {
+      // Through Steam's own links, so they work whether Steam is open or not.
+      // ping waits for Steam to close (timeout needs a console, which these don't have).
+      list.emplace_back("Steam Big Picture", R"(cmd.exe /d /c start "" steam://open/bigpicture)", false);
+      list.emplace_back("Leave Steam Big Picture", R"(cmd.exe /d /c start "" steam://close/bigpicture)", false);
+      list.emplace_back("Restart Steam", R"(cmd.exe /d /c start "" steam://exit & ping -n 11 127.0.0.1 >nul & start "" steam://open/bigpicture)", false);
+    }
+#endif
+    list.emplace_back("Move the pointer aside", std::string {POINTER_ASIDE}, false);
+    return list;
   }
 
   boost::filesystem::path find_working_directory(const std::string &cmd, const boost::process::v1::environment &env) {

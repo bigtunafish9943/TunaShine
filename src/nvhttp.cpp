@@ -940,9 +940,9 @@ namespace nvhttp {
       if (!!(named_cert_p->perm & PERM::server_cmd)) {
         pt::ptree& root_node = tree.get_child("root");
 
-        if (config::tunastream.server_cmds.size() > 0) {
-          // Broadcast server_cmds
-          for (const auto& cmd : config::tunastream.server_cmds) {
+        {
+          // Settings' commands, then TunaStream's own
+          for (const auto& cmd : proc::server_commands()) {
             pt::ptree cmd_node;
             cmd_node.put_value(cmd.cmd_name);
             root_node.push_back(std::make_pair("ServerCommand", cmd_node));
