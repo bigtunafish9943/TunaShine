@@ -2096,9 +2096,32 @@ namespace video {
         if (auto kbps = bitrate_events->pop(0ms)) {
           if (session->set_bitrate(*kbps)) {
             bitrate_kbps = *kbps;
-          } else if (!bitrate_change_unsupported_logged) {
-            BOOST_LOG(info) << "This encoder can't change bitrate mid-stream; keeping "sv << config.bitrate << " kbps"sv;
-            bitrate_change_unsupported_logged = true;
+          } else if (*kbps != (bitrate_kbps > 0 ? bitrate_kbps : config.bitrate)) {
+            // This encoder (AMD, Intel, software) can't change bitrate in place: start one at the
+            // new bitrate in the background, the way a new picture size is, and switch to it
+            // between two frames. One at a time; a later request waits for the next.
+            bitrate_kbps = *kbps;
+            if (!next_session.valid()) {
+              config_t next_config = config;
+              next_config.width = current_width;
+              next_config.height = current_height;
+              next_config.bitrate = *kbps;
+              next_scale = picture_scale;
+              next_bitrate = *kbps;
+              next_width = current_width;
+              next_height = current_height;
+              if (!bitrate_change_unsupported_logged) {
+                BOOST_LOG(info) << "This encoder can't change bitrate in place; starting one at "sv << *kbps << " kbps to switch to"sv;
+                bitrate_change_unsupported_logged = true;
+              }
+              next_session = std::async(std::launch::async, [disp, &encoder, next_config]() -> std::unique_ptr<encode_session_t> {
+                auto next_device = make_encode_device(*disp, encoder, next_config);
+                if (!next_device) {
+                  return nullptr;
+                }
+                return make_encode_session(disp.get(), encoder, next_config, disp->width, disp->height, std::move(next_device));
+              });
+            }
           }
         }
       }
@@ -2163,8 +2186,9 @@ namespace video {
             if (auto ready = next_session.get()) {
               retire(std::move(session));
               session = std::move(ready);
-              if (bitrate_kbps > 0 && bitrate_kbps != next_bitrate) {
-                session->set_bitrate(bitrate_kbps);
+              if (bitrate_kbps > 0 && bitrate_kbps != next_bitrate && !session->set_bitrate(bitrate_kbps)) {
+                // A newer bitrate came in while this encoder was starting: go again for it
+                bitrate_events->raise(bitrate_kbps);
               }
               session->request_idr_frame();
               picture_scale = next_scale;
