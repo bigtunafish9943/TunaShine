@@ -1211,6 +1211,10 @@
     "self_rtss_ok": "RivaTuner Statistics Server está en marcha: los límites de fotogramas son exactos, 59,94 incluido.",
     "self_rtss_warn": "RivaTuner Statistics Server está instalado pero no en marcha: ábrelo para límites exactos.",
     "self_rtss_info": "RivaTuner Statistics Server no está instalado: se usa el límite de NVIDIA, redondeado a enteros.",
+    "self_wake_ok": "{detail} está conectado por cable y puede despertar este PC, así que la TV puede sacarlo de la suspensión.",
+    "self_wake_warn": "{detail} no puede despertar este PC, así que la TV no puede despertarlo. En el Administrador de dispositivos, abre Propiedades > Administración de energía de este adaptador de red y marca \"Permitir que este dispositivo reactive el equipo\" y \"Permitir solo un Magic Packet para reactivar el equipo\". Puede que también haya que activar Wake-on-LAN en la BIOS.",
+    "self_wake_info": "Este PC está por Wi-Fi ({detail}): la mayoría de los PC no se despiertan por Wi-Fi. Usa un cable de red si quieres despertarlo desde la TV.",
+    "self_fast_startup_info": "El inicio rápido de Windows está activado: la TV puede despertar este PC de la suspensión, pero normalmente no si está apagado. Para despertarlo también apagado, desactiva el inicio rápido (Panel de control > Opciones de energía > Elegir el comportamiento de los botones de inicio/apagado).",
     "intro": "Cosas para probar en tu propio PC, tele y mandos. Marca cada una cuando la hayas probado; lo que marques se guarda en este PC, así que puedes volver desde cualquier navegador.",
     "count_works": "funcionan",
     "count_problem": "tienen un problema",
@@ -1362,6 +1366,11 @@
         "title": "Compartir una ventana",
         "how": "En la página Ver, en Compartir mi pantalla, elige la ventana de un juego de la lista y compártela. Haz la ventana más pequeña, cambia a otra ventana en el PC y luego cierra el juego.",
         "expect": "La tableta muestra solo la ventana del juego, llenando la imagen sea cual sea su tamaño, y solo oye el juego, aunque estés en otra ventana. Al cerrarse el juego se deja de compartir; nunca se muestra el resto de la pantalla."
+      },
+      "wakepc": {
+        "title": "Despertar el PC desde la TV",
+        "how": "Suspende el PC (Inicio > Iniciar/Apagar > Suspender). En la TV, abre TunaReceive y elige el PC. Mira antes la Autocomprobación de arriba: dice si el adaptador de red de este PC puede despertarlo.",
+        "expect": "En la TV aparece \"Despertando\", el PC se despierta en unos 30 segundos y sus juegos se abren solos. Si no se despierta, la TV dice qué necesita el PC."
       },
       "signin": {
         "title": "Mantener la sesión iniciada",

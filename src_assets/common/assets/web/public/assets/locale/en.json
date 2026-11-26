@@ -1211,6 +1211,10 @@
     "self_rtss_ok": "RivaTuner Statistics Server is running: frame caps are exact, 59.94 included.",
     "self_rtss_warn": "RivaTuner Statistics Server is installed but not running: start it for exact frame caps.",
     "self_rtss_info": "RivaTuner Statistics Server isn't installed: NVIDIA's frame cap is used, rounded to whole numbers.",
+    "self_wake_ok": "{detail} is wired and allowed to wake this PC, so the TV can wake it from sleep.",
+    "self_wake_warn": "{detail} isn't allowed to wake this PC, so the TV can't wake it. In Device Manager, open this network adapter's Properties > Power Management and tick \"Allow this device to wake the computer\" and \"Only allow a magic packet to wake the computer\". Wake-on-LAN may also need switching on in the BIOS.",
+    "self_wake_info": "This PC is on Wi-Fi ({detail}): most PCs can't be woken over Wi-Fi. Use a network cable if you want to wake it from the TV.",
+    "self_fast_startup_info": "Windows Fast startup is on: the TV can wake this PC from sleep, but usually not once it's shut down. To wake it from shut down too, switch off Fast startup (Control Panel > Power Options > Choose what the power buttons do).",
     "intro": "Things to try on your own PC, TV and controllers. Mark each one when you've tried it; what you mark is kept on this PC, so you can come back to it from any browser.",
     "count_works": "work",
     "count_problem": "have a problem",
@@ -1362,6 +1366,11 @@
         "title": "Share one window",
         "how": "On the Watch page, under Share my screen, pick a game's window from the list and share it. Make the window smaller, switch to another window on the PC, then close the game.",
         "expect": "The tablet shows only the game's window, filling the picture whatever its size, and hears only the game, even while you're in another window. When the game closes, sharing stops; the rest of the screen is never shown."
+      },
+      "wakepc": {
+        "title": "Wake the PC from the TV",
+        "how": "Put the PC to sleep (Start > Power > Sleep). On the TV, open TunaReceive and select the PC. First check the Self-check above: it says whether this PC's network adapter is allowed to wake it.",
+        "expect": "\"Waking\" shows on the TV, the PC wakes within about 30 seconds, and its games open by themselves. If it doesn't wake, the TV says what the PC needs."
       },
       "signin": {
         "title": "Keep me signed in",
