@@ -252,6 +252,8 @@
     "dd_hdr_option": "HDR",
     "dd_hdr_option_auto": "Switch on/off the HDR mode as requested by the client (default)",
     "dd_hdr_option_disabled": "Do not change HDR settings",
+    "dd_manual_refresh_rate": "Refresh rate to use",
+    "dd_manual_resolution": "Resolution to use",
     "dd_mode_remapping": "Display mode remapping",
     "dd_mode_remapping_add": "Add remapping entry",
     "dd_mode_remapping_desc_1": "Specify remapping entries to change the requested resolution and/or refresh rate to other values.",
