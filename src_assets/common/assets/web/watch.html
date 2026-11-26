@@ -912,8 +912,9 @@
                   buffer.copyToChannel(plane, ch)
                 }
                 const now = context.currentTime
-                // Keep the sound close to the picture: never more than a quarter second queued
-                if (audio.next < now + 0.03 || audio.next > now + 0.25) audio.next = now + 0.06
+                // A little sound queued rides out Wi-Fi's uneven delivery without gaps or clicks;
+                // more than half a second behind, catch up
+                if (audio.next < now + 0.02 || audio.next > now + 0.5) audio.next = now + 0.15
                 const source = context.createBufferSource()
                 source.buffer = buffer
                 source.connect(context.destination)
@@ -922,13 +923,22 @@
               } catch (e) { /* a packet that couldn't be played */ }
               data.close()
             },
-            error: () => { /* the next packet starts over */ },
+            // A decoder that hit an error is closed for good: make a new one
+            error: () => { audio.broken = true },
           })
           audio.decoder.configure({ codec: 'opus', sampleRate: 48000, numberOfChannels: 2 })
           this.audio = audio
         },
         onAudio(data, timestamp) {
-          if (!this.soundOn || !this.audio || this.audio.decoder.state !== 'configured') return
+          if (!this.soundOn || !this.audio) return
+          if (this.audio.broken || this.audio.decoder.state === 'closed') {
+            const context = this.audio.context
+            try { context.close() } catch (e) { /* closed */ }
+            this.audio = null
+            this.startAudio()
+            this.audio.context.resume()
+          }
+          if (this.audio.decoder.state !== 'configured') return
           try {
             this.audio.decoder.decode(new EncodedAudioChunk({ type: 'key', timestamp, data }))
           } catch (e) { /* skip it */ }
