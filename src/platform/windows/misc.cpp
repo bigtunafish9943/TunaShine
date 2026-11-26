@@ -1336,11 +1336,22 @@ namespace platf {
    * @param url The url to open.
    */
   void open_url(const std::string &url) {
+    // Through Windows' own "start", in the user's session: browsers installed from the Store
+    // (packaged apps) open too, which handing the URL over directly didn't. AutoRun and delayed
+    // variable expansion are switched off for this cmd. (Sunshine #6047)
+    wchar_t system_directory[MAX_PATH];
+    const auto length = GetSystemDirectoryW(system_directory, MAX_PATH);
+    if (!length || length >= MAX_PATH) {
+      BOOST_LOG(warning) << "Couldn't find Windows' command processor to open url ["sv << url << ']';
+      return;
+    }
+    const std::wstring cmd_exe = std::wstring {system_directory, length} + L"\\cmd.exe";
+    const auto command = to_utf8(escape_argument(cmd_exe) + L" /d /v:off /c start \"\" " + escape_argument_for_cmd(escape_argument(from_utf8(url))));
     boost::process::v1::environment _env = boost::this_process::environment();
     auto working_dir = boost::filesystem::path();
     std::error_code ec;
 
-    auto child = run_command(false, false, url, working_dir, _env, nullptr, ec, nullptr);
+    auto child = run_command(false, false, command, working_dir, _env, nullptr, ec, nullptr);
     if (ec) {
       BOOST_LOG(warning) << "Couldn't open url ["sv << url << "]: System: "sv << ec.message();
     } else {
