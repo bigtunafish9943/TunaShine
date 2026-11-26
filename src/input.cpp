@@ -1810,6 +1810,127 @@ namespace input {
     }
   }  // namespace remote
 
+  namespace phone_pads {
+    using namespace std::literals;
+
+    struct pad_t {
+      int id = -1;
+      int player = 1;
+      std::chrono::steady_clock::time_point seen;
+      safe::mail_t mail;
+      platf::feedback_queue_t feedback;
+      float rumble = 0;
+    };
+
+    constexpr auto IDLE = 20s;
+    constexpr std::size_t MAX_PADS = 4;
+
+    static std::mutex pads_lock;
+    static std::map<std::string, pad_t> pads;
+    static bool reaper_running = false;
+
+    static void unplug_locked(std::map<std::string, pad_t>::iterator it) {
+      if (it->second.id >= 0 && platf_input) {
+        free_gamepad(platf_input, it->second.id);
+      }
+      BOOST_LOG(info) << "Phone controller "sv << it->second.player << " unplugged"sv;
+      pads.erase(it);
+    }
+
+    static void expire_locked() {
+      const auto now = std::chrono::steady_clock::now();
+      for (auto it = pads.begin(); it != pads.end();) {
+        auto next = std::next(it);
+        if (now - it->second.seen > IDLE) {
+          unplug_locked(it);
+        }
+        it = next;
+      }
+    }
+
+    /// Unplugs phones that went quiet (a locked screen, a closed tab) while any are plugged in
+    static void start_reaper_locked() {
+      if (reaper_running) {
+        return;
+      }
+      reaper_running = true;
+      std::thread([] {
+        while (true) {
+          std::this_thread::sleep_for(5s);
+          std::lock_guard lg {pads_lock};
+          expire_locked();
+          if (pads.empty()) {
+            reaper_running = false;
+            return;
+          }
+        }
+      }).detach();
+    }
+
+    std::string update(const std::string &key, const std::string &name, const state_t &state, float &rumble, int &player) {
+      if (!platf_input) {
+        return "Controllers aren't available on this PC.";
+      }
+      std::lock_guard lg {pads_lock};
+      expire_locked();
+      auto it = pads.find(key);
+      if (it == pads.end()) {
+        if (pads.size() >= MAX_PADS) {
+          return "Four phones are playing already.";
+        }
+        // The lowest player number no other phone has
+        int number = 1;
+        for (bool taken = true; taken; ) {
+          taken = false;
+          for (const auto &[k, p] : pads) {
+            if (p.player == number) {
+              taken = true;
+              ++number;
+              break;
+            }
+          }
+        }
+        pad_t pad;
+        pad.player = number;
+        pad.mail = std::make_shared<safe::mail_raw_t>();
+        pad.feedback = pad.mail->queue<platf::gamepad_feedback_msg_t>(mail::gamepad_feedback);
+        const auto id = alloc_id(gamepadMask);
+        if (id < 0) {
+          return "Every controller slot is in use.";
+        }
+        const platf::gamepad_arrival_t arrival {LI_CTYPE_XBOX, LI_CCAP_RUMBLE, 0xFFFF};
+        if (platf::alloc_gamepad(platf_input, {id, (std::uint8_t) (number - 1)}, arrival, pad.feedback)) {
+          free_id(gamepadMask, id);
+          return "Couldn't add a controller. Check that ViGEmBus is installed (Troubleshooting).";
+        }
+        pad.id = id;
+        record_gamepad(id, name.empty() ? std::string {"Phone"} : name, number - 1);
+        BOOST_LOG(info) << "Phone controller "sv << number << " plugged in for "sv << name;
+        it = pads.emplace(key, std::move(pad)).first;
+        start_reaper_locked();
+      }
+      auto &pad = it->second;
+      pad.seen = std::chrono::steady_clock::now();
+      platf::gamepad_update(platf_input, pad.id, platf::gamepad_state_t {state.buttons, state.lt, state.rt, state.lsX, state.lsY, state.rsX, state.rsY});
+      while (pad.feedback->peek()) {
+        auto msg = pad.feedback->pop();
+        if (msg && msg->type == platf::gamepad_feedback_e::rumble) {
+          pad.rumble = std::max(msg->data.rumble.lowfreq, msg->data.rumble.highfreq) / 65535.0f;
+        }
+      }
+      rumble = pad.rumble;
+      player = pad.player;
+      return {};
+    }
+
+    void leave(const std::string &key) {
+      std::lock_guard lg {pads_lock};
+      if (auto it = pads.find(key); it != pads.end()) {
+        unplug_locked(it);
+      }
+    }
+  }  // namespace phone_pads
+
   [[nodiscard]] std::unique_ptr<platf::deinit_t> init() {
     platf_input = platf::input();
 

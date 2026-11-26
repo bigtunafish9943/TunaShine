@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+
+<head>
+  <%- header %>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#050b16">
+  <style>
+    :root {
+      --pad-bg: #050b16;
+      --pad-face: #0d1a2e;
+      --pad-edge: #1f3554;
+      --pad-label: #c9d6ea;
+      --pad-press: #3fb6e8;
+      --pad-a: #3dbb6a;
+      --pad-b: #e0504d;
+      --pad-x: #3b82e6;
+      --pad-y: #e8b93a;
+    }
+
+    html,
+    body {
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: var(--pad-bg) !important;
+      padding: 0 !important;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      overscroll-behavior: none;
+    }
+
+    .pad {
+      position: fixed;
+      inset: 0;
+      padding: max(10px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      grid-template-rows: auto 1fr;
+      gap: 8px 12px;
+      color: var(--pad-label);
+      font-family: system-ui, sans-serif;
+    }
+
+    .pad-shoulders {
+      display: flex;
+      gap: 8px;
+    }
+
+    .pad-shoulders.right {
+      justify-content: flex-end;
+    }
+
+    .pad-btn {
+      border: 1px solid var(--pad-edge);
+      background: var(--pad-face);
+      color: var(--pad-label);
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 15px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      touch-action: none;
+    }
+
+    .pad-btn.on {
+      background: var(--pad-press);
+      color: #04121f;
+      border-color: var(--pad-press);
+    }
+
+    .pad-shoulder {
+      width: 26%;
+      min-width: 64px;
+      height: 40px;
+    }
+
+    .pad-side {
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      gap: 8px;
+      min-height: 0;
+    }
+
+    .pad-side.left {
+      flex-direction: row;
+    }
+
+    .pad-side.right {
+      flex-direction: row-reverse;
+    }
+
+    /* Sticks: the one thing that takes most of the hand */
+    .pad-stick {
+      position: relative;
+      width: min(34vh, 34vw, 190px);
+      aspect-ratio: 1;
+      border-radius: 50%;
+      background: radial-gradient(circle at 50% 50%, #12233c 0 55%, var(--pad-face) 56%);
+      border: 1px solid var(--pad-edge);
+      touch-action: none;
+      flex: 0 0 auto;
+    }
+
+    .pad-stick.small {
+      width: min(26vh, 26vw, 140px);
+    }
+
+    .pad-knob {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 44%;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      background: #2a4669;
+      border: 2px solid #4b6f99;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+    }
+
+    .pad-stick.on .pad-knob {
+      background: var(--pad-press);
+      border-color: var(--pad-press);
+    }
+
+    .pad-dpad {
+      display: grid;
+      grid-template-columns: repeat(3, min(9vh, 9vw, 52px));
+      grid-template-rows: repeat(3, min(9vh, 9vw, 52px));
+      gap: 3px;
+      flex: 0 0 auto;
+    }
+
+    .pad-dpad .pad-btn {
+      border-radius: 8px;
+    }
+
+    .pad-face {
+      position: relative;
+      width: min(36vh, 32vw, 200px);
+      aspect-ratio: 1;
+      flex: 0 0 auto;
+    }
+
+    .pad-face .pad-btn {
+      position: absolute;
+      width: 36%;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      font-size: 20px;
+    }
+
+    .pad-face .a { left: 32%; bottom: 0; color: var(--pad-a); }
+    .pad-face .b { right: 0; top: 32%; color: var(--pad-b); }
+    .pad-face .x { left: 0; top: 32%; color: var(--pad-x); }
+    .pad-face .y { left: 32%; top: 0; color: var(--pad-y); }
+    .pad-face .pad-btn.on { color: #04121f; }
+
+    .pad-middle {
+      grid-row: 1 / span 2;
+      grid-column: 2;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      min-width: 92px;
+    }
+
+    .pad-middle .pad-btn {
+      width: 76px;
+      height: 34px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .pad-middle .pad-home {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+    }
+
+    .pad-player {
+      font-size: 13px;
+      text-align: center;
+      line-height: 1.3;
+      opacity: 0.85;
+    }
+
+    .pad-player strong {
+      display: block;
+      font-size: 26px;
+      color: var(--pad-press);
+    }
+
+    .pad-error {
+      color: #ff9b8f;
+      font-size: 12px;
+      text-align: center;
+      max-width: 140px;
+    }
+
+    .pad-sheet {
+      position: fixed;
+      inset: 0;
+      background: var(--pad-bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      z-index: 2;
+      touch-action: auto;
+    }
+
+    .pad-sheet form {
+      width: min(100%, 360px);
+      color: var(--pad-label);
+    }
+
+    .pad-sheet h1 {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      color: #fff;
+    }
+
+    .pad-sheet p {
+      font-size: 14px;
+      opacity: 0.85;
+    }
+
+    .pad-turn {
+      display: none;
+    }
+
+    @media (orientation: portrait) {
+      .pad-turn {
+        display: flex;
+        position: fixed;
+        inset: 0;
+        z-index: 1;
+        background: var(--pad-bg);
+        color: var(--pad-label);
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 32px;
+        font-size: 18px;
+      }
+    }
+  </style>
+</head>
+
+<body id="app" v-cloak>
+  <div class="pad" v-show="joined">
+    <div class="pad-shoulders">
+      <div class="pad-btn pad-shoulder" :class="{ on: held.lt }" v-press="'lt'">LT</div>
+      <div class="pad-btn pad-shoulder" :class="{ on: held.lb }" v-press="'lb'">LB</div>
+    </div>
+    <div class="pad-shoulders right" style="grid-column: 3">
+      <div class="pad-btn pad-shoulder" :class="{ on: held.rb }" v-press="'rb'">RB</div>
+      <div class="pad-btn pad-shoulder" :class="{ on: held.rt }" v-press="'rt'">RT</div>
+    </div>
+
+    <div class="pad-side left" style="grid-row: 2; grid-column: 1">
+      <div class="pad-stick" ref="ls" :class="{ on: sticks.l.active }" @pointerdown="stickDown('l', $event)"
+        @pointermove="stickMove('l', $event)" @pointerup="stickUp('l', $event)" @pointercancel="stickUp('l', $event)">
+        <div class="pad-knob" :style="knob('l')"></div>
+      </div>
+      <div class="pad-dpad">
+        <span></span>
+        <div class="pad-btn" :class="{ on: held.up }" v-press="'up'" aria-label="Up">▲</div>
+        <span></span>
+        <div class="pad-btn" :class="{ on: held.left }" v-press="'left'" aria-label="Left">◀</div>
+        <span></span>
+        <div class="pad-btn" :class="{ on: held.right }" v-press="'right'" aria-label="Right">▶</div>
+        <span></span>
+        <div class="pad-btn" :class="{ on: held.down }" v-press="'down'" aria-label="Down">▼</div>
+        <span></span>
+      </div>
+    </div>
+
+    <div class="pad-middle">
+      <div class="pad-player">
+        <strong>{{ player ? $t('pad.player', { n: player }) : '…' }}</strong>
+        {{ name }}
+      </div>
+      <div class="pad-btn" :class="{ on: held.back }" v-press="'back'">{{ $t('pad.view') }}</div>
+      <div class="pad-btn pad-home" :class="{ on: held.home }" v-press="'home'" :aria-label="$t('pad.home')">⌂</div>
+      <div class="pad-btn" :class="{ on: held.start }" v-press="'start'">{{ $t('pad.menu') }}</div>
+      <div class="pad-error" v-if="error" role="status">{{ error }}</div>
+    </div>
+
+    <div class="pad-side right" style="grid-row: 2; grid-column: 3">
+      <div class="pad-face">
+        <div class="pad-btn y" :class="{ on: held.y }" v-press="'y'">Y</div>
+        <div class="pad-btn x" :class="{ on: held.x }" v-press="'x'">X</div>
+        <div class="pad-btn b" :class="{ on: held.b }" v-press="'b'">B</div>
+        <div class="pad-btn a" :class="{ on: held.a }" v-press="'a'">A</div>
+      </div>
+      <div class="pad-stick small" ref="rs" :class="{ on: sticks.r.active }" @pointerdown="stickDown('r', $event)"
+        @pointermove="stickMove('r', $event)" @pointerup="stickUp('r', $event)" @pointercancel="stickUp('r', $event)">
+        <div class="pad-knob" :style="knob('r')"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="pad-turn" v-if="joined">{{ $t('pad.turn') }}</div>
+
+  <div class="pad-sheet" v-if="!joined">
+    <form @submit.prevent="join">
+      <h1>{{ $t('pad.title') }}</h1>
+      <p>{{ $t('pad.intro') }}</p>
+      <label class="form-label" for="pad-name">{{ $t('pad.your_name') }}</label>
+      <input id="pad-name" class="form-control mb-3" v-model="name" maxlength="30" autocomplete="nickname" required>
+      <button type="submit" class="btn btn-primary w-100" :disabled="!name.trim()">{{ $t('pad.join') }}</button>
+      <p class="mt-3 small" v-if="error" role="status">{{ error }}</p>
+    </form>
+  </div>
+
+  <script type="module">
+    import { createApp } from 'vue'
+    import { initApp } from './init'
+
+    // Button bits, as the PC's controllers use them
+    const BITS = {
+      up: 0x0001, down: 0x0002, left: 0x0004, right: 0x0008, start: 0x0010, back: 0x0020,
+      ls: 0x0040, rs: 0x0080, lb: 0x0100, rb: 0x0200, home: 0x0400,
+      a: 0x1000, b: 0x2000, x: 0x4000, y: 0x8000,
+    }
+    const HEARTBEAT_MS = 3000
+
+    function padId() {
+      try {
+        let id = sessionStorage.getItem('tuna-pad-id')
+        if (!id) {
+          id = Array.from(crypto.getRandomValues(new Uint8Array(12)), (b) => b.toString(16).padStart(2, '0')).join('')
+          sessionStorage.setItem('tuna-pad-id', id)
+        }
+        return id
+      } catch (e) {
+        return Array.from(crypto.getRandomValues(new Uint8Array(12)), (b) => b.toString(16).padStart(2, '0')).join('')
+      }
+    }
+
+    const app = createApp({
+      inject: ['i18n'],
+      data() {
+        let name = ''
+        try {
+          name = localStorage.getItem('tuna-pad-name') || ''
+        } catch (e) {
+          // No saved name
+        }
+        return {
+          name,
+          joined: false,
+          player: 0,
+          error: '',
+          held: { up: false, down: false, left: false, right: false, start: false, back: false, lb: false, rb: false, lt: false, rt: false, home: false, a: false, b: false, x: false, y: false },
+          sticks: { l: { x: 0, y: 0, active: false, id: null }, r: { x: 0, y: 0, active: false, id: null } },
+        }
+      },
+      created() {
+        this.pad = padId()
+        // A player link carries its token in the address; with the password, the session does
+        this.token = new URLSearchParams(location.search).get('token') || ''
+        if (this.token) history.replaceState(null, '', location.pathname)
+        this.inFlight = false
+        this.again = false
+        this.lastRumble = 0
+      },
+      mounted() {
+        window.addEventListener('pagehide', this.leave)
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'hidden') this.release()
+        })
+      },
+      directives: {
+        // A button that's held while touched, by any finger
+        press: {
+          mounted(el, binding) {
+            const vm = binding.instance
+            const key = binding.value
+            const down = (e) => {
+              e.preventDefault()
+              try { el.setPointerCapture(e.pointerId) } catch (err) { /* not capturable */ }
+              vm.setHeld(key, true)
+            }
+            const up = (e) => {
+              e.preventDefault()
+              vm.setHeld(key, false)
+            }
+            el.addEventListener('pointerdown', down)
+            el.addEventListener('pointerup', up)
+            el.addEventListener('pointercancel', up)
+            el.addEventListener('contextmenu', (e) => e.preventDefault())
+          },
+        },
+      },
+      methods: {
+        headers() {
+          const h = { 'Content-Type': 'application/json' }
+          if (this.token) h.Authorization = 'Bearer ' + this.token
+          return h
+        },
+        join() {
+          this.name = this.name.trim()
+          if (!this.name) return
+          try {
+            localStorage.setItem('tuna-pad-name', this.name)
+          } catch (e) {
+            // Asked again next time
+          }
+          this.joined = true
+          // Sideways and full screen where the phone allows it
+          const el = document.documentElement
+          if (el.requestFullscreen) {
+            el.requestFullscreen().then(() => screen.orientation?.lock?.('landscape')).catch(() => {})
+          }
+          this.send()
+          this.beat = setInterval(() => this.send(), HEARTBEAT_MS)
+        },
+        setHeld(key, on) {
+          if (this.held[key] === on) return
+          this.held[key] = on
+          if (on && navigator.vibrate) navigator.vibrate(8)
+          this.send()
+        },
+        release() {
+          for (const k of Object.keys(this.held)) this.held[k] = false
+          for (const s of ['l', 'r']) Object.assign(this.sticks[s], { x: 0, y: 0, active: false, id: null })
+          this.send()
+        },
+        state() {
+          let buttons = 0
+          for (const [k, bit] of Object.entries(BITS)) {
+            if (this.held[k]) buttons |= bit
+          }
+          const axis = (v) => Math.round(Math.max(-1, Math.min(1, v)) * 32767)
+          return {
+            pad: this.pad,
+            name: this.name,
+            buttons,
+            lt: this.held.lt ? 255 : 0,
+            rt: this.held.rt ? 255 : 0,
+            lx: axis(this.sticks.l.x),
+            ly: axis(-this.sticks.l.y),
+            rx: axis(this.sticks.r.x),
+            ry: axis(-this.sticks.r.y),
+          }
+        },
+        // One request at a time, always with the newest state: a slow moment drops old states
+        // instead of queueing them
+        async send() {
+          if (!this.joined) return
+          if (this.inFlight) {
+            this.again = true
+            return
+          }
+          this.inFlight = true
+          try {
+            const r = await fetch('./api/pad', {
+              method: 'POST',
+              credentials: 'include',
+              headers: this.headers(),
+              body: JSON.stringify(this.state()),
+            })
+            if (r.status === 401) {
+              this.error = this.$t('pad.link_expired')
+            } else {
+              const j = await r.json()
+              if (j.status) {
+                this.error = ''
+                this.player = j.player
+                this.rumble(j.rumble)
+              } else {
+                this.error = j.error || this.$t('pad.failed')
+              }
+            }
+          } catch (e) {
+            this.error = this.$t('pad.failed')
+          }
+          this.inFlight = false
+          if (this.again) {
+            this.again = false
+            this.send()
+          }
+        },
+        rumble(level) {
+          if (!navigator.vibrate) return
+          if (level > 0.15 && this.lastRumble <= 0.15) navigator.vibrate(Math.round(150 + level * 250))
+          else if (level <= 0.15 && this.lastRumble > 0.15) navigator.vibrate(0)
+          this.lastRumble = level
+        },
+        leave() {
+          if (!this.joined) return
+          try {
+            fetch('./api/pad/leave', {
+              method: 'POST',
+              credentials: 'include',
+              keepalive: true,
+              headers: this.headers(),
+              body: JSON.stringify({ pad: this.pad }),
+            })
+          } catch (e) {
+            // The PC unplugs it after 20 seconds anyway
+          }
+        },
+        stickDown(s, e) {
+          const st = this.sticks[s]
+          if (st.id !== null) return
+          e.currentTarget.setPointerCapture(e.pointerId)
+          st.id = e.pointerId
+          st.active = true
+          this.stickMove(s, e)
+        },
+        stickMove(s, e) {
+          const st = this.sticks[s]
+          if (st.id !== e.pointerId) return
+          const box = this.$refs[s + 's'].getBoundingClientRect()
+          const radius = box.width / 2
+          let x = (e.clientX - box.left - radius) / (radius * 0.8)
+          let y = (e.clientY - box.top - radius) / (radius * 0.8)
+          const len = Math.hypot(x, y)
+          if (len > 1) {
+            x /= len
+            y /= len
+          }
+          // A small dead zone, so a resting thumb doesn't drift
+          if (Math.hypot(x, y) < 0.08) {
+            x = 0
+            y = 0
+          }
+          if (Math.abs(x - st.x) + Math.abs(y - st.y) < 0.02) return
+          st.x = x
+          st.y = y
+          this.send()
+        },
+        stickUp(s, e) {
+          const st = this.sticks[s]
+          if (st.id !== e.pointerId) return
+          Object.assign(st, { x: 0, y: 0, active: false, id: null })
+          this.send()
+        },
+        knob(s) {
+          const st = this.sticks[s]
+          return { transform: `translate(calc(-50% + ${st.x * 90}%), calc(-50% + ${st.y * 90}%))` }
+        },
+      },
+    })
+
+    initApp(app)
+  </script>
+</body>
+
+</html>
