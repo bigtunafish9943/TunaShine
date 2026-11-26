@@ -994,6 +994,22 @@ namespace platf {
    * @param hwdevice_type enables possible use of hardware encoder
    */
   std::shared_ptr<display_t> display(mem_type_e hwdevice_type, const std::string &display_name, const video::config_t &config) {
+    // Share my screen with one window: only that window, by WGC; never the whole screen instead
+    if (platf::window_capture()) {
+      if (hwdevice_type == mem_type_e::dxgi) {
+        auto disp = std::make_shared<dxgi::display_wgc_vram_t>();
+        if (!disp->init(config, display_name)) {
+          return disp;
+        }
+      } else if (hwdevice_type == mem_type_e::system) {
+        auto disp = std::make_shared<dxgi::display_wgc_ram_t>();
+        if (!disp->init(config, display_name)) {
+          return disp;
+        }
+      }
+      return nullptr;
+    }
+
     // WGC first when chosen; DDX when it can't (secure desktop, nobody signed in, helper trouble)
     if (config::video.capture == "wgc") {
       if (hwdevice_type == mem_type_e::dxgi) {

@@ -1526,6 +1526,7 @@ namespace confighttp {
     }
     auto out = watch::sharing();
     out["monitors"] = watch::monitors();
+    out["windows"] = watch::windows();
     out["soundApps"] = watch::sound_apps();
     out["status"] = true;
     send_response(response, out);
@@ -1724,7 +1725,20 @@ namespace confighttp {
         watch::set_leave_out(input.value("leaveOut", std::string {}));
       }
       if (input.contains("on")) {
-        watch::share_screen(on, input.value("minutes", 120), input.value("monitor", std::string {}));
+        std::uint64_t window = 0;
+        if (const auto w = input.value("window", std::string {}); !w.empty()) {
+          window = std::strtoull(w.c_str(), nullptr, 10);
+          // Only a window from the list: a person's own window, not something else's id
+          bool listed = false;
+          for (const auto &item : watch::windows()) {
+            listed = listed || item.value("id", "") == w;
+          }
+          if (!listed) {
+            bad_request(response, request, "That window isn't open any more. Pick it again.");
+            return;
+          }
+        }
+        watch::share_screen(on, input.value("minutes", 120), input.value("monitor", std::string {}), window);
       }
       auto out = watch::sharing();
       out["status"] = true;

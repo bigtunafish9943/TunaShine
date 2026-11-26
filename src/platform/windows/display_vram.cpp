@@ -1733,7 +1733,7 @@ namespace platf::dxgi {
       return -1;
     }
     // TunaStream runs as SYSTEM, where WGC isn't available: capture through a helper as the user
-    if (platf::is_running_as_system()) {
+    if (platf::is_running_as_system() || platf::window_capture()) {
       remote = make_wgc_remote(this, config);
       if (!remote) {
         return -1;

@@ -283,17 +283,23 @@
       <h2 class="h6" id="share-title"><i class="fas fa-tower-broadcast" aria-hidden="true"></i> {{ $t('watch.screen_title') }}</h2>
       <template v-if="sharing.on">
         <p class="mb-2">{{ $t('watch.screen_on', { minutes: sharing.minutesLeft }) }}
-          <span v-if="monitors.length > 1 && sharedMonitor">({{ monitorLabel(sharedMonitor) }})</span></p>
+          <span v-if="sharing.window">({{ $t('watch.window_shared', { title: sharing.windowTitle || '' }) }})</span>
+          <span v-else-if="monitors.length > 1 && sharedMonitor">({{ monitorLabel(sharedMonitor) }})</span></p>
         <button type="button" class="btn btn-sm btn-danger" @click="setSharing(false)" :disabled="sharingBusy">{{ $t('watch.screen_stop') }}</button>
       </template>
       <template v-else>
         <p class="mb-2">{{ $t('watch.screen_desc') }}</p>
         <div class="d-flex flex-wrap gap-2 align-items-center">
           <label class="visually-hidden" for="share-minutes">{{ $t('watch.screen_for') }}</label>
-          <template v-if="monitors.length > 1">
+          <template v-if="monitors.length > 1 || windows.length">
             <label class="visually-hidden" for="share-monitor">{{ $t('watch.screen_which') }}</label>
-            <select id="share-monitor" class="form-select form-select-sm w-auto" v-model="shareMonitor">
-              <option v-for="m in monitors" :key="m.id" :value="m.id">{{ monitorLabel(m) }}</option>
+            <select id="share-monitor" class="form-select form-select-sm w-auto" style="max-width: 24rem" v-model="shareTarget" @focus="loadMonitors">
+              <optgroup :label="$t('watch.share_screens')">
+                <option v-for="m in monitors" :key="m.id" :value="'m:' + m.id">{{ monitorLabel(m) }}</option>
+              </optgroup>
+              <optgroup :label="$t('watch.share_windows')" v-if="windows.length">
+                <option v-for="w in windows" :key="w.id" :value="'w:' + w.id">{{ w.title }}{{ w.exe ? ' (' + w.exe + ')' : '' }}</option>
+              </optgroup>
             </select>
           </template>
           <select id="share-minutes" class="form-select form-select-sm w-auto" v-model.number="shareMinutes">
@@ -303,8 +309,9 @@
           </select>
           <button type="button" class="btn btn-sm btn-primary" @click="setSharing(true)" :disabled="sharingBusy">{{ $t('watch.screen_start') }}</button>
         </div>
+        <p class="small text-muted mt-1 mb-0" v-if="shareTarget.startsWith('w:')">{{ $t('watch.window_desc') }}</p>
       </template>
-      <div class="d-flex flex-wrap gap-2 align-items-center mt-2" v-if="soundApps.length">
+      <div class="d-flex flex-wrap gap-2 align-items-center mt-2" v-if="soundApps.length && !shareTarget.startsWith('w:') && !(sharing.on && sharing.window)">
         <label for="share-sound" class="mb-0">{{ $t('watch.sound_label') }}</label>
         <select id="share-sound" class="form-select form-select-sm w-auto" v-model="leaveOut" @change="setLeaveOut">
           <option value="">{{ $t('watch.sound_everything') }}</option>
@@ -421,6 +428,8 @@
           shareMinutes: 120,
           showingScreen: false,
           monitors: [],
+          windows: [],
+          shareTarget: '',
           soundApps: [],
           leaveOut: '',
           shareMonitor: '',
@@ -697,6 +706,7 @@
             const r = await fetch('./api/watch/share', { credentials: 'include' }).then((r) => r.ok ? r.json() : null)
             if (!r) return
             this.monitors = r.monitors || []
+            this.windows = r.windows || []
             this.soundApps = r.soundApps || []
             const left = this.soundApps.find((a) => a.leftOut)
             this.leaveOut = left ? left.key : ''
@@ -705,6 +715,9 @@
               const main = this.monitors.find((m) => m.main)
               this.shareMonitor = r.monitor || (main ? main.id : '')
             }
+            // What's picked: a screen (m:) or a window (w:); a window that closed falls back to the screen
+            const picked = this.shareTarget.startsWith('w:') && this.windows.some((w) => 'w:' + w.id === this.shareTarget)
+            if (!picked) this.shareTarget = 'm:' + this.shareMonitor
           } catch (e) { /* only the main screen then */ }
         },
         async setLeaveOut() {
@@ -721,7 +734,9 @@
           try {
             const r = await fetch('./api/watch/share', {
               credentials: 'include', method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ on, minutes: this.shareMinutes, monitor: this.shareMonitor }),
+              body: JSON.stringify(Object.assign({ on, minutes: this.shareMinutes },
+                this.shareTarget.startsWith('w:') ? { window: this.shareTarget.slice(2), monitor: this.shareMonitor }
+                  : { monitor: this.shareTarget.startsWith('m:') ? this.shareTarget.slice(2) : this.shareMonitor })),
             }).then((r) => r.json())
             if (r.status === false) throw new Error(r.error || '')
             this.sharing = r

@@ -8,6 +8,7 @@
 
 // standard includes
 #include <chrono>
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -59,9 +60,14 @@ namespace watch {
 
   /**
    * @brief Share my screen: show one of the PC's own screens to viewers while nobody streams,
-   *        for a while. monitor is an id from monitors(); empty for the main screen.
+   *        for a while. monitor is an id from monitors(); empty for the main screen. window, an id
+   *        from windows(), shows just that window and its program's sound instead.
    */
-  void share_screen(bool on, int minutes, const std::string &monitor = {});
+  void share_screen(bool on, int minutes, const std::string &monitor = {}, std::uint64_t window = 0);
+
+  /// Windows Share my screen can show on their own, with only their program's sound:
+  /// [{"id", "title", "exe", "minimized"}]. Empty where TunaStream can't (not a service).
+  nlohmann::json windows();
 
   /// {"on", "minutesLeft", "showingScreen", "viewers", "monitor"} for the home and watch pages.
   nlohmann::json sharing();
