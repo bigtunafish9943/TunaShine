@@ -1360,8 +1360,8 @@
       },
       "sharewindow": {
         "title": "Share one window",
-        "how": "On the Watch page, under Share my screen, pick a game's window from the list and share it. Switch to another window on the PC, then close the game.",
-        "expect": "The tablet shows only the game's window and hears only the game, even while you're in another window. When the game closes, sharing stops; the rest of the screen is never shown."
+        "how": "On the Watch page, under Share my screen, pick a game's window from the list and share it. Make the window smaller, switch to another window on the PC, then close the game.",
+        "expect": "The tablet shows only the game's window, filling the picture whatever its size, and hears only the game, even while you're in another window. When the game closes, sharing stops; the rest of the screen is never shown."
       },
       "signin": {
         "title": "Keep me signed in",
@@ -1429,6 +1429,10 @@
     "screen_failed": "Sharing couldn't be changed.",
     "need_link": "This device can't watch yet. Open a new watch link from the person who shares, or sign in.",
     "sign_in": "Sign in",
+    "stats": "Stats",
+    "stats_line1": "{fps} frames a second, {mbps} Mbps",
+    "stats_line2": "{width}×{height}, {skips} skips, {reconnects} reconnects",
+    "stats_line3": "Sound {ms} ms ahead",
     "share_screens": "A whole screen",
     "share_windows": "Just one window, with its sound",
     "window_shared": "just {title}, with its sound",

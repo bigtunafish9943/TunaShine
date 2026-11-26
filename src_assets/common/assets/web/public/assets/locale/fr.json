@@ -1360,8 +1360,8 @@
       },
       "sharewindow": {
         "title": "Partager une fenêtre",
-        "how": "Sur la page Regarder, sous Partager mon écran, choisissez la fenêtre d'un jeu dans la liste et partagez-la. Passez à une autre fenêtre sur le PC, puis fermez le jeu.",
-        "expect": "La tablette ne montre que la fenêtre du jeu et n'entend que le jeu, même quand vous êtes dans une autre fenêtre. Quand le jeu se ferme, le partage s'arrête ; le reste de l'écran n'est jamais montré."
+        "how": "Sur la page Regarder, sous Partager mon écran, choisissez la fenêtre d'un jeu dans la liste et partagez-la. Réduisez la taille de la fenêtre, passez à une autre fenêtre sur le PC, puis fermez le jeu.",
+        "expect": "La tablette ne montre que la fenêtre du jeu, qui remplit l'image quelle que soit sa taille, et n'entend que le jeu, même quand vous êtes dans une autre fenêtre. Quand le jeu se ferme, le partage s'arrête ; le reste de l'écran n'est jamais montré."
       },
       "signin": {
         "title": "Rester connecté",
@@ -1429,6 +1429,10 @@
     "screen_failed": "Le partage n'a pas pu être modifié.",
     "need_link": "Cet appareil ne peut pas encore regarder. Ouvrez un nouveau lien pour regarder envoyé par la personne qui partage, ou connectez-vous.",
     "sign_in": "Se connecter",
+    "stats": "Stats",
+    "stats_line1": "{fps} images par seconde, {mbps} Mbit/s",
+    "stats_line2": "{width}×{height}, {skips} sauts, {reconnects} reconnexions",
+    "stats_line3": "Son {ms} ms d'avance",
     "share_screens": "Un écran entier",
     "share_windows": "Une seule fenêtre, avec son son",
     "window_shared": "seulement {title}, avec son son",

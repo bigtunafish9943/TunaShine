@@ -1360,8 +1360,8 @@
       },
       "sharewindow": {
         "title": "Ein Fenster teilen",
-        "how": "Wähle auf der Seite „Zuschauen“ unter „Meinen Bildschirm teilen“ das Fenster eines Spiels aus der Liste und teile es. Wechsle am PC zu einem anderen Fenster und schließ dann das Spiel.",
-        "expect": "Das Tablet zeigt nur das Spielfenster und hört nur das Spiel, auch wenn du in einem anderen Fenster bist. Wird das Spiel geschlossen, endet das Teilen; der restliche Bildschirm wird nie gezeigt."
+        "how": "Wähle auf der Seite „Zuschauen“ unter „Meinen Bildschirm teilen“ das Fenster eines Spiels aus der Liste und teile es. Verkleinere das Fenster, wechsle am PC zu einem anderen Fenster und schließ dann das Spiel.",
+        "expect": "Das Tablet zeigt nur das Spielfenster, bildfüllend egal wie groß es ist, und hört nur das Spiel, auch wenn du in einem anderen Fenster bist. Wird das Spiel geschlossen, endet das Teilen; der restliche Bildschirm wird nie gezeigt."
       },
       "signin": {
         "title": "Angemeldet bleiben",
@@ -1429,6 +1429,10 @@
     "screen_failed": "Das Teilen konnte nicht geändert werden.",
     "need_link": "Dieses Gerät kann noch nicht zuschauen. Öffne einen neuen Zuschau-Link von der Person, die teilt, oder melde dich an.",
     "sign_in": "Anmelden",
+    "stats": "Werte",
+    "stats_line1": "{fps} Bilder pro Sekunde, {mbps} Mbit/s",
+    "stats_line2": "{width}×{height}, {skips} Sprünge, {reconnects} Neuverbindungen",
+    "stats_line3": "Ton {ms} ms im Voraus",
     "share_screens": "Ein ganzer Bildschirm",
     "share_windows": "Nur ein Fenster, mit seinem Ton",
     "window_shared": "nur {title}, mit seinem Ton",

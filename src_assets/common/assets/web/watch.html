@@ -196,6 +196,20 @@
       background: rgba(200, 30, 50, 0.85);
     }
 
+    .watch-stats {
+      position: absolute;
+      top: 2.5rem;
+      left: 0.75rem;
+      padding: 0.35rem 0.6rem;
+      border-radius: 0.4rem;
+      font-size: 0.75rem;
+      line-height: 1.35;
+      color: #fff;
+      background: rgba(0, 0, 0, 0.65);
+      pointer-events: none;
+      font-variant-numeric: tabular-nums;
+    }
+
     .watch-controls {
       display: flex;
       flex-wrap: wrap;
@@ -230,6 +244,11 @@
       </button>
       <canvas ref="canvas" width="1280" height="720" :aria-label="$t('watch.picture')" role="img"></canvas>
       <span class="watch-live" v-if="state === 'playing'">{{ $t('watch.live') }}</span>
+      <div class="watch-stats" v-if="showStats && state === 'playing'" aria-live="off">
+        {{ $t('watch.stats_line1', { fps: stats.fps, mbps: stats.mbps }) }}<br>
+        {{ $t('watch.stats_line2', { width: stats.width, height: stats.height, skips: stats.skips, reconnects: stats.reconnects }) }}<br>
+        <span v-if="soundOn">{{ $t('watch.stats_line3', { ms: stats.soundMs }) }}</span>
+      </div>
       <div class="watch-cheers" aria-live="polite">
         <div class="watch-cheer" v-for="c in floating" :key="c.id">
           <span class="watch-cheer-emoji">{{ c.emoji }}</span> <span class="watch-cheer-name">{{ c.name }}</span>
@@ -258,6 +277,9 @@
       </button>
       <button type="button" class="btn btn-sm btn-outline-secondary" @click="fullscreen">
         <i class="fas fa-expand" aria-hidden="true"></i> {{ $t('watch.fullscreen') }}
+      </button>
+      <button type="button" class="btn btn-sm" :class="showStats ? 'btn-secondary' : 'btn-outline-secondary'" @click="showStats = !showStats" :aria-pressed="showStats">
+        <i class="fas fa-chart-simple" aria-hidden="true"></i> {{ $t('watch.stats') }}
       </button>
       <button type="button" class="btn btn-sm btn-outline-secondary" @click="shareAsking = !shareAsking" v-if="!token && signedIn && !shareAsking">
         <i class="fas fa-link" aria-hidden="true"></i> {{ $t('watch.share') }}
@@ -418,6 +440,8 @@
           isFull: false,
           pseudoFull: false,
           connectGen: 0,
+          showStats: false,
+          stats: { fps: 0, mbps: '0.0', width: 0, height: 0, skips: 0, reconnects: 0, soundMs: 0 },
           sharper: false,
           newPasswordName: '',
           newPassword: '',
@@ -456,8 +480,17 @@
         this.needKey = true
         this.audio = null
         this.stopped = false
+        // Not reactive: counted many times a second
+        this.counters = { bytes: 0, frames: 0 }
+        this.frameQueue = []
       },
       async mounted() {
+        this.statsTimer = setInterval(() => {
+          this.stats.fps = this.counters.frames
+          this.stats.mbps = (this.counters.bytes * 8 / 1e6).toFixed(1)
+          this.counters.bytes = 0
+          this.counters.frames = 0
+        }, 1000)
         this.onFullChange = () => {
           this.isFull = !!(document.fullscreenElement || document.webkitFullscreenElement) || this.pseudoFull
         }
@@ -480,6 +513,7 @@
         this.viewerTimer = setInterval(() => this.loadViewers(), 5000)
       },
       beforeUnmount() {
+        clearInterval(this.statsTimer)
         clearTimeout(this.retryTimer)
         if (this.abort) this.abort.abort()
         document.removeEventListener('fullscreenchange', this.onFullChange)
@@ -764,6 +798,7 @@
           const now = Date.now()
           if (now - (this.lastKeyAsk || 0) < 1000) return
           this.lastKeyAsk = now
+          this.stats.skips++
           fetch('./api/watch/key', { credentials: 'include', method: 'POST', headers: this.authHeaders() }).catch(() => {})
         },
         async connect() {
@@ -804,6 +839,8 @@
             return this.retryLater(5000, gen)
           }
           this.needKey = true
+          if (this.everConnected) this.stats.reconnects++
+          this.everConnected = true
           const reader = response.body.getReader()
           let buffer = new Uint8Array(0)
           let ended = false
@@ -811,6 +848,7 @@
             while (true) {
               const { value, done } = await reader.read()
               if (done || gen !== this.connectGen) break
+              this.counters.bytes += value.length
               const joined = new Uint8Array(buffer.length + value.length)
               joined.set(buffer)
               joined.set(value, buffer.length)
@@ -847,21 +885,56 @@
           // TunaStream closes long responses after a few minutes: carry straight on
           this.retryLater(200, gen)
         },
+        paint(frame) {
+          const canvas = this.$refs.canvas
+          if (canvas.width !== frame.displayWidth || canvas.height !== frame.displayHeight) {
+            // 720p or 1080p (Sharper): draw at the picture's own size
+            canvas.width = frame.displayWidth
+            canvas.height = frame.displayHeight
+            this.stats.width = frame.displayWidth
+            this.stats.height = frame.displayHeight
+          }
+          this.ctx2d.drawImage(frame, 0, 0, canvas.width, canvas.height)
+          frame.close()
+          if (this.state !== 'playing') this.state = 'playing'
+        },
+        // Draws the newest picture whose sound is playing now
+        schedulePaint() {
+          if (this.paintPending) return
+          this.paintPending = true
+          requestAnimationFrame(() => {
+            this.paintPending = false
+            const audio = this.audio
+            if (!audio || audio.offset === undefined || !this.soundOn) {
+              while (this.frameQueue.length) this.paint(this.frameQueue.shift())
+              return
+            }
+            const now = audio.context.currentTime
+            let due = null
+            while (this.frameQueue.length && this.frameQueue[0].timestamp / 1e6 + audio.offset <= now + 0.008) {
+              if (due) due.close()
+              due = this.frameQueue.shift()
+            }
+            if (due) this.paint(due)
+            if (this.frameQueue.length) this.schedulePaint()
+          })
+        },
         makeDecoder(codec) {
           if (this.decoder && this.decoder.state !== 'closed') {
             try { this.decoder.close() } catch (e) { /* already closed */ }
           }
           this.decoder = new VideoDecoder({
             output: (frame) => {
-              const canvas = this.$refs.canvas
-              if (canvas.width !== frame.displayWidth || canvas.height !== frame.displayHeight) {
-                // 720p or 1080p (Sharper): draw at the picture's own size
-                canvas.width = frame.displayWidth
-                canvas.height = frame.displayHeight
+              this.counters.frames++
+              // With sound on, each picture waits for its sound (which is buffered a little
+              // against Wi-Fi), so lips and footsteps line up; without sound, at once
+              if (this.soundOn && this.audio && this.audio.offset !== undefined) {
+                this.frameQueue.push(frame)
+                if (this.frameQueue.length > 45) this.frameQueue.shift().close()
+                this.schedulePaint()
+              } else {
+                this.paint(frame)
               }
-              this.ctx2d.drawImage(frame, 0, 0, canvas.width, canvas.height)
-              frame.close()
-              if (this.state !== 'playing') this.state = 'playing'
             },
             error: () => {
               this.needKey = true
@@ -919,7 +992,11 @@
                 source.buffer = buffer
                 source.connect(context.destination)
                 source.start(audio.next)
+                // Where the PC's clock sits on this sound clock: the pictures follow it
+                const offset = audio.next - data.timestamp / 1e6
+                audio.offset = audio.offset === undefined || Math.abs(offset - audio.offset) > 0.1 ? offset : audio.offset * 0.9 + offset * 0.1
                 audio.next += buffer.duration
+                this.stats.soundMs = Math.round((audio.next - now) * 1000)
               } catch (e) { /* a packet that couldn't be played */ }
               data.close()
             },
@@ -952,6 +1029,8 @@
             this.audio.context.resume()
           } else if (this.audio) {
             this.audio.context.suspend()
+            // Pictures waiting for their sound go out now
+            while (this.frameQueue.length) this.paint(this.frameQueue.shift())
           }
         },
         fullscreen() {
