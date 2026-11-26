@@ -1,0 +1,104 @@
+From 486372b8cccf7d91b5d7aadc3775b8523ed06e94 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Thu, 26 Nov 2026 00:40:29 +0000
+Subject: [PATCH] Streaming: let controller presses go straight to TunaReceive;
+ show PC game box art when it arrives
+
+- HomeButtonService filters key events for the Home button and shortcuts. Android waits for
+  the service before delivering every key press, controller buttons included, so while
+  TunaReceive streams (or watches) a game every button press took a round trip to TunaHome,
+  longer whenever TunaHome's main thread was busy. The filter is now off while TunaReceive's
+  Game or Watch screen is in front, and back on as soon as anything else is. While streaming,
+  Home goes to the TV's own home screen, which 'replace the TV's home screen' then swaps for
+  TunaHome as usual.
+- The PC games row only refreshed when the list of games changed, so box art TunaReceive
+  fetched after the first listing never appeared until a game was added or removed.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01MwG5QtPhwViJXoZm8p79Dg
+---
+ .../java/com/tunastream/home/HomeActivity.kt  |  3 +-
+ .../com/tunastream/home/HomeButtonService.kt  | 32 +++++++++++++++++++
+ 2 files changed, 34 insertions(+), 1 deletion(-)
+
+diff --git a/app/src/main/java/com/tunastream/home/HomeActivity.kt b/app/src/main/java/com/tunastream/home/HomeActivity.kt
+index c0f5f41..2d3f959 100644
+--- a/app/src/main/java/com/tunastream/home/HomeActivity.kt
++++ b/app/src/main/java/com/tunastream/home/HomeActivity.kt
+@@ -1249,7 +1249,8 @@ class HomeActivity : BaseActivity() {
+                 if (isDestroyed) {
+                     return@runOnUiThread
+                 }
+-                if (games.map { it.pkg } != pcGames.map { it.pkg }) {
++                // Box art can arrive after the list (TunaReceive fetches it later): show it then too
++                if (games.map { it.pkg to (it.banner != null) } != pcGames.map { it.pkg to (it.banner != null) }) {
+                     pcGames = games
+                     sections.filter { it.row.kind == Rows.PC_GAMES }.forEach { it.show(games) }
+                     applyGaps()
+diff --git a/app/src/main/java/com/tunastream/home/HomeButtonService.kt b/app/src/main/java/com/tunastream/home/HomeButtonService.kt
+index 3c75ae0..31e85df 100644
+--- a/app/src/main/java/com/tunastream/home/HomeButtonService.kt
++++ b/app/src/main/java/com/tunastream/home/HomeButtonService.kt
+@@ -1,6 +1,7 @@
+ package com.tunastream.home
+ 
+ import android.accessibilityservice.AccessibilityService
++import android.accessibilityservice.AccessibilityServiceInfo
+ import android.content.ComponentName
+ import android.content.Context
+ import android.content.Intent
+@@ -23,6 +24,28 @@ import android.view.accessibility.AccessibilityEvent
+  */
+ class HomeButtonService : AccessibilityService() {
+     private var lastReplaced = 0L
++    private var filteringKeys = true
++
++    /**
++     * While TunaReceive streams a game (or watches one), button presses go straight to it.
++     * Filtering keys makes Android wait for this service before every press, controller buttons
++     * included, which adds delay to the game, more so when TunaHome is busy. So the filter is
++     * off while a stream is in front, and back on as soon as anything else is.
++     */
++    private fun setKeyFiltering(on: Boolean) {
++        if (filteringKeys == on) {
++            return
++        }
++        val info = serviceInfo ?: return
++        info.flags = if (on) {
++            info.flags or AccessibilityServiceInfo.FLAG_REQUEST_FILTER_KEY_EVENTS
++        } else {
++            info.flags and AccessibilityServiceInfo.FLAG_REQUEST_FILTER_KEY_EVENTS.inv()
++        }
++        serviceInfo = info
++        filteringKeys = on
++        hotkeys.reset()
++    }
+ 
+     /** Shortcuts on Home and Back that work everywhere. */
+     private val hotkeys = HotkeyEngine(
+@@ -107,6 +130,13 @@ class HomeButtonService : AccessibilityService() {
+             return
+         }
+         val pkg = event.packageName?.toString() ?: return
++        val cls = event.className?.toString() ?: ""
++        when {
++            pkg == PcGames.RECEIVER && cls in STREAMING_SCREENS -> setKeyFiltering(false)
++            // TunaReceive's own pop-ups over the stream leave things as they are
++            pkg == PcGames.RECEIVER && !cls.startsWith("com.limelight.") -> {}
++            else -> setKeyFiltering(true)
++        }
+         if (pkg !in STOCK_HOME_SCREENS || !Prefs.replaceStock(this) || CrashLog.failingLately(this)) {
+             return
+         }
+@@ -147,6 +177,8 @@ class HomeButtonService : AccessibilityService() {
+          * Only these are ever replaced. A fixed list on purpose: the TV's Settings app also
+          * counts as a "home" app on some devices, and replacing that would lock the viewer out.
+          */
++        private val STREAMING_SCREENS = setOf("com.limelight.Game", "com.limelight.WatchActivity")
++
+         private val STOCK_HOME_SCREENS = setOf(
+             "com.google.android.tvlauncher",
+             "com.google.android.apps.tv.launcherx",
+-- 
+2.43.0
+
