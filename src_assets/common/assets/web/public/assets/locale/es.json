@@ -309,7 +309,7 @@
     "qsv_slow_hevc_desc": "Esto puede habilitar la codificación HEVC en GPU de Intel, a costa de un mayor uso de GPU y un peor rendimiento.",
     "restart_note": "TunaStream se está reiniciando para aplicar tus cambios. Esta página vuelve sola en unos segundos.",
     "server_cmd": "Comandos del servidor",
-    "server_cmd_desc": "Define comandos que un dispositivo puede llamar durante la transmisión.",
+    "server_cmd_desc": "Comandos que una TV puede ejecutar desde el menú rápido de TunaReceive (Comandos del PC) durante una partida. TunaStream añade los suyos después: Steam Big Picture, salir de él y reiniciar Steam (si Steam está instalado), y apartar el puntero.",
     "sw_preset": "Preajustes SW",
     "sw_preset_desc": "Optimice la compensación entre la velocidad de codificación (fotogramas codificados por segundo) y la eficiencia de la compresión (calidad por bit en el flujo de bits). Por defecto es superrápido.",
     "sw_preset_fast": "rápido",

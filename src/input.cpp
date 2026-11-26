@@ -1801,6 +1801,13 @@ namespace input {
       }
       return true;
     }
+
+    void pointer_aside() {
+      if (platf_input) {
+        // Far further than any screen: the pointer stops at the corner
+        platf::move_mouse(platf_input, 30000, 30000);
+      }
+    }
   }  // namespace remote
 
   [[nodiscard]] std::unique_ptr<platf::deinit_t> init() {

@@ -1102,11 +1102,18 @@ namespace stream {
 
       uint8_t cmdIndex = *(uint8_t*)payload.data();
 
-      if (cmdIndex < config::tunastream.server_cmds.size()) {
-        const auto& cmd = config::tunastream.server_cmds[cmdIndex];
+      const auto commands = proc::server_commands();
+      if (cmdIndex < commands.size()) {
+        // A copy: Settings may change the list while the command starts
+        const auto cmd = commands[cmdIndex];
         BOOST_LOG(info) << "Executing server command: " << cmd.cmd_name;
 
-        auto exec_thread = std::thread([&cmd]{
+        if (cmd.cmd_val == proc::POINTER_ASIDE) {
+          input::remote::pointer_aside();
+          return;
+        }
+
+        auto exec_thread = std::thread([cmd]{
           std::error_code ec;
           auto env = proc::proc.get_env();
           boost::filesystem::path working_dir = proc::find_working_directory(cmd.cmd_val, env);

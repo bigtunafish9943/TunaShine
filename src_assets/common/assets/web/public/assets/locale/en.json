@@ -501,7 +501,7 @@
     "screen_status_ok": "The virtual screen is working.",
     "screen_title": "How the stream's screen works",
     "server_cmd": "Server Commands",
-    "server_cmd_desc": "Configure a list of commands to be executed when called from client during streaming.",
+    "server_cmd_desc": "Commands a TV can run from TunaReceive's quick menu (PC commands) during a game. TunaStream adds its own after these: Steam Big Picture, leaving it and restarting Steam (when Steam is installed), and moving the pointer aside.",
     "settings_intro": "Setup already chose good settings for you. Change things here only if you want to fine-tune something.",
     "stream_audio": "Send sound to the device",
     "stream_audio_desc": "Turn this off to keep the sound on this PC instead.",

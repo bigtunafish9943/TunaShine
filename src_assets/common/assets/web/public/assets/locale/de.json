@@ -527,7 +527,7 @@
     "screen_status_ok": "Der virtuelle Bildschirm funktioniert.",
     "screen_title": "So funktioniert der Bildschirm des Streams",
     "server_cmd": "Server-Befehle",
-    "server_cmd_desc": "Legt Befehle fest, die ein Gerät während des Streamens aufrufen kann.",
+    "server_cmd_desc": "Befehle, die ein Fernseher während eines Spiels aus dem Schnellmenü von TunaReceive (PC-Befehle) ausführen kann. TunaStream ergänzt danach eigene: Steam Big Picture, es verlassen und Steam neu starten (wenn Steam installiert ist) sowie den Mauszeiger zur Seite schieben.",
     "settings_intro": "Die Einrichtung hat bereits gute Einstellungen für dich gewählt. Ändere hier nur etwas, wenn du etwas feinjustieren willst.",
     "stream_audio": "Ton an das Gerät senden",
     "stream_audio_desc": "Schalte das aus, um den Ton stattdessen auf diesem PC zu behalten.",

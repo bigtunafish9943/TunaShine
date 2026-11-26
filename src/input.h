@@ -54,6 +54,8 @@ namespace input {
     void type(const std::string &utf8);
     /// One of: enter, backspace, escape, tab, up, down, left, right, win, alt_tab, alt_f4
     bool key(const std::string &name);
+    /// The pointer to the bottom-right corner, out of the game's way
+    void pointer_aside();
   }  // namespace remote
 
   struct touch_port_t: public platf::touch_port_t {

@@ -86,6 +86,9 @@ and every step was tightened:
   time left, the message and sound buttons and End session. While nobody plays: the last seven days, play time
   today, each TV and how it's set up, this PC, milestones and captures. Add it to your home screen to open it
   like an app; *Full page* opens everything else.
+- **Steam from the couch.** TunaReceive's quick menu has *PC commands*: open Steam Big Picture, leave it, restart
+  Steam when Big Picture hangs, and move the pointer out of the way, next to any commands set up under
+  *Settings > General > Server Commands*. The Steam ones appear when Steam is installed.
 - **Phone remote.** *Remote* on the Live page turns the phone into the PC's mouse and keyboard, with or without a
   stream: slide to move the pointer, tap to click, two fingers to right-click or scroll, type into whatever has
   the cursor (passwords and searches included, in any language), and Esc, Enter, Tab, the arrows, the Windows key,
