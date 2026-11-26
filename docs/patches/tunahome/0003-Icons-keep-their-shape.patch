@@ -1,0 +1,241 @@
+From c637d7309a0183ad39a13eff967594b3694ba519 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Thu, 26 Nov 2026 03:27:49 +0000
+Subject: [PATCH] Icons keep their shape
+
+Icons were stretched or blown up in a few places:
+- A picture's size was capped one side at a time, so a large or very small non-square drawing
+  was squashed. It is now scaled as a whole.
+- Icons turned into one-colour lines (a tint, or apps the pack doesn't have shown as lines) squeezed
+  a wide logo into a square. They now keep its shape.
+- Tinted pack drawings, a pack's frame for apps it doesn't have, and the icons in a folder's
+  card were all drawn into squares whatever their shape. They now fit inside, in proportion.
+- With Edge to edge on, a drawing on nothing (an icon pack's line art, a logo with no
+  background) was trimmed to its lines and blown up to fill the card, cutting it off. It is now
+  shown whole, in the middle of the card with a margin; icons with their own background still
+  fill the card.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01MwG5QtPhwViJXoZm8p79Dg
+---
+ .../java/com/tunastream/home/AppAdapter.kt    | 15 +++-
+ .../java/com/tunastream/home/AppsOnDisk.kt    |  7 +-
+ .../main/java/com/tunastream/home/Folders.kt  |  2 +-
+ .../java/com/tunastream/home/IconPacks.kt     |  2 +-
+ .../java/com/tunastream/home/IconShape.kt     | 87 +++++++++++++++++--
+ 5 files changed, 99 insertions(+), 14 deletions(-)
+
+diff --git a/app/src/main/java/com/tunastream/home/AppAdapter.kt b/app/src/main/java/com/tunastream/home/AppAdapter.kt
+index 17ca153..d5cea2f 100644
+--- a/app/src/main/java/com/tunastream/home/AppAdapter.kt
++++ b/app/src/main/java/com/tunastream/home/AppAdapter.kt
+@@ -460,7 +460,20 @@ class AppAdapter(
+             val showBanner = wideImage != null
+             banner.setImageDrawable(wideImage)
+             banner.visibility = if (showBanner) View.VISIBLE else View.GONE
+-            icon.setImageDrawable(if (showBanner) null else app.own ?: app.icon)
++            val shown = if (showBanner) null else app.own ?: app.icon
++            icon.setImageDrawable(shown)
++            if (tiles.fullBleed) {
++                // Edge to edge, except a drawing on nothing (line-art packs): that is shown
++                // whole, in proportion, rather than blown up and cut off
++                if (shown is IconShape.LineArt) {
++                    icon.scaleType = ImageView.ScaleType.FIT_CENTER
++                    val pad = Math.round(Math.min(tiles.width, tiles.height) * (if (big) 2 else 1) * 0.14f)
++                    icon.setPadding(pad, pad, pad, pad)
++                } else {
++                    icon.scaleType = ImageView.ScaleType.CENTER_CROP
++                    icon.setPadding(0, 0, 0, 0)
++                }
++            }
+             icon.visibility = if (showBanner) View.GONE else View.VISIBLE
+             cardLabel.visibility = if (tiles.style == Look.TILE_ICON_NAME) View.VISIBLE else View.GONE
+             lockBadge.visibility = if (AppLock.isLocked(itemView.context, app.appPkg)) View.VISIBLE else View.GONE
+diff --git a/app/src/main/java/com/tunastream/home/AppsOnDisk.kt b/app/src/main/java/com/tunastream/home/AppsOnDisk.kt
+index dd943bd..488d0cc 100644
+--- a/app/src/main/java/com/tunastream/home/AppsOnDisk.kt
++++ b/app/src/main/java/com/tunastream/home/AppsOnDisk.kt
+@@ -18,7 +18,7 @@ import java.io.FileOutputStream
+  * The real list loads straight after and replaces it. Thrown away if the look has changed.
+  */
+ object AppsOnDisk {
+-    private const val VERSION = 1
++    private const val VERSION = 2  // 2: remembers icons drawn on nothing
+ 
+     private fun dir(context: Context) = File(context.cacheDir, "apps")
+ 
+@@ -56,6 +56,7 @@ object AppsOnDisk {
+                     .put("colour", app.colour)
+                     .put("banner", write(app.banner, File(fresh, "$i.b.png"), 640))
+                     .put("icon", write(app.icon, File(fresh, "$i.i.png"), 256))
++                    .put("iconLine", app.icon is IconShape.LineArt)
+                     .put("own", write(app.own, File(fresh, "$i.o.png"), 640))
+                 list.put(o)
+             }
+@@ -96,7 +97,9 @@ object AppsOnDisk {
+                         label = o.optString("label"),
+                         launch = launch,
+                         banner = picture("$i.b.png", "banner"),
+-                        icon = picture("$i.i.png", "icon"),
++                        icon = if (o.optBoolean("iconLine")) {
++                            BitmapFactory.decodeFile(File(folder, "$i.i.png").path)?.let { IconShape.LineArt(context.resources, it) }
++                        } else picture("$i.i.png", "icon"),
+                         tv = o.optBoolean("tv"),
+                         own = picture("$i.o.png", "own"),
+                         appPkg = o.optString("appPkg", o.getString("pkg")),
+diff --git a/app/src/main/java/com/tunastream/home/Folders.kt b/app/src/main/java/com/tunastream/home/Folders.kt
+index aa8930f..5a330c4 100644
+--- a/app/src/main/java/com/tunastream/home/Folders.kt
++++ b/app/src/main/java/com/tunastream/home/Folders.kt
+@@ -80,7 +80,7 @@ object Folders {
+             val x = (i % 2) * cell
+             val y = (i / 2) * cell
+             val copy = icon.constantState?.newDrawable()?.mutate() ?: icon
+-            copy.setBounds(x + pad, y + pad, x + cell - pad, y + cell - pad)
++            IconShape.fitSquare(copy, x + pad, y + pad, cell - 2 * pad)
+             copy.draw(canvas)
+         }
+         return BitmapDrawable(context.resources, bitmap)
+diff --git a/app/src/main/java/com/tunastream/home/IconPacks.kt b/app/src/main/java/com/tunastream/home/IconPacks.kt
+index 11ad446..370854e 100644
+--- a/app/src/main/java/com/tunastream/home/IconPacks.kt
++++ b/app/src/main/java/com/tunastream/home/IconPacks.kt
+@@ -312,7 +312,7 @@ object IconPacks {
+             val inner = Math.round(size * scale)
+             val offset = (size - inner) / 2
+             val copy = icon.constantState?.newDrawable()?.mutate() ?: icon
+-            copy.setBounds(offset, offset, offset + inner, offset + inner)
++            IconShape.fitBounds(copy, size, offset)
+             copy.draw(canvas)
+             mask?.let { name ->
+                 drawable(name)?.let { m ->
+diff --git a/app/src/main/java/com/tunastream/home/IconShape.kt b/app/src/main/java/com/tunastream/home/IconShape.kt
+index 880d696..de29c52 100644
+--- a/app/src/main/java/com/tunastream/home/IconShape.kt
++++ b/app/src/main/java/com/tunastream/home/IconShape.kt
+@@ -12,6 +12,61 @@ import android.os.Build
+ object IconShape {
+     private const val SIZE = 256
+ 
++    /**
++     * A drawing on nothing (an icon pack's line art, a logo without a background), which would
++     * be blown up and cut off if made to fill a card: the card shows it whole, with a margin.
++     */
++    class LineArt(res: Resources, bitmap: Bitmap) : BitmapDrawable(res, bitmap)
++
++    /** [source] drawn as large as fits in a square, keeping its shape, [margin] of it left empty. */
++    private fun fitted(source: Bitmap, size: Int, margin: Float = 0f): Bitmap {
++        val out = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
++        val room = size * (1f - 2 * margin)
++        val scale = room / Math.max(source.width, source.height)
++        val w = source.width * scale
++        val h = source.height * scale
++        val left = (size - w) / 2
++        val top = (size - h) / 2
++        val paint = android.graphics.Paint(android.graphics.Paint.FILTER_BITMAP_FLAG or android.graphics.Paint.ANTI_ALIAS_FLAG)
++        Canvas(out).drawBitmap(source, null, android.graphics.RectF(left, top, left + w, top + h), paint)
++        return out
++    }
++
++    /** Where a drawable goes in a [size] square to keep its shape: as large as fits, in the middle. */
++    fun fitBounds(drawable: Drawable, size: Int, inset: Int = 0) = fitSquare(drawable, inset, inset, size - 2 * inset)
++
++    /** [drawable] as large as fits in the square at [x], [y] with sides [side], keeping its shape. */
++    fun fitSquare(drawable: Drawable, x: Int, y: Int, side: Int) {
++        val iw = drawable.intrinsicWidth
++        val ih = drawable.intrinsicHeight
++        if (iw <= 0 || ih <= 0 || iw == ih) {
++            drawable.setBounds(x, y, x + side, y + side)
++            return
++        }
++        val scale = side.toFloat() / Math.max(iw, ih)
++        val w = Math.round(iw * scale)
++        val h = Math.round(ih * scale)
++        val left = x + (side - w) / 2
++        val top = y + (side - h) / 2
++        drawable.setBounds(left, top, left + w, top + h)
++    }
++
++    /** How much of a picture is drawn on, 0 to 1. */
++    private fun coverage(bitmap: Bitmap): Float {
++        val w = bitmap.width
++        val h = bitmap.height
++        if (w == 0 || h == 0) {
++            return 0f
++        }
++        val px = IntArray(w * h)
++        bitmap.getPixels(px, 0, w, 0, 0, w, h)
++        var drawn = 0
++        for (p in px) {
++            if ((p ushr 24) > 160) drawn++
++        }
++        return drawn.toFloat() / px.size
++    }
++
+     /**
+      * An icon with its empty border taken away, ready to fill a card. Modern icons come in two
+      * layers bigger than what shows, so the middle of them is used; older ones are trimmed to
+@@ -20,12 +75,15 @@ object IconShape {
+     fun fullBleed(res: Resources, icon: Drawable?): Drawable? {
+         icon ?: return null
+         return try {
+-            val bitmap = if (Build.VERSION.SDK_INT >= 26 && icon is AdaptiveIconDrawable) {
+-                layers(icon)
+-            } else {
+-                trimmed(icon)
++            if (Build.VERSION.SDK_INT >= 26 && icon is AdaptiveIconDrawable) {
++                return BitmapDrawable(res, layers(icon))
++            }
++            val bitmap = trimmed(icon) ?: return icon
++            // Line art or a logo on nothing: shown whole, not stretched or cut to fill the card
++            if (coverage(bitmap) < 0.6f) {
++                return LineArt(res, fitted(bitmap, SIZE, 0.06f))
+             }
+-            bitmap?.let { BitmapDrawable(res, it) } ?: icon
++            BitmapDrawable(res, bitmap)
+         } catch (e: Exception) {
+             icon
+         }
+@@ -51,7 +109,8 @@ object IconShape {
+                 tint(bitmap, colour)
+             } else {
+                 val source = trimmed(icon) ?: return icon
+-                canvas.drawBitmap(Bitmap.createScaledBitmap(source, size, size, true), 0f, 0f, null)
++                // Kept in shape: a wide logo stays wide instead of being squashed into a square
++                canvas.drawBitmap(fitted(source, size), 0f, 0f, null)
+                 edges(bitmap, colour)
+             }
+             BitmapDrawable(res, bitmap)
+@@ -70,7 +129,7 @@ object IconShape {
+             val size = 192
+             val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+             val copy = icon.constantState?.newDrawable()?.mutate() ?: icon
+-            copy.setBounds(0, 0, size, size)
++            fitBounds(copy, size)
+             copy.draw(Canvas(bitmap))
+             tint(bitmap, colour)
+             BitmapDrawable(res, bitmap)
+@@ -187,8 +246,18 @@ object IconShape {
+ 
+     /** An older icon, cut down to where its picture is (most have see-through borders). */
+     private fun trimmed(icon: Drawable): Bitmap? {
+-        val w = icon.intrinsicWidth.takeIf { it > 0 }?.coerceIn(16, 512) ?: SIZE
+-        val h = icon.intrinsicHeight.takeIf { it > 0 }?.coerceIn(16, 512) ?: SIZE
++        // Its own shape, at a workable size: a big or small picture is scaled as a whole, never
++        // one side more than the other
++        val iw = icon.intrinsicWidth.takeIf { it > 0 } ?: SIZE
++        val ih = icon.intrinsicHeight.takeIf { it > 0 } ?: SIZE
++        val big = Math.max(iw, ih)
++        val scale = when {
++            big > 512 -> 512f / big
++            big < 128 -> 128f / big
++            else -> 1f
++        }
++        val w = Math.max(1, Math.round(iw * scale))
++        val h = Math.max(1, Math.round(ih * scale))
+         val full = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+         val copy = icon.constantState?.newDrawable()?.mutate() ?: icon
+         copy.setBounds(0, 0, w, h)
+-- 
+2.43.0
+
