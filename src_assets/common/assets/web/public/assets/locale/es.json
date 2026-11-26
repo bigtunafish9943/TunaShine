@@ -219,6 +219,8 @@
     "dd_hdr_option": "HDR",
     "dd_hdr_option_auto": "Encender/apagar el modo HDR tal como lo solicitó el cliente (por defecto)",
     "dd_hdr_option_disabled": "No cambiar la configuración de HDR",
+    "dd_manual_refresh_rate": "Frecuencia que usar",
+    "dd_manual_resolution": "Resolución que usar",
     "dd_mode_remapping": "Modo de visualización de mapeo",
     "dd_mode_remapping_add": "Añadir entrada de remplazamiento",
     "dd_mode_remapping_desc_1": "Especifique las entradas de remplazamiento para cambiar la resolución solicitada y/o la tasa de actualización a otros valores.",
