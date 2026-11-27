@@ -300,6 +300,9 @@ namespace confighttp {
         if (path == "/api/watch/now") {
           return "watch";
         }
+        if (path == "/api/quick-messages") {
+          return "messages";
+        }
         if (path == "/pad" || path == "/pad/") {
           return "play";
         }
@@ -324,7 +327,7 @@ namespace confighttp {
         if (path == "/api/watch/rotate") {
           return "rotate";  // only a device's watch key
         }
-        if (path == "/api/tv-message" || path == "/api/sounds/play") {
+        if (path == "/api/tv-message" || path == "/api/sounds/play" || path == "/api/buzz") {
           return "messages";
         }
         if (path == "/api/apps/close" || path == "/api/play-limits/extend") {
@@ -2477,6 +2480,28 @@ namespace confighttp {
    *
    * @api_examples{/api/rumble-test| POST| null}
    */
+  /**
+   * @brief POST /api/buzz {"device", "controller"}: a short buzz on one player's controller.
+   */
+  void postBuzz(resp_https_t response, req_https_t request) {
+    if (!validateContentType(response, request, "application/json") || !authenticate(response, request)) {
+      return;
+    }
+    try {
+      std::stringstream ss;
+      ss << request->content.rdbuf();
+      auto input = nlohmann::json::parse(ss.str());
+      nlohmann::json out;
+      out["status"] = stream::session::buzz(input.value("device", std::string {}), input.value("controller", -1));
+      if (!out["status"].get<bool>()) {
+        out["error"] = "That device isn't streaming now.";
+      }
+      send_response(response, out);
+    } catch (std::exception &e) {
+      bad_request(response, request, e.what());
+    }
+  }
+
   void rumbleTest(resp_https_t response, req_https_t request) {
     if (!validateContentType(response, request, "application/json") || !authenticate(response, request)) {
       return;
@@ -2820,6 +2845,69 @@ namespace confighttp {
     output_tree["status"] = true;
     output_tree["messages"] = messages;
     send_response(response, output_tree);
+  }
+
+  /**
+   * Your quick messages: the household's own one-tap messages for the TV (up to eight), kept on
+   * the PC so the home page and the phone page show the same ones. Empty means TunaStream's.
+   */
+  namespace quick_messages {
+    std::filesystem::path file() {
+      return platf::appdata() / "quick_messages.json";
+    }
+
+    nlohmann::json load() {
+      try {
+        auto j = nlohmann::json::parse(file_handler::read_file(file().string().c_str()));
+        if (j.is_array()) {
+          return j;
+        }
+      } catch (const std::exception &) {
+        // None set yet
+      }
+      return nlohmann::json::array();
+    }
+  }  // namespace quick_messages
+
+  void getQuickMessages(resp_https_t response, req_https_t request) {
+    if (!authenticate(response, request)) {
+      return;
+    }
+    nlohmann::json out;
+    out["status"] = true;
+    out["messages"] = quick_messages::load();
+    send_response(response, out);
+  }
+
+  void postQuickMessages(resp_https_t response, req_https_t request) {
+    if (!validateContentType(response, request, "application/json") || !authenticate_owner(response, request)) {
+      return;
+    }
+    try {
+      std::stringstream ss;
+      ss << request->content.rdbuf();
+      auto input = nlohmann::json::parse(ss.str());
+      nlohmann::json clean = nlohmann::json::array();
+      for (const auto &m : input.value("messages", nlohmann::json::array())) {
+        if (!m.is_string()) {
+          continue;
+        }
+        auto text = m.get<std::string>();
+        // Trimmed, short, and no more than eight
+        text.erase(0, text.find_first_not_of(" \t\r\n"));
+        text.erase(text.find_last_not_of(" \t\r\n") + 1);
+        if (!text.empty() && text.size() <= 60 && clean.size() < 8) {
+          clean.push_back(text);
+        }
+      }
+      file_handler::write_file(quick_messages::file().string().c_str(), clean.dump());
+      nlohmann::json out;
+      out["status"] = true;
+      out["messages"] = clean;
+      send_response(response, out);
+    } catch (std::exception &e) {
+      bad_request(response, request, e.what());
+    }
   }
 
   void getStatus(resp_https_t response, req_https_t request) {
@@ -4184,10 +4272,13 @@ namespace confighttp {
     server.resource["^/api/apps/launch$"]["POST"] = launchApp;
     server.resource["^/api/apps/close$"]["POST"] = closeApp;
     server.resource["^/api/rumble-test$"]["POST"] = rumbleTest;
+    server.resource["^/api/buzz$"]["POST"] = postBuzz;
     server.resource["^/api/status$"]["GET"] = getStatus;
     server.resource["^/api/recap$"]["GET"] = getRecap;
     server.resource["^/api/tv-message$"]["POST"] = postTvMessage;
     server.resource["^/api/tv-message$"]["GET"] = getTvMessages;
+    server.resource["^/api/quick-messages$"]["GET"] = getQuickMessages;
+    server.resource["^/api/quick-messages$"]["POST"] = postQuickMessages;
     server.resource["^/api/sounds$"]["GET"] = getSounds;
     server.resource["^/api/play-limits$"]["GET"] = getPlayLimits;
     server.resource["^/api/play-limits$"]["POST"] = postPlayLimits;

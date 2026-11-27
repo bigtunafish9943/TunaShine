@@ -2368,6 +2368,43 @@ namespace stream {
       return clients;
     }
 
+    bool buzz(const std::string &device, int controller) {
+      if (running_sessions == 0 || controller < 0 || controller > 15) {
+        return false;
+      }
+      auto ref = broadcast.ref();
+      if (!ref) {
+        return false;
+      }
+      bool found = false;
+      {
+        auto lg = ref->control_server._sessions.lock();
+        for (auto *session : *ref->control_server._sessions) {
+          if (session->device_name != device || !session->control.peer || !session->control.feedback_queue) {
+            continue;
+          }
+          // Two short pulses, like a phone's buzz
+          auto queue = session->control.feedback_queue;
+          const auto id = (std::uint16_t) controller;
+          queue->raise(platf::gamepad_feedback_msg_t::make_rumble(id, 0xE000, 0xE000));
+          task_pool.pushDelayed([queue, id]() {
+            queue->raise(platf::gamepad_feedback_msg_t::make_rumble(id, 0, 0));
+          }, 250ms);
+          task_pool.pushDelayed([queue, id]() {
+            queue->raise(platf::gamepad_feedback_msg_t::make_rumble(id, 0xE000, 0xE000));
+          }, 400ms);
+          task_pool.pushDelayed([queue, id]() {
+            queue->raise(platf::gamepad_feedback_msg_t::make_rumble(id, 0, 0));
+          }, 650ms);
+          found = true;
+        }
+      }
+      if (found) {
+        BOOST_LOG(info) << "Buzzed controller "sv << controller + 1 << " on "sv << device;
+      }
+      return found;
+    }
+
     state_e state(session_t &session) {
       return session.state.load(std::memory_order_relaxed);
     }

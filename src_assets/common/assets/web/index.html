@@ -188,9 +188,18 @@
       <!-- A short message shown on the TV over the game -->
       <form class="home-message" v-if="streamingDevices.length" @submit.prevent="sendTvMessage()">
         <label class="home-message-label" for="tv-message">{{ $t('index.message_title') }}</label>
-        <div class="home-message-quick">
+        <div class="home-message-quick" v-if="!quickEditing">
           <button type="button" class="btn btn-sm btn-outline-secondary" v-for="q in quickMessages" :key="q"
                   :disabled="message.sending" @click="sendTvMessage(q)">{{ q }}</button>
+          <button type="button" class="btn btn-sm btn-link" @click="editQuick">{{ $t('index.quick_edit') }}</button>
+        </div>
+        <!-- Your own quick messages, one per line -->
+        <div class="home-quick-edit" v-else>
+          <textarea class="form-control" rows="5" v-model="quickDraft" :aria-label="$t('index.quick_edit_label')"></textarea>
+          <p class="form-text">{{ $t('index.quick_edit_hint') }}</p>
+          <button type="button" class="btn btn-sm btn-primary me-2" @click="saveQuick">{{ $t('index.quick_save') }}</button>
+          <button type="button" class="btn btn-sm btn-outline-secondary me-2" @click="quickEditing = false">{{ $t('_common.cancel') }}</button>
+          <button type="button" class="btn btn-sm btn-link" @click="quickDraft = ''; saveQuick()">{{ $t('index.quick_reset') }}</button>
         </div>
         <div class="home-message-row">
           <select class="form-select home-message-device" v-if="streamingDevices.length > 1" v-model="message.device"
@@ -477,6 +486,9 @@
         soundMaxBytes: 2097152,
         soundForm: { open: false, name: '', file: null, saving: false, status: '', error: false },
         message: { text: '', device: '', sending: false, status: '', error: false, id: 0, waitFor: [], shown: false },
+        customQuick: [],
+        quickEditing: false,
+        quickDraft: '',
       }
     },
     async created() {
@@ -509,6 +521,7 @@
         this.loadPlayLimits();
         this.loadRecap();
         this.loadSounds();
+        this.loadQuick();
         this.loadCaptures();
         this.recapTimer = setInterval(() => {
           if (!document.hidden) this.loadRecap();
@@ -741,6 +754,34 @@
       },
       captureUrl(c) {
         return `./api/captures/file?kind=${encodeURIComponent(c.kind)}&name=${encodeURIComponent(c.name)}`;
+      },
+      async loadQuick() {
+        try {
+          const r = await fetch('./api/quick-messages', { credentials: 'include' }).then((r) => r.json());
+          if (r.status) this.customQuick = r.messages || [];
+        } catch (e) {
+          // TunaStream's own quick messages, then
+        }
+      },
+      editQuick() {
+        this.quickDraft = this.quickMessages.join('\n');
+        this.quickEditing = true;
+      },
+      async saveQuick() {
+        const messages = this.quickDraft.split('\n').map((m) => m.trim()).filter((m) => m);
+        try {
+          const r = await fetch('./api/quick-messages', {
+            credentials: 'include', method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ messages }),
+          }).then((r) => r.json());
+          if (r.status) {
+            this.customQuick = r.messages || [];
+            this.quickEditing = false;
+          }
+        } catch (e) {
+          this.message.status = this.$t('index.message_failed');
+          this.message.error = true;
+        }
       },
       async loadSounds() {
         try {
@@ -1068,6 +1109,7 @@
         return this.players.filter((p) => p.health).map((p) => p.device).filter((d) => d);
       },
       quickMessages() {
+        if (this.customQuick.length) return this.customQuick;
         return [this.$t('index.message_quick_dinner'), this.$t('index.message_quick_ten'),
                 this.$t('index.message_quick_bed'), this.$t('index.message_quick_come')];
       },

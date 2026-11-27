@@ -493,10 +493,17 @@
               <i class="fas fa-hourglass-half" aria-hidden="true"></i> {{ $t('live.left', { left: minutesText(playLeft(p.device)) }) }}
             </span>
             <button type="button" class="live-chip btn btn-sm btn-outline-secondary" v-if="playLeft(p.device) !== null" @click="extendPlay(p.device)">{{ $t('live.extend') }}</button>
-            <span class="live-chip" v-for="c in p.controllers" :key="c.controller" :class="{ 'live-chip-low': c.battery >= 0 && c.battery <= 15 && !c.charging }">
-              <i class="fas fa-gamepad" aria-hidden="true"></i>
-              {{ c.battery >= 0 ? (c.charging ? $t('live.battery_charging', { pct: c.battery }) : $t('live.battery', { pct: c.battery })) : $t('live.controller', { n: c.controller + 1 }) }}
-            </span>
+            <template v-for="c in p.controllers" :key="c.controller">
+              <span class="live-chip" :class="{ 'live-chip-low': c.battery >= 0 && c.battery <= 15 && !c.charging }">
+                <i class="fas fa-gamepad" aria-hidden="true"></i>
+                {{ c.battery >= 0 ? (c.charging ? $t('live.battery_charging', { pct: c.battery }) : $t('live.battery', { pct: c.battery })) : $t('live.controller', { n: c.controller + 1 }) }}
+              </span>
+              <!-- A buzz on that controller: "your turn" -->
+              <button type="button" class="live-chip btn btn-sm btn-outline-secondary" @click="buzz(p.device, c.controller)"
+                :aria-label="$t('live.buzz_label', { n: c.controller + 1 })">
+                <i class="fas fa-bell" aria-hidden="true"></i> {{ $t('live.buzz') }}
+              </button>
+            </template>
           </div>
         </section>
 
@@ -764,6 +771,7 @@
           tvs: [],
           captures: null,
           sharing: '',
+          customQuick: [],
           canShare: !!navigator.canShare,
           network: null,
           pcVersion: '',
@@ -782,6 +790,7 @@
           return this.app ? { backgroundImage: `url("./api/cover?app=${encodeURIComponent(this.app)}")` } : {};
         },
         quickMessages() {
+          if (this.customQuick.length) return this.customQuick;
           return [this.$t('index.message_quick_dinner'), this.$t('index.message_quick_ten'),
                   this.$t('index.message_quick_bed'), this.$t('index.message_quick_come')];
         },
@@ -795,6 +804,7 @@
       created() {
         this.refresh();
         this.loadSounds();
+        this.loadQuick();
         this.loadRecap();
         this.loadPlayLimits();
         this.loadTvs();
@@ -1020,6 +1030,25 @@
           }).catch(() => {});
           this.status = this.$t('live.extended');
           this.loadPlayLimits();
+        },
+        async buzz(device, controller) {
+          if (navigator.vibrate) navigator.vibrate([40, 60, 40])
+          try {
+            await fetch('./api/buzz', {
+              credentials: 'include', method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ device, controller }),
+            })
+          } catch (e) {
+            // Nothing to say: the next status shows whether it's still streaming
+          }
+        },
+        async loadQuick() {
+          try {
+            const r = await fetch('./api/quick-messages', { credentials: 'include' }).then((r) => r.json());
+            if (r.status) this.customQuick = r.messages || [];
+          } catch (e) {
+            // TunaStream's own quick messages, then
+          }
         },
         async loadSounds() {
           try {
