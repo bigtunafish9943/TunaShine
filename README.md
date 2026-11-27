@@ -111,6 +111,7 @@ and every step was tightened:
   restarting it. Games in exclusive full screen may need switching to borderless or windowed first.
 - **Wake and sleep from the TV.** TunaReceive wakes the PC when you pick it (Wake-on-LAN), and *Put the PC to
   sleep* in its menu sends it back to sleep when you're done, unless another device is still streaming.
+- **Websites as apps, for a show in the corner.** *Add a website* on the Apps page (Paramount+, a sports stream, anything in a browser): starting it from the TV opens it in the PC's own browser, signed in as you are there. With TunaHome's *PC in a corner* or TunaReceive's *Shrink to a corner*, it plays in a small window over whatever the TV itself is showing, so two shows are on at once. Ending the session leaves the browser open on the PC.
 - **Steam from the couch.** TunaReceive's quick menu has *PC commands*: open Steam Big Picture, leave it, restart
   Steam when Big Picture hangs, and move the pointer out of the way, next to any commands set up under
   *Settings > General > Server Commands*. The Steam ones appear when Steam is installed.
