@@ -23,6 +23,12 @@
     </div>
 
     <!-- Share my screen is on: never unnoticed -->
+    <!-- A TV's TunaHome asking to show messages -->
+    <div class="alert alert-info d-flex flex-wrap align-items-center gap-2" v-for="r in homeRequests" :key="r.request" role="status">
+      <span class="me-auto">{{ $t('index.tunahome_asks', { name: r.name }) }}</span>
+      <button type="button" class="btn btn-sm btn-primary" @click="answerHome(r.request, true)">{{ $t('index.tunahome_allow') }}</button>
+      <button type="button" class="btn btn-sm btn-outline-secondary" @click="answerHome(r.request, false)">{{ $t('index.tunahome_no') }}</button>
+    </div>
     <div class="alert alert-warning d-flex flex-wrap align-items-center gap-2" v-if="sharing && sharing.on" role="status">
       <i class="fas fa-tower-broadcast" aria-hidden="true"></i>
       <span class="flex-grow-1">{{ $t('index.sharing_on', { minutes: sharing.minutesLeft, viewers: sharing.viewers }) }}
@@ -186,7 +192,7 @@
       </ul>
 
       <!-- A short message shown on the TV over the game -->
-      <form class="home-message" v-if="streamingDevices.length" @submit.prevent="sendTvMessage()">
+      <form class="home-message" v-if="streamingDevices.length || linkedHomes.length" @submit.prevent="sendTvMessage()">
         <label class="home-message-label" for="tv-message">{{ $t('index.message_title') }}</label>
         <div class="home-message-quick" v-if="!quickEditing">
           <button type="button" class="btn btn-sm btn-outline-secondary" v-for="q in quickMessages" :key="q"
@@ -487,6 +493,8 @@
         soundForm: { open: false, name: '', file: null, saving: false, status: '', error: false },
         message: { text: '', device: '', sending: false, status: '', error: false, id: 0, waitFor: [], shown: false },
         customQuick: [],
+        homeRequests: [],
+        linkedHomes: [],
         quickEditing: false,
         quickDraft: '',
       }
@@ -514,6 +522,10 @@
         this.customPort = (port && port !== 47989) ? port : null;
         this.loadStatus();
         // Keep the status row current while the page is open
+        this.loadHomes();
+        this.homesTimer = setInterval(() => {
+          if (!document.hidden) this.loadHomes();
+        }, 10000);
         this.statusTimer = setInterval(() => {
           if (!document.hidden && !this.ending) this.loadStatus();
         }, 5000);
@@ -754,6 +766,28 @@
       },
       captureUrl(c) {
         return `./api/captures/file?kind=${encodeURIComponent(c.kind)}&name=${encodeURIComponent(c.name)}`;
+      },
+      async loadHomes() {
+        try {
+          const r = await fetch('./api/tunahome/requests', { credentials: 'include' }).then((r) => r.json());
+          if (r.status) {
+            this.homeRequests = r.requests || [];
+            this.linkedHomes = r.linked || [];
+          }
+        } catch (e) {
+          // Asked again shortly
+        }
+      },
+      async answerHome(request, allow) {
+        try {
+          await fetch('./api/tunahome/answer', {
+            credentials: 'include', method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ request, allow }),
+          });
+        } catch (e) {
+          // The list says how it went
+        }
+        this.loadHomes();
       },
       async loadQuick() {
         try {

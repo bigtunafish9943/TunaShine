@@ -218,7 +218,7 @@ namespace confighttp {
     std::vector<token_t> tokens;
     bool loaded = false;
 
-    const std::vector<std::string> SCOPES {"status", "watch", "messages", "sessions", "launch", "logs", "play"};
+    const std::vector<std::string> SCOPES {"status", "watch", "messages", "sessions", "launch", "logs", "play", "inbox"};
 
     std::filesystem::path file() {
       return platf::appdata() / "api_tokens.json";
@@ -302,6 +302,9 @@ namespace confighttp {
         }
         if (path == "/api/quick-messages") {
           return "messages";
+        }
+        if (path == "/api/tv-inbox") {
+          return "inbox";
         }
         if (path == "/pad" || path == "/pad/") {
           return "play";
@@ -2557,6 +2560,288 @@ namespace confighttp {
    * @details Body: {"text": "...", "device": "name"} (device empty or left out: every device
    *          that is streaming). TunaReceive shows it within about five seconds.
    */
+  /**
+   * TunaHome on a TV, linked to this PC: messages reach it whether or not anyone is streaming,
+   * popping up over whatever is on. A TV asks to be linked; the owner allows it on the home page;
+   * the TV then collects a token that can only read the TV inbox.
+   */
+  namespace tunahome {
+    struct request_t {
+      std::string id;
+      std::string name;
+      std::int64_t created = 0;
+      std::string token;  ///< Set once allowed, handed over once
+    };
+
+    struct message_t {
+      std::int64_t id = 0;
+      std::int64_t at = 0;
+      std::string text;
+      std::string kind;  ///< "message", or "goodnight": the TV goes to sleep
+    };
+
+    std::mutex lock;
+    std::vector<request_t> requests;
+    std::vector<message_t> inbox;
+    std::int64_t next_id = 1;
+    /// When each linked TunaHome last looked, by token name
+    std::map<std::string, std::int64_t> seen;
+
+    std::int64_t now_s() {
+      return std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    }
+
+    void tidy_locked() {
+      const auto now = now_s();
+      std::erase_if(requests, [&](const request_t &r) {
+        return now - r.created > 600;
+      });
+      std::erase_if(inbox, [&](const message_t &m) {
+        return now - m.at > 900;
+      });
+      while (inbox.size() > 30) {
+        inbox.erase(inbox.begin());
+      }
+    }
+
+    void post(const std::string &text, const std::string &kind) {
+      std::lock_guard lg {lock};
+      tidy_locked();
+      inbox.push_back({next_id++, now_s(), text, kind});
+    }
+
+    /// TunaHomes that looked in the last two minutes
+    std::vector<std::string> listening() {
+      std::lock_guard lg {lock};
+      std::vector<std::string> out;
+      const auto now = now_s();
+      for (const auto &[name, at] : seen) {
+        if (now - at < 120) {
+          out.push_back(name);
+        }
+      }
+      return out;
+    }
+  }  // namespace tunahome
+
+  /// POST /api/tunahome/request {"name"}: a TV asks to be linked (no password: it hasn't one yet).
+  void postTunahomeRequest(resp_https_t response, req_https_t request) {
+    if (!checkIPOrigin(response, request)) {
+      return;
+    }
+    try {
+      std::stringstream ss;
+      ss << request->content.rdbuf();
+      auto input = nlohmann::json::parse(ss.str());
+      auto name = input.value("name", std::string {"TV"});
+      if (name.size() > 40) {
+        name.resize(40);
+      }
+      tunahome::request_t r;
+      r.id = crypto::rand_alphabet(24, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789");
+      r.name = name;
+      r.created = tunahome::now_s();
+      {
+        std::lock_guard lg {tunahome::lock};
+        tunahome::tidy_locked();
+        if (tunahome::requests.size() >= 5) {
+          bad_request(response, request, "Too many TVs are asking at once. Try again in a few minutes.");
+          return;
+        }
+        tunahome::requests.push_back(r);
+      }
+      BOOST_LOG(info) << "TunaHome on "sv << name << " asks to be linked"sv;
+      nlohmann::json out;
+      out["status"] = true;
+      out["request"] = r.id;
+      send_response(response, out);
+    } catch (std::exception &e) {
+      bad_request(response, request, e.what());
+    }
+  }
+
+  /// GET /api/tunahome/claim?request=: the TV collects its token once allowed ({"waiting": true} until then).
+  void getTunahomeClaim(resp_https_t response, req_https_t request) {
+    if (!checkIPOrigin(response, request)) {
+      return;
+    }
+    const auto args = request->parse_query_string();
+    const auto it = args.find("request");
+    nlohmann::json out;
+    out["status"] = false;
+    if (it != args.end()) {
+      std::lock_guard lg {tunahome::lock};
+      tunahome::tidy_locked();
+      for (auto r = tunahome::requests.begin(); r != tunahome::requests.end(); ++r) {
+        if (r->id != it->second) {
+          continue;
+        }
+        out["status"] = true;
+        if (r->token.empty()) {
+          out["waiting"] = true;
+        } else {
+          out["token"] = r->token;
+          tunahome::requests.erase(r);
+        }
+        break;
+      }
+    }
+    if (!out["status"].get<bool>()) {
+      out["error"] = "No such request: it may have run out. Ask again from the TV.";
+    }
+    send_response(response, out);
+  }
+
+  /// GET /api/tunahome/requests: TVs waiting to be allowed, for the home page.
+  void getTunahomeRequests(resp_https_t response, req_https_t request) {
+    if (!authenticate(response, request)) {
+      return;
+    }
+    nlohmann::json list = nlohmann::json::array();
+    {
+      std::lock_guard lg {tunahome::lock};
+      tunahome::tidy_locked();
+      for (const auto &r : tunahome::requests) {
+        if (r.token.empty()) {
+          list.push_back({{"request", r.id}, {"name", r.name}});
+        }
+      }
+    }
+    nlohmann::json out;
+    out["status"] = true;
+    out["requests"] = list;
+    out["linked"] = tunahome::listening();
+    send_response(response, out);
+  }
+
+  /// POST /api/tunahome/answer {"request", "allow"}: the owner allows a TV (or turns it down).
+  void postTunahomeAnswer(resp_https_t response, req_https_t request) {
+    if (!validateContentType(response, request, "application/json") || !authenticate_owner(response, request)) {
+      return;
+    }
+    try {
+      std::stringstream ss;
+      ss << request->content.rdbuf();
+      auto input = nlohmann::json::parse(ss.str());
+      const auto id = input.value("request", std::string {});
+      const bool allow = input.value("allow", false);
+      std::string name;
+      {
+        std::lock_guard lg {tunahome::lock};
+        auto r = std::find_if(tunahome::requests.begin(), tunahome::requests.end(), [&](const auto &x) {
+          return x.id == id;
+        });
+        if (r == tunahome::requests.end()) {
+          bad_request(response, request, "That request has run out. Ask again from the TV.");
+          return;
+        }
+        name = r->name;
+        if (!allow) {
+          tunahome::requests.erase(r);
+        }
+      }
+      if (allow) {
+        api_tokens::token_t t;
+        t.name = "TunaHome · " + name;
+        t.scopes = {"inbox"};
+        const std::string token = "tsh_" + crypto::rand_alphabet(40, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789");
+        t.id = crypto::rand_alphabet(12);
+        t.hash = api_tokens::hash_of(token);
+        t.created = api_tokens::now_s();
+        {
+          std::lock_guard lg {api_tokens::lock};
+          api_tokens::prepare();
+          api_tokens::tokens.push_back(t);
+          api_tokens::save();
+        }
+        std::lock_guard lg {tunahome::lock};
+        for (auto &r : tunahome::requests) {
+          if (r.id == id) {
+            r.token = token;
+          }
+        }
+        BOOST_LOG(info) << "TunaHome on "sv << name << " linked"sv;
+      }
+      nlohmann::json out;
+      out["status"] = true;
+      send_response(response, out);
+    } catch (std::exception &e) {
+      bad_request(response, request, e.what());
+    }
+  }
+
+  /// GET /api/tv-inbox?after=: messages for linked TunaHomes, newer than [after]: {"messages": [...], "now"}.
+  void getTvInbox(resp_https_t response, req_https_t request) {
+    if (!authenticate(response, request)) {
+      return;
+    }
+    const auto args = request->parse_query_string();
+    std::int64_t after = 0;
+    if (auto it = args.find("after"); it != args.end()) {
+      try {
+        after = std::stoll(it->second);
+      } catch (const std::exception &) {
+        // From the start
+      }
+    }
+    nlohmann::json list = nlohmann::json::array();
+    std::int64_t newest = 0;
+    {
+      std::lock_guard lg {tunahome::lock};
+      tunahome::tidy_locked();
+      for (const auto &m : tunahome::inbox) {
+        newest = std::max(newest, m.id);
+        if (m.id > after) {
+          list.push_back({{"id", m.id}, {"at", m.at}, {"text", m.text}, {"kind", m.kind}});
+        }
+      }
+      // Who's listening, for "Shown on" and Goodnight
+      const auto token = api_tokens::from_request(request);
+      std::string who = "TunaHome";
+      {
+        std::lock_guard tlg {api_tokens::lock};
+        const auto hash = api_tokens::hash_of(token);
+        for (const auto &t : api_tokens::tokens) {
+          if (t.hash == hash) {
+            who = t.name.starts_with("TunaHome · ") ? t.name.substr(std::string {"TunaHome · "}.size()) : t.name;
+          }
+        }
+      }
+      tunahome::seen[who] = tunahome::now_s();
+    }
+    nlohmann::json out;
+    out["status"] = true;
+    out["messages"] = list;
+    out["newest"] = newest;
+    out["now"] = tunahome::now_s();
+    send_response(response, out);
+  }
+
+  /**
+   * @brief POST /api/goodnight: everything to bed. Linked TunaHomes put their TVs to sleep,
+   *        streams end with the PC, and the PC goes to sleep in 15 seconds.
+   */
+  void postGoodnight(resp_https_t response, req_https_t request) {
+    if (!authenticate_owner(response, request)) {
+      return;
+    }
+    tunahome::post("Goodnight", "goodnight");
+    // TVs that are streaming see it over the game too
+    if (!stream::session::health().empty()) {
+      tv_messages::post("", "Goodnight 🌙 The PC is going to sleep.", "");
+    }
+    const auto tvs = tunahome::listening();
+    BOOST_LOG(info) << "Goodnight: the PC sleeps in 15 seconds"sv;
+    std::thread([] {
+      std::this_thread::sleep_for(15s);
+      platf::sleep_pc();
+    }).detach();
+    nlohmann::json out;
+    out["status"] = true;
+    out["tvs"] = tvs;
+    send_response(response, out);
+  }
+
   void postTvMessage(resp_https_t response, req_https_t request) {
     if (!validateContentType(response, request, "application/json") || !authenticate(response, request)) {
       return;
@@ -2583,16 +2868,28 @@ namespace confighttp {
           streaming.push_back(h.device);
         }
       }
-      if (streaming.empty()) {
+      // Linked TunaHomes show messages for everyone over whatever is on, streaming or not
+      const auto homes = device.empty() ? tunahome::listening() : std::vector<std::string> {};
+      if (streaming.empty() && homes.empty()) {
         output_tree["status"] = false;
         output_tree["error"] = device.empty() ? "Nobody is streaming right now." : device + " isn't streaming right now.";
         send_response(response, output_tree);
         return;
       }
-      const auto id = tv_messages::post(device, text, sound);
-      if (!id) {
+      if (text.empty() && sound.empty()) {
         bad_request(response, request, "The message is empty");
         return;
+      }
+      if (!homes.empty() && !text.empty()) {
+        tunahome::post(text, "message");
+      }
+      const auto id = streaming.empty() ? 0 : tv_messages::post(device, text, sound);
+      if (!streaming.empty() && !id) {
+        bad_request(response, request, "The message is empty");
+        return;
+      }
+      for (const auto &h : homes) {
+        streaming.push_back(h);
       }
       BOOST_LOG(info) << "Message for "sv << (device.empty() ? "every streaming device"s : device) << " queued"sv;
       output_tree["status"] = true;
@@ -4277,6 +4574,12 @@ namespace confighttp {
     server.resource["^/api/recap$"]["GET"] = getRecap;
     server.resource["^/api/tv-message$"]["POST"] = postTvMessage;
     server.resource["^/api/tv-message$"]["GET"] = getTvMessages;
+    server.resource["^/api/tunahome/request$"]["POST"] = postTunahomeRequest;
+    server.resource["^/api/tunahome/claim$"]["GET"] = getTunahomeClaim;
+    server.resource["^/api/tunahome/requests$"]["GET"] = getTunahomeRequests;
+    server.resource["^/api/tunahome/answer$"]["POST"] = postTunahomeAnswer;
+    server.resource["^/api/tv-inbox$"]["GET"] = getTvInbox;
+    server.resource["^/api/goodnight$"]["POST"] = postGoodnight;
     server.resource["^/api/quick-messages$"]["GET"] = getQuickMessages;
     server.resource["^/api/quick-messages$"]["POST"] = postQuickMessages;
     server.resource["^/api/sounds$"]["GET"] = getSounds;

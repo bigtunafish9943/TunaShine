@@ -191,6 +191,24 @@ expect "a player link opens the controller page" "$(curl -sk -o /dev/null -w "%{
 expect "a player link can't read the settings" "$(curl -sk -o /dev/null -w "%{http_code}" --max-time 20 -H "Authorization: Bearer $player" "$base/api/config")" "401"
 expect "a player link can't drive the mouse" "$(curl -sk -o /dev/null -w "%{http_code}" --max-time 20 -H "Authorization: Bearer $player" -H "Content-Type: application/json" -X POST -d '{"action":"click","button":1}' "$base/api/remote")" "401"
 
+# TunaHome linking: a TV asks, the owner allows, the TV collects an inbox-only token
+anon() { curl -sk --max-time 20 "$@"; }
+req=$(anon -H "Content-Type: application/json" -X POST -d '{"name":"CI TV"}' "$base/api/tunahome/request" | json request)
+if [ -n "$req" ] && [ "$req" != "None" ]; then pass "a TV can ask to be linked"; else fail "a TV can ask to be linked ($req)"; fi
+expect "the TV waits until allowed" "$(anon "$base/api/tunahome/claim?request=$req" | json waiting)" "True"
+expect "the home page lists the TV asking" "$(get /api/tunahome/requests)" "CI TV"
+expect "the owner can allow the TV" "$(post /api/tunahome/answer "{\"request\":\"$req\",\"allow\":true}" | json status)" "True"
+home=$(anon "$base/api/tunahome/claim?request=$req" | json token)
+if [[ "$home" == tsh_* ]]; then pass "the TV collects its token"; else fail "the TV collects its token ($home)"; fi
+expect "the token is handed over once" "$(anon "$base/api/tunahome/claim?request=$req" | json status)" "False"
+expect "the linked TV reads its inbox" "$(anon -H "Authorization: Bearer $home" "$base/api/tv-inbox?after=0" | json status)" "True"
+expect "a message reaches a linked TV with nobody streaming" "$(post /api/tv-message '{"text":"Dinner is ready"}' | json status)" "True"
+expect "the message is in the TV's inbox" "$(anon -H "Authorization: Bearer $home" "$base/api/tv-inbox?after=0")" "Dinner is ready"
+expect "the TV's token can't read the settings" "$(anon -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $home" "$base/api/config")" "401"
+expect "quick messages can be set" "$(post /api/quick-messages '{"messages":["Game night!"," ","Bath time"]}' | json messages)" "['Game night!', 'Bath time']"
+expect "quick messages are read back" "$(get /api/quick-messages)" "Bath time"
+expect "buzz answers with nobody streaming" "$(post /api/buzz '{"device":"Nobody","controller":0}' | json status)" "False"
+
 # The updater: this build is newer than any published release, so a real check against GitHub must
 # find the latest release, read it and decide there is nothing to install.
 expect "updater is idle at start" "$(get /api/update | json stage)" "idle"
