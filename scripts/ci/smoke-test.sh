@@ -140,7 +140,7 @@ expect "config reports this build's version" "$(json version <<< "$config")" "$e
 if [[ "$config" == *"vdisplayStatus"* ]]; then pass "virtual display status is reported"; else fail "virtual display status is reported"; fi
 
 # Pages
-for page in "" pin apps config troubleshooting password setup help; do
+for page in "" pin apps config troubleshooting password setup help live remote pad; do
   body=$(get "/$page")
   if [[ "$body" == *"<title>TunaStream</title>"* && "$body" == *'id="app"'* ]]; then pass "page /$page loads"; else fail "page /$page loads (${#body} bytes)"; fi
 done
@@ -176,6 +176,20 @@ expect "files waiting for devices can be listed" "$(get /api/files | json status
 expect "a file can't be sent to an unpaired device" "$(curl -sk --max-time 20 -b "$jar" -c "$jar" -H "Content-Type: application/octet-stream" -X POST --data-binary "hello" "$base/api/files/send?uuid=not-a-device&name=a.txt" | json status)" "False"
 expect "picked apps can be added" "$(post /api/apps/add-many '{"apps":[{"name":"Smoke Test App","cmd":"cmd.exe /c exit","detached":"","workingDir":""}]}' | json added)" "1"
 expect "added app is in the app list" "$(get /api/apps)" "Smoke Test App"
+
+# Phone remote and phone controllers
+expect "phone remote refuses an unknown action" "$(post /api/remote '{"action":"dance"}' | json status)" "False"
+expect "phone remote presses a key" "$(post /api/remote '{"action":"key","key":"escape"}' | json status)" "True"
+expect "phone remote refuses an unknown key" "$(post /api/remote '{"action":"key","key":"nope"}' | json status)" "False"
+pad=$(post /api/pad '{"pad":"smoke-test-pad-1","name":"CI","buttons":4096}')
+# No ViGEmBus on the build machine: the controller can't be added, and it says why
+if [[ "$pad" == *'"status":true'* || "$pad" == *"ViGEmBus"* ]]; then pass "phone controller answers"; else fail "phone controller answers ($pad)"; fi
+expect "phone controller leaves" "$(post /api/pad/leave '{"pad":"smoke-test-pad-1"}' | json status)" "True"
+player=$(post /api/pad/invite '{}' | json token)
+if [[ "$player" == tsp_* ]]; then pass "a player link can be made"; else fail "a player link can be made ($player)"; fi
+expect "a player link opens the controller page" "$(curl -sk -o /dev/null -w "%{http_code}" --max-time 20 "$base/pad?token=$player")" "200"
+expect "a player link can't read the settings" "$(curl -sk -o /dev/null -w "%{http_code}" --max-time 20 -H "Authorization: Bearer $player" "$base/api/config")" "401"
+expect "a player link can't drive the mouse" "$(curl -sk -o /dev/null -w "%{http_code}" --max-time 20 -H "Authorization: Bearer $player" -H "Content-Type: application/json" -X POST -d '{"action":"click","button":1}' "$base/api/remote")" "401"
 
 # The updater: this build is newer than any published release, so a real check against GitHub must
 # find the latest release, read it and decide there is nothing to install.
