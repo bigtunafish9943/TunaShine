@@ -1773,7 +1773,8 @@ namespace confighttp {
     api_tokens::token_t t;
     t.name = "Player link";
     t.scopes = {"play"};
-    const std::string token = "tsp_" + crypto::rand_alphabet(40);
+    // Letters and digits only: it travels in a link (and a QR code) as it is
+    const std::string token = "tsp_" + crypto::rand_alphabet(40, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789");
     t.id = crypto::rand_alphabet(12);
     t.hash = api_tokens::hash_of(token);
     t.created = api_tokens::now_s();
