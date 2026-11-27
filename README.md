@@ -86,6 +86,9 @@ and every step was tightened:
   time left, the message and sound buttons and End session. While nobody plays: the last seven days, play time
   today, each TV and how it's set up, this PC, milestones and captures. Add it to your home screen to open it
   like an app; *Full page* opens everything else.
+- **Clips to your phone.** The Live page lists your three newest instant-replay clips and the newest screenshot,
+  marked *New* for a few minutes after they're saved, with *Save* to download and *Share* to send them straight from
+  the phone's share sheet (Messages, WhatsApp, Photos and so on).
 - **Phones as controllers.** Friends on the couch can join with their phones: on the Live page, *Invite players*
   shows a QR code, and each phone that scans it becomes an Xbox controller on the PC (two sticks, D-pad, A B X Y,
   bumpers, triggers, View, Menu and Guide), up to four, with rumble where the phone can vibrate. The link works for
