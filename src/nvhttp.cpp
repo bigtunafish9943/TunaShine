@@ -2034,6 +2034,36 @@ namespace nvhttp {
     response->close_connection_after_response = true;
   }
 
+  /**
+   * GET /tuna/pad/invite: a player link for the TV to show as a QR code, so friends can join
+   * with their phones. Only for devices allowed to start games. {"url"} or {"error"}.
+   */
+  void tunaPadInvite(resp_https_t response, req_https_t request) {
+    print_req<TunaStreamHTTPS>(request);
+    auto named_cert_p = get_verified_cert(request);
+    nlohmann::json out;
+    if (!(named_cert_p->perm & PERM::launch)) {
+      out["error"] = "not allowed";
+    } else {
+      std::string error;
+      const auto token = confighttp::make_player_token(error);
+      if (token.empty()) {
+        out["error"] = error;
+      } else {
+        // The address the TV reached this PC on, which the phones on the same network can reach too
+        auto address = net::addr_to_normalized_string(request->local_endpoint().address());
+        if (address.find(':') != std::string::npos) {
+          address = "[" + address + "]";
+        }
+        out["url"] = "https://" + address + ":" + std::to_string(net::map_port(confighttp::PORT_HTTPS)) + "/pad?token=" + token;
+      }
+    }
+    SimpleWeb::CaseInsensitiveMultimap headers;
+    headers.emplace("Content-Type", "application/json");
+    response->write(SimpleWeb::StatusCode::success_ok, out.dump(), headers);
+    response->close_connection_after_response = true;
+  }
+
   void tunaDeskContinue(resp_https_t response, req_https_t request) {
     print_req<TunaStreamHTTPS>(request);
     auto named_cert_p = get_verified_cert(request);
@@ -2438,6 +2468,7 @@ namespace nvhttp {
     https_server.resource["^/tuna/replay$"]["GET"] = tunaReplay;
     https_server.resource["^/tuna/sleep$"]["GET"] = tunaSleep;
     https_server.resource["^/tuna/desk$"]["GET"] = tunaDesk;
+    https_server.resource["^/tuna/pad/invite$"]["GET"] = tunaPadInvite;
     https_server.resource["^/tuna/desk/continue$"]["GET"] = tunaDeskContinue;
     https_server.resource["^/tuna/settings$"]["POST"] = tunaSettings;
     https_server.resource["^/tuna/backup$"]["POST"] = tunaBackupSave;

@@ -26,6 +26,12 @@ namespace confighttp {
    *        week, and replaces the device's previous one. Listed under Access tokens.
    */
   std::string device_watch_key(const std::string &device_uuid, const std::string &device_name);
+
+  /**
+   * @brief A player link's token: phones that open /pad with it join as controllers, for 12 hours,
+   *        and it can do nothing else. Empty, with [error] set, when there are too many tokens.
+   */
+  std::string make_player_token(std::string &error);
 }  // namespace confighttp
 
 // mime types map

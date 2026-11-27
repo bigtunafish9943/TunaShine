@@ -1769,10 +1769,7 @@ namespace confighttp {
    * @brief POST /api/pad/invite: a player link to share, for friends to join with their phones as
    *        controllers. It works on any number of phones for 12 hours, and only for that.
    */
-  void postPadInvite(resp_https_t response, req_https_t request) {
-    if (!authenticate_owner(response, request)) {
-      return;
-    }
+  std::string make_player_token(std::string &error) {
     api_tokens::token_t t;
     t.name = "Player link";
     t.scopes = {"play"};
@@ -1781,24 +1778,35 @@ namespace confighttp {
     t.hash = api_tokens::hash_of(token);
     t.created = api_tokens::now_s();
     t.expires = t.created + 12 * 3600;
-    {
-      std::lock_guard lg {api_tokens::lock};
-      api_tokens::prepare();
-      std::erase_if(api_tokens::tokens, [&](const api_tokens::token_t &x) {
-        return x.expires && x.expires < t.created;
-      });
-      if (api_tokens::tokens.size() >= 50) {
-        bad_request(response, request, "There are 50 tokens and links already. Remove some under Change Password > Access tokens first.");
-        return;
-      }
-      api_tokens::tokens.push_back(t);
-      api_tokens::save();
+    std::lock_guard lg {api_tokens::lock};
+    api_tokens::prepare();
+    std::erase_if(api_tokens::tokens, [&](const api_tokens::token_t &x) {
+      return x.expires && x.expires < t.created;
+    });
+    if (api_tokens::tokens.size() >= 50) {
+      error = "There are 50 tokens and links already. Remove some under Change Password > Access tokens first.";
+      return {};
     }
+    api_tokens::tokens.push_back(t);
+    api_tokens::save();
     BOOST_LOG(info) << "Player link made"sv;
+    return token;
+  }
+
+  void postPadInvite(resp_https_t response, req_https_t request) {
+    if (!authenticate_owner(response, request)) {
+      return;
+    }
+    std::string error;
+    const auto token = make_player_token(error);
+    if (token.empty()) {
+      bad_request(response, request, error.c_str());
+      return;
+    }
     nlohmann::json out;
     out["status"] = true;
     out["token"] = token;
-    out["expires"] = t.expires;
+    out["expires"] = api_tokens::now_s() + 12 * 3600;
     send_response(response, out);
   }
 

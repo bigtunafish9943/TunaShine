@@ -89,7 +89,8 @@ and every step was tightened:
 - **Phones as controllers.** Friends on the couch can join with their phones: on the Live page, *Invite players*
   shows a QR code, and each phone that scans it becomes an Xbox controller on the PC (two sticks, D-pad, A B X Y,
   bumpers, triggers, View, Menu and Guide), up to four, with rumble where the phone can vibrate. The link works for
-  12 hours and only as a controller; a phone that's put away is unplugged after 20 seconds. Party games are the
+  12 hours and only as a controller; a phone that's put away is unplugged after 20 seconds. TunaReceive's quick
+  menu shows the same QR code on the TV (*Invite players*). Party games are the
   best fit, as a touch screen is slower than a real controller.
 - **Continue on the TV.** Playing at the desk and want the couch? TunaReceive sees the game in front at the PC
   (one of your launchers' games, or anything full screen that isn't a browser or video player) and offers
