@@ -493,10 +493,17 @@
               <i class="fas fa-hourglass-half" aria-hidden="true"></i> {{ $t('live.left', { left: minutesText(playLeft(p.device)) }) }}
             </span>
             <button type="button" class="live-chip btn btn-sm btn-outline-secondary" v-if="playLeft(p.device) !== null" @click="extendPlay(p.device)">{{ $t('live.extend') }}</button>
-            <span class="live-chip" v-for="c in p.controllers" :key="c.controller" :class="{ 'live-chip-low': c.battery >= 0 && c.battery <= 15 && !c.charging }">
-              <i class="fas fa-gamepad" aria-hidden="true"></i>
-              {{ c.battery >= 0 ? (c.charging ? $t('live.battery_charging', { pct: c.battery }) : $t('live.battery', { pct: c.battery })) : $t('live.controller', { n: c.controller + 1 }) }}
-            </span>
+            <template v-for="c in p.controllers" :key="c.controller">
+              <span class="live-chip" :class="{ 'live-chip-low': c.battery >= 0 && c.battery <= 15 && !c.charging }">
+                <i class="fas fa-gamepad" aria-hidden="true"></i>
+                {{ c.battery >= 0 ? (c.charging ? $t('live.battery_charging', { pct: c.battery }) : $t('live.battery', { pct: c.battery })) : $t('live.controller', { n: c.controller + 1 }) }}
+              </span>
+              <!-- A buzz on that controller: "your turn" -->
+              <button type="button" class="live-chip btn btn-sm btn-outline-secondary" @click="buzz(p.device, c.controller)"
+                :aria-label="$t('live.buzz_label', { n: c.controller + 1 })">
+                <i class="fas fa-bell" aria-hidden="true"></i> {{ $t('live.buzz') }}
+              </button>
+            </template>
           </div>
         </section>
 
@@ -718,6 +725,27 @@
       <a class="btn btn-primary w-100 mt-2" href="./">{{ $t('live.open_home') }}</a>
     </template>
 
+    <!-- Messages for TVs with TunaHome linked, when nobody's streaming -->
+    <section class="live-card mt-3" v-if="loaded && !players.length && linkedHomes.length">
+      <h2>{{ $t('live.message_title') }}</h2>
+      <div class="live-buttons mb-2">
+        <button class="btn btn-outline-secondary" v-for="q in quickMessages" :key="q" :disabled="sending" @click="send(q, '')">{{ q }}</button>
+      </div>
+      <form class="d-flex gap-2" @submit.prevent="send(homeText, ''); homeText = ''">
+        <input class="form-control" v-model="homeText" maxlength="200" :placeholder="$t('live.message_placeholder')">
+        <button class="btn btn-primary" type="submit" :disabled="sending || !homeText.trim()">{{ $t('index.message_send') }}</button>
+      </form>
+      <p class="live-status" role="status" v-if="status">{{ status }}</p>
+      <p class="live-note mt-2">{{ $t('live.homes_note', { tvs: linkedHomes.join(', ') }) }}</p>
+    </section>
+
+    <!-- Goodnight: TVs with TunaHome to sleep, streams over, the PC to sleep -->
+    <section class="live-card mt-3" v-if="loaded">
+      <h2><i class="fas fa-moon me-1" aria-hidden="true"></i>{{ $t('live.goodnight_title') }}</h2>
+      <p class="live-note">{{ $t('live.goodnight_intro') }}</p>
+      <button type="button" class="btn btn-outline-secondary" :disabled="goodnightSent" @click="goodnight">{{ goodnightSent ? $t('live.goodnight_sent') : $t('live.goodnight_button') }}</button>
+    </section>
+
     <!-- Phones as controllers, for friends on the couch -->
     <section class="live-card mt-3" v-if="loaded">
       <h2><i class="fas fa-gamepad me-1" aria-hidden="true"></i>{{ $t('live.pads_title') }}</h2>
@@ -764,6 +792,10 @@
           tvs: [],
           captures: null,
           sharing: '',
+          customQuick: [],
+          linkedHomes: [],
+          homeText: '',
+          goodnightSent: false,
           canShare: !!navigator.canShare,
           network: null,
           pcVersion: '',
@@ -782,6 +814,7 @@
           return this.app ? { backgroundImage: `url("./api/cover?app=${encodeURIComponent(this.app)}")` } : {};
         },
         quickMessages() {
+          if (this.customQuick.length) return this.customQuick;
           return [this.$t('index.message_quick_dinner'), this.$t('index.message_quick_ten'),
                   this.$t('index.message_quick_bed'), this.$t('index.message_quick_come')];
         },
@@ -795,6 +828,8 @@
       created() {
         this.refresh();
         this.loadSounds();
+        this.loadQuick();
+        this.loadHomes();
         this.loadRecap();
         this.loadPlayLimits();
         this.loadTvs();
@@ -810,6 +845,7 @@
           }
           // Clips are saved mid-game: looked for while playing too
           if (this.ticks % 10 === 0) this.loadCaptures();
+          if (this.ticks % 10 === 1) this.loadHomes();
         }, 2000);
       },
       methods: {
@@ -1020,6 +1056,43 @@
           }).catch(() => {});
           this.status = this.$t('live.extended');
           this.loadPlayLimits();
+        },
+        async loadHomes() {
+          try {
+            const r = await fetch('./api/tunahome/requests', { credentials: 'include' }).then((r) => r.json())
+            if (r.status) this.linkedHomes = r.linked || []
+          } catch (e) {
+            // Asked again shortly
+          }
+        },
+        async goodnight() {
+          if (!window.confirm(this.$t('live.goodnight_confirm'))) return
+          try {
+            const r = await fetch('./api/goodnight', { credentials: 'include', method: 'POST' }).then((r) => r.json())
+            if (r.status) this.goodnightSent = true
+          } catch (e) {
+            // The PC may already be going to sleep
+            this.goodnightSent = true
+          }
+        },
+        async buzz(device, controller) {
+          if (navigator.vibrate) navigator.vibrate([40, 60, 40])
+          try {
+            await fetch('./api/buzz', {
+              credentials: 'include', method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ device, controller }),
+            })
+          } catch (e) {
+            // Nothing to say: the next status shows whether it's still streaming
+          }
+        },
+        async loadQuick() {
+          try {
+            const r = await fetch('./api/quick-messages', { credentials: 'include' }).then((r) => r.json());
+            if (r.status) this.customQuick = r.messages || [];
+          } catch (e) {
+            // TunaStream's own quick messages, then
+          }
         },
         async loadSounds() {
           try {

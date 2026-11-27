@@ -86,6 +86,16 @@ and every step was tightened:
   time left, the message and sound buttons and End session. While nobody plays: the last seven days, play time
   today, each TV and how it's set up, this PC, milestones and captures. Add it to your home screen to open it
   like an app; *Full page* opens everything else.
+- **Messages any time, through TunaHome.** Link [TunaHome](https://github.com/bigtunafish9943/TunaHome) on a TV
+  (its settings, *Messages from your PC*, then *Allow* on TunaStream's home page) and messages for everyone reach
+  that TV whether or not anyone's streaming, popping up over whatever is on. The TV's link can only read its
+  messages.
+- **Goodnight.** One button on the Live page: linked TVs go to sleep, any stream ends with the PC, and the PC
+  goes to sleep 15 seconds later.
+- **Your quick messages.** *Edit* beside the quick messages on the home page sets your household's own one-tap
+  messages for the TV (up to eight); the phone page shows the same ones.
+- **Buzz a player.** On the Live page, *Buzz* beside each controller gives it two short buzzes: "your turn", or a
+  nudge for whoever's dozed off.
 - **Clips to your phone.** The Live page lists your three newest instant-replay clips and the newest screenshot,
   marked *New* for a few minutes after they're saved, with *Save* to download and *Share* to send them straight from
   the phone's share sheet (Messages, WhatsApp, Photos and so on).

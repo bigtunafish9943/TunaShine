@@ -86,6 +86,13 @@ namespace stream {
      */
     int test_rumble();
 
+    /**
+     * @brief A short buzz on one controller of the device named [device] (its controller
+     *        number [controller], from 0): "your turn", from the phone page.
+     * @return Whether that device is streaming.
+     */
+    bool buzz(const std::string &device, int controller);
+
     /// What the device sees of its stream, as TunaReceive reports it.
     struct device_view_t {
       bool known = false;  ///< False until a report arrives, or when the last one is old
