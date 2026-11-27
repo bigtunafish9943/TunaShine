@@ -206,6 +206,27 @@
       color: var(--bs-emphasis-color);
     }
 
+    .live-clips {
+      list-style: none;
+      padding: 0;
+      margin: 0.5rem 0 0.75rem;
+    }
+
+    .live-clips li {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      padding: 0.4rem 0;
+      border-top: 1px solid var(--ts-surface-border);
+    }
+
+    .live-clip-actions {
+      display: flex;
+      gap: 0.4rem;
+      flex: 0 0 auto;
+    }
+
     .live-qr {
       width: min(15rem, 70vw);
       background: #fff;
@@ -676,6 +697,21 @@
         <h2>{{ $t('index.captures_title') }}</h2>
         <p v-if="captures.total">{{ $t('live.captures_count', { shots: captures.shots, clips: captures.clips }) }} {{ $t('live.captures_latest', { when: ago(captures.latest) }) }}</p>
         <p v-else class="live-note">{{ $t('live.captures_none') }}</p>
+        <!-- The newest clips and screenshot, to save or share from the phone -->
+        <ul class="live-clips" v-if="captures.recent.length">
+          <li v-for="c in captures.recent" :key="c.kind + c.name">
+            <div class="live-clip-name">
+              <i :class="c.kind === 'clip' ? 'fas fa-film' : 'fas fa-image'" aria-hidden="true"></i>
+              {{ c.kind === 'clip' ? $t('live.clip') : $t('live.screenshot') }} · {{ ago(c.modified) }}
+              <span class="badge text-bg-primary ms-1" v-if="justNow(c.modified)">{{ $t('live.clip_new') }}</span>
+            </div>
+            <div class="live-clip-actions">
+              <a class="btn btn-sm btn-outline-secondary" :href="captureUrl(c)" :download="c.name">{{ $t('live.clip_save') }}</a>
+              <button type="button" class="btn btn-sm btn-primary" v-if="canShare" :disabled="sharing === c.name"
+                @click="shareCapture(c)">{{ $t('live.clip_share') }}</button>
+            </div>
+          </li>
+        </ul>
         <a class="btn btn-sm btn-outline-secondary" href="./#captures-title">{{ $t('live.captures_open') }}</a>
       </section>
 
@@ -727,6 +763,8 @@
           playLimits: [],
           tvs: [],
           captures: null,
+          sharing: '',
+          canShare: !!navigator.canShare,
           network: null,
           pcVersion: '',
           otherHosts: [],
@@ -769,8 +807,9 @@
           if (this.ticks % 15 === 0 && !this.players.length) {
             this.loadRecap();
             this.loadTvs();
-            this.loadCaptures();
           }
+          // Clips are saved mid-game: looked for while playing too
+          if (this.ticks % 10 === 0) this.loadCaptures();
         }, 2000);
       },
       methods: {
@@ -875,10 +914,40 @@
               shots: list.filter((c) => c.kind !== 'clip').length,
               clips: list.filter((c) => c.kind === 'clip').length,
               latest: Math.max(0, ...list.map((c) => c.modified || 0)),
+              // The three newest clips and the newest screenshot
+              recent: [
+                ...list.filter((c) => c.kind === 'clip').sort((a, b) => b.modified - a.modified).slice(0, 3),
+                ...list.filter((c) => c.kind !== 'clip').sort((a, b) => b.modified - a.modified).slice(0, 1),
+              ],
             };
           } catch (e) {
             this.captures = null;
           }
+        },
+        captureUrl(c) {
+          return './api/captures/file?kind=' + encodeURIComponent(c.kind) + '&name=' + encodeURIComponent(c.name)
+        },
+        justNow(seconds) {
+          return seconds && Date.now() / 1000 - seconds < 180
+        },
+        // The phone's own share sheet (Messages, WhatsApp, Photos), where the browser allows files
+        async shareCapture(c) {
+          this.sharing = c.name
+          try {
+            const blob = await fetch(this.captureUrl(c), { credentials: 'include' }).then((r) => {
+              if (!r.ok) throw new Error(r.statusText)
+              return r.blob()
+            })
+            const file = new File([blob], c.name, { type: blob.type })
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+              await navigator.share({ files: [file], title: c.name })
+            } else {
+              window.location.href = this.captureUrl(c)
+            }
+          } catch (e) {
+            // Closing the share sheet lands here too: nothing to say
+          }
+          this.sharing = ''
         },
         tvSetting(t, key) {
           const s = (t.settings || []).find((x) => x.key === key);
