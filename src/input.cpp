@@ -262,6 +262,21 @@ namespace input {
    * @param keyCode The VKEY code
    * @return 0 if no shortcut applied, > 0 if shortcut applied.
    */
+  /**
+   * The pointer stays out of the picture from the start of a stream until the TV uses a mouse
+   * (or the phone remote's touchpad): Steam Big Picture and most games are played with a
+   * controller, and Windows otherwise shows its pointer in the middle of the TV's screen.
+   * Ctrl+Alt+Shift+N still shows or hides it by hand.
+   */
+  static bool pointer_hidden_until_used = false;
+
+  static void pointer_used() {
+    if (pointer_hidden_until_used) {
+      pointer_hidden_until_used = false;
+      display_cursor = true;
+    }
+  }
+
   inline int apply_shortcut(short keyCode) {
     constexpr auto VK_F1 = 0x70;
     constexpr auto VK_F13 = 0x7C;
@@ -275,6 +290,7 @@ namespace input {
 
     switch (keyCode) {
       case 0x4E /* VKEY_N */:
+        pointer_hidden_until_used = false;
         display_cursor = !display_cursor;
         return 1;
     }
@@ -509,6 +525,7 @@ namespace input {
     }
 
     input->mouse_left_button_timeout = DISABLE_LEFT_BUTTON_DELAY;
+    pointer_used();
     platf::move_mouse(platf_input, util::endian::big(packet->deltaX), util::endian::big(packet->deltaY));
   }
 
@@ -614,6 +631,7 @@ namespace input {
       touch_port.env_height
     };
 
+    pointer_used();
     platf::abs_mouse(platf_input, abs_port, tpcoords->first, tpcoords->second);
   }
 
@@ -624,6 +642,7 @@ namespace input {
 
     auto release = util::endian::little(packet->header.magic) == MOUSE_BUTTON_UP_EVENT_MAGIC_GEN5;
     auto button = util::endian::big(packet->button);
+    pointer_used();
     if (button > 0 && button < mouse_press.size()) {
       if (mouse_press[button] != release) {
         // button state is already what we want
@@ -1710,6 +1729,11 @@ namespace input {
   }
 
   void reset(std::shared_ptr<input_t> &input) {
+    // Shown again after the stream (Share my screen and Watch show the pointer)
+    if (pointer_hidden_until_used) {
+      pointer_hidden_until_used = false;
+      display_cursor = true;
+    }
     task_pool.cancel(key_press_repeat_id);
     task_pool.cancel(input->mouse_left_button_timeout);
 
@@ -1743,6 +1767,7 @@ namespace input {
   namespace remote {
     void move(int dx, int dy) {
       if (platf_input) {
+        pointer_used();
         platf::move_mouse(platf_input, std::clamp(dx, -500, 500), std::clamp(dy, -500, 500));
       }
     }
@@ -1970,6 +1995,10 @@ namespace input {
       mail->queue<platf::gamepad_feedback_msg_t>(mail::gamepad_feedback)
     );
     input->device_name = device_name;
+
+    // No pointer in the picture until the TV uses a mouse (see pointer_used)
+    pointer_hidden_until_used = true;
+    display_cursor = false;
 
     // Workaround to ensure new frames will be captured when a client connects
     task_pool.pushDelayed([]() {
