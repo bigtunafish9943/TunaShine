@@ -559,7 +559,7 @@
     "upnp": "Me laisser jouer hors de chez moi",
     "upnp_desc": "Demande à votre routeur d'ouvrir les ports dont TunaStream a besoin pour streamer via Internet. Votre routeur doit prendre en charge l'UPnP. Laissez désactivé si vous ne jouez qu'à la maison.",
     "video_send_rate": "Vitesse d'envoi de la vidéo (Mbit/s)",
-    "video_send_rate_desc": "La vitesse d'envoi de chaque image. 0 la déduit du débit du stream, ce qui convient au Wi-Fi. Ne l'augmentez que sur un réseau filaire à 2,5 ou 10 gigabits.",
+    "video_send_rate_desc": "La vitesse d'envoi de chaque image. 0 la choisit selon le débit du flux et, si la liaison est lente, selon la vitesse Wi-Fi de la TV, ce qui convient au Wi-Fi. Ne l'augmentez que sur un réseau filaire à 2,5 ou 10 gigabits.",
     "virtual_display_only": "Ne jamais afficher mon écran sur l'appareil (recommandé)",
     "virtual_display_only_desc": "Si l'écran propre au stream ne peut pas être créé, le stream ne démarre pas et l'appareil explique pourquoi, au lieu de tout montrer de votre écran. Désactivez pour utiliser votre écran en secours.",
     "virtual_display_primary": "Ouvrir les jeux sur l'écran du stream",

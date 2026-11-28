@@ -466,6 +466,7 @@ namespace stream {
       int slow_game_minutes = 0;
       double slow_game_fps_sum = 0;
       std::atomic_int send_rate_mbps {0};
+      std::atomic_int wifi_link_mbps {0};  // the device's Wi-Fi link speed, 0 when wired or unknown
       std::atomic_int bitrate_kbps {0};  // current bitrate, once it has been changed mid-stream
       std::atomic_int fec_percent {0};  // error correction being added to each frame right now
       std::atomic_int picture_scale {100};  // picture size in percent of what the device asked for
@@ -1808,7 +1809,17 @@ namespace stream {
         // can carry. Wired 2.5 or 10 GbE setups can raise it with video_send_rate.
         int send_rate_mbps = config::stream.video_send_rate;
         if (send_rate_mbps <= 0) {
-          send_rate_mbps = std::clamp(session->config.monitor.bitrate / 1000 * 5, 200, 800);
+          const int changed_kbps = session->health.bitrate_kbps.load();
+          const int kbps = changed_kbps > 0 ? changed_kbps : session->config.monitor.bitrate;
+          send_rate_mbps = std::clamp(kbps / 1000 * 5, 200, 800);
+          // A TV on a slower Wi-Fi link gets bursts of at most two fifths of its link speed, about
+          // what Wi-Fi really carries, so frames don't pile up in the router; never under twice
+          // the bitrate, so a frame still leaves within half a frame interval
+          const int link = session->health.wifi_link_mbps.load();
+          if (link > 0) {
+            const int fits = std::max(link * 2 / 5, kbps / 1000 * 2);
+            send_rate_mbps = std::min(send_rate_mbps, std::max(20, (fits + 19) / 20 * 20));
+          }
         }
         if (session->health.send_rate_mbps != send_rate_mbps) {
           BOOST_LOG(info) << "Sending video to "sv << session->device_name << " at up to "sv << send_rate_mbps << " Mbps"sv;
@@ -2455,6 +2466,7 @@ namespace stream {
       std::lock_guard lg {session.health.lock};
       session.health.device_view = view;
       session.health.device_view_at = std::chrono::steady_clock::now();
+      session.health.wifi_link_mbps = view.net == "wifi" ? view.link_mbps : 0;
       return summarise_health(session);
     }
 
